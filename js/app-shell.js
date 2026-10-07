@@ -764,6 +764,13 @@
     } catch (err) { }
   }
 
+  // Avisa as páginas que os dados da nuvem foram aplicados (para recarregar e redesenhar).
+  function dispatchRemoteStateApplied() {
+    try {
+      window.dispatchEvent(new CustomEvent('soter:remote-state-applied'));
+    } catch (err) { }
+  }
+
   function buildFreshAccountState(user) {
     var freshState = deepClone(DEFAULT_STATE);
     var preferredName = String(
@@ -1437,6 +1444,7 @@
       } finally {
         firebaseIsApplyingRemote = false;
       }
+      dispatchRemoteStateApplied();
     }, function (err) {
       firebaseLastError = String((err && err.message) || err || 'firebase_snapshot_failed');
       updateFirebaseMeta({ enabled: true, lastError: firebaseLastError });
@@ -1470,6 +1478,7 @@
         } finally {
           firebaseIsApplyingRemote = false;
         }
+        dispatchRemoteStateApplied();
       }
       firebaseIsHydrated = true;
       updateFirebaseMeta({ hydrated: true, lastError: '' });
@@ -2047,7 +2056,7 @@
     if (!task || !task.done) return false;
     if (!task.data) return true;
     var doneAt = task.doneAt || task.updatedAt || new Date().toISOString();
-    return String(doneAt).slice(0, 10) <= String(task.data).slice(0, 10);
+    return getLocalDayFromStamp(doneAt) <= String(task.data).slice(0, 10);
   }
   function countDreamGoalsDone(dream) {
     return Array.isArray(dream && dream.metas) ? dream.metas.filter(function (meta) { return !!meta.feita; }).length : 0;
@@ -2513,8 +2522,22 @@
     if (changed) saveTaskTimeAlertsSnapshot(alerts);
   }
 
+  // Data local (AAAA-MM-DD). toISOString() usa UTC e adianta o dia no Brasil (UTC-3) a partir das 21h.
+  function getLocalDateStr(date) {
+    var d = date instanceof Date ? date : new Date(date);
+    if (isNaN(d.getTime())) return "";
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+
+  // Converte um carimbo ISO (UTC) para o dia local; datas puras (AAAA-MM-DD) ficam como estão.
+  function getLocalDayFromStamp(value) {
+    var text = String(value || "");
+    if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+    return getLocalDateStr(text) || text.slice(0, 10);
+  }
+
   function getIsoToday() {
-    return new Date().toISOString().slice(0, 10);
+    return getLocalDateStr(new Date());
   }
 
   function getLocalIsoDate(date) {
@@ -2612,8 +2635,8 @@
   }
 
   function getTaskCreatedDay(task) {
-    if (task && task.createdAt) return String(task.createdAt).slice(0, 10);
-    if (task && typeof task.id === "number" && Number.isFinite(task.id)) return new Date(task.id).toISOString().slice(0, 10);
+    if (task && task.createdAt) return getLocalDayFromStamp(task.createdAt);
+    if (task && typeof task.id === "number" && Number.isFinite(task.id)) return getLocalDateStr(new Date(task.id));
     return getNotificationCycleDate();
   }
 
@@ -4050,7 +4073,7 @@
   }
 
   function financeToday() {
-    return new Date().toISOString().slice(0, 10);
+    return getLocalDateStr(new Date());
   }
 
   function isFinanceFuture(tx) {
