@@ -1776,9 +1776,9 @@
   var ABANDON_RULES = { watch: 2, risk: 14, critical: 30 };
   var ABANDON_TRACKER_LABELS = { livros: "Livraria", cinema: "Cinema", mangas: "Mang\u00e1s" };
   var ABANDON_ACTIVE_STATUSES = {
-    livros: { lendo: true, relendo: true, pausado: true },
-    cinema: { assistindo: true, reassistindo: true, pausado: true },
-    mangas: { lendo: true, relendo: true, pausado: true }
+    livros: { lendo: true, relendo: true },
+    cinema: { assistindo: true, reassistindo: true },
+    mangas: { lendo: true, relendo: true }
   };
   var ACH_STAGE_WORDS = [
     "da Fresta", "da Centelha", "da Vigilia", "do Atlas", "do Ritual",
