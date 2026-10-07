@@ -205,6 +205,16 @@
     return parts[2] + "/" + parts[1] + "/" + parts[0];
   }
 
+  // Escapa texto digitado pelo usuário antes de inseri-lo em HTML (evita injeção de scripts).
+  function esc(value) {
+    return String(value == null ? "" : value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
   // Data local (AAAA-MM-DD): toISOString() usa UTC e adianta o dia no Brasil a partir das 21h.
   function today() {
     var d = new Date();
@@ -366,6 +376,27 @@
     }, 2800);
   }
 
+  // Ocorrências mensais a partir da data-âncora, sem deriva: o dia original é preservado
+  // e, em meses mais curtos, usa o último dia do mês (ex.: dia 31 -> 28/29 em fevereiro, 30 em abril).
+  function getMonthlyOccurrenceDates(startStr, endStr) {
+    var out = [];
+    var year = Number(String(startStr).slice(0, 4));
+    var month = Number(String(startStr).slice(5, 7)) - 1;
+    var day = Number(String(startStr).slice(8, 10));
+    if (!year || !(month >= 0 && month <= 11) || !day) return out;
+    var guard = 0;
+    while (guard < 2400) {
+      guard += 1;
+      var lastDay = new Date(year, month + 1, 0).getDate();
+      var dateStr = year + "-" + String(month + 1).padStart(2, "0") + "-" + String(Math.min(day, lastDay)).padStart(2, "0");
+      if (dateStr > endStr) break;
+      out.push(dateStr);
+      month += 1;
+      if (month > 11) { month = 0; year += 1; }
+    }
+    return out;
+  }
+
   function expandRecurring(year, month) {
     var result = [];
     txs.forEach(function (tx) {
@@ -375,7 +406,8 @@
 
       if (tx.recurrence === "monthly") {
         if (year > txYear || (year === txYear && month >= txMonth)) {
-          var monthlyDate = year + "-" + String(month + 1).padStart(2, "0") + "-" + String(baseDate.getDate()).padStart(2, "0");
+          var monthlyDay = Math.min(baseDate.getDate(), new Date(year, month + 1, 0).getDate());
+          var monthlyDate = year + "-" + String(month + 1).padStart(2, "0") + "-" + String(monthlyDay).padStart(2, "0");
           result.push(Object.assign({}, tx, {
             date: monthlyDate,
             id: tx.id + "_" + year + "_" + month,
@@ -412,12 +444,9 @@
       if (ignoreTxId && tx.id === ignoreTxId) return;
       if (!isSavingsType(tx.type)) return;
       if (tx.recurrence === "monthly") {
-        var monthlyCur = new Date(tx.date + "T12:00:00");
-        var endMonthly = new Date(dateStr + "T12:00:00");
-        while (monthlyCur <= endMonthly) {
+        getMonthlyOccurrenceDates(tx.date, dateStr).forEach(function () {
           balance += getSavingsDelta(tx);
-          monthlyCur.setMonth(monthlyCur.getMonth() + 1);
-        }
+        });
       } else if (tx.recurrence === "weekly") {
         var weeklyCur = new Date(tx.date + "T12:00:00");
         var endWeekly = new Date(dateStr + "T12:00:00");
@@ -441,15 +470,12 @@
       if (ignoreTxId && tx.id === ignoreTxId) return;
       if (tx.type !== "save") return;
       if (tx.recurrence === "monthly") {
-        var monthlyCur = new Date(tx.date + "T12:00:00");
-        var endMonthly = new Date(dateStr + "T12:00:00");
-        while (monthlyCur <= endMonthly) {
+        getMonthlyOccurrenceDates(tx.date, dateStr).forEach(function (occurrenceDate) {
           occurrences.push({
-            date: getMonthDateStr(monthlyCur.getFullYear(), monthlyCur.getMonth(), monthlyCur.getDate()),
+            date: occurrenceDate,
             value: Number(tx.value || 0)
           });
-          monthlyCur.setMonth(monthlyCur.getMonth() + 1);
-        }
+        });
       } else if (tx.recurrence === "weekly") {
         var weeklyCur = new Date(tx.date + "T12:00:00");
         var endWeekly = new Date(dateStr + "T12:00:00");
@@ -592,13 +618,10 @@
     var savingsTotal = 0;
     txs.forEach(function (tx) {
       if (tx.recurrence === "monthly") {
-        var monthlyCur = new Date(tx.date + "T12:00:00");
-        var now = new Date();
-        while (monthlyCur <= now) {
+        getMonthlyOccurrenceDates(tx.date, today()).forEach(function () {
           saldo += getTxDelta(tx);
           savingsTotal += getSavingsDelta(tx);
-          monthlyCur.setMonth(monthlyCur.getMonth() + 1);
-        }
+        });
       } else if (tx.recurrence === "weekly") {
         var weeklyCur = new Date(tx.date + "T12:00:00");
         var nowWeekly = new Date();
@@ -646,12 +669,9 @@
     txs.forEach(function (tx) {
       if (!isSavingsType(tx.type)) return;
       if (tx.recurrence === "monthly") {
-        var monthlyCur = new Date(tx.date + "T12:00:00");
-        var nowMonthly = new Date();
-        while (monthlyCur <= nowMonthly) {
-          reserveHistory.push({ date: getMonthDateStr(monthlyCur.getFullYear(), monthlyCur.getMonth(), monthlyCur.getDate()), value: getSavingsDelta(tx) });
-          monthlyCur.setMonth(monthlyCur.getMonth() + 1);
-        }
+        getMonthlyOccurrenceDates(tx.date, today()).forEach(function (occurrenceDate) {
+          reserveHistory.push({ date: occurrenceDate, value: getSavingsDelta(tx) });
+        });
       } else if (tx.recurrence === "weekly") {
         var weeklyCur = new Date(tx.date + "T12:00:00");
         var nowWeeklyHistory = new Date();
@@ -897,12 +917,9 @@
     var baseSaldo = 0;
     txs.forEach(function (tx) {
       if (tx.recurrence === "monthly") {
-        var monthlyCur = new Date(tx.date + "T12:00:00");
-        var now = new Date();
-        while (monthlyCur <= now) {
+        getMonthlyOccurrenceDates(tx.date, today()).forEach(function () {
           baseSaldo += getTxDelta(tx);
-          monthlyCur.setMonth(monthlyCur.getMonth() + 1);
-        }
+        });
       } else if (tx.recurrence === "weekly") {
         var weeklyCur = new Date(tx.date + "T12:00:00");
         var nowWeekly = new Date();
@@ -1206,7 +1223,7 @@
       div.innerHTML =
         '<div class="fin-tx-dot ' + txClass + '" style="background:rgba(' + hexToRgb(catClr) + ',.15)">' + catIco + "</div>" +
         '<div class="fin-tx-body">' +
-          '<div class="fin-tx-name">' + tx.description + '<span class="fin-tx-cat-badge" style="background:rgba(' + hexToRgb(catClr) + ',.15);color:' + catClr + '">' + tx.category + "</span></div>" +
+          '<div class="fin-tx-name">' + esc(tx.description) + '<span class="fin-tx-cat-badge" style="background:rgba(' + hexToRgb(catClr) + ',.15);color:' + catClr + '">' + esc(tx.category) + "</span></div>" +
           '<div class="fin-tx-meta">' + fmtD(tx.date) + (tx.recurrence ? ' · <span style="color:var(--fin-amber)">↻ ' + (tx.recurrence === "monthly" ? "Mensal" : "Semanal") + "</span>" : "") + "</div>" +
         "</div>" +
         '<div class="fin-tx-amt ' + txClass + '">' + getTxSign(tx.type) + fmtR(tx.value) + "</div>";
@@ -1246,7 +1263,7 @@
       row.className = "fin-cat-item";
       row.innerHTML =
         '<div class="fin-cat-dot" style="background:' + clr + '"></div>' +
-        '<div class="fin-cat-name">' + entry.name + "</div>" +
+        '<div class="fin-cat-name">' + esc(entry.name) + "</div>" +
         '<div class="fin-cat-bar-bg"><div class="fin-cat-bar-fill" style="width:' + pct + "%;background:" + clr + '"></div></div>' +
         '<div class="fin-cat-val">' + fmtR(entry.val) + "</div>";
       list.appendChild(row);
@@ -1561,7 +1578,7 @@
     var locked = category === "Outros";
     row.className = "fin-cat-manager-row" + (locked ? " locked" : "");
     row.innerHTML =
-      '<input type="text" class="fin-fi fin-cat-manager-input" value="' + category + '"' + (locked ? " disabled" : "") + ">" +
+      '<input type="text" class="fin-fi fin-cat-manager-input" value="' + esc(category) + '"' + (locked ? " disabled" : "") + ">" +
       '<button class="fin-btn fin-btn-rose fin-btn-sm fin-cat-manager-del" type="button"' + (locked ? " disabled" : "") + '><i class="fas fa-trash"></i></button>';
     row.dataset.original = category;
     row.dataset.type = type;
@@ -1745,8 +1762,8 @@
       card.type = "button";
       card.className = "fin-recurring-card" + (rule.id === editRuleId ? " active" : "");
       card.innerHTML =
-        '<div class="fin-recurring-card-title">' + rule.name + '</div>' +
-        '<div class="fin-recurring-card-meta">' + fmtR(rule.value) + ' · ' + rule.category + '</div>' +
+        '<div class="fin-recurring-card-title">' + esc(rule.name) + '</div>' +
+        '<div class="fin-recurring-card-meta">' + fmtR(rule.value) + ' · ' + esc(rule.category) + '</div>' +
         '<div class="fin-recurring-card-sub">' + (rule.pattern === "fixed_day" ? ("Dia " + rule.day + " com ajuste") : (rule.nth + "º dia útil com sábado contando")) + '</div>';
       card.addEventListener("click", function () {
         fillRuleForm(rule.id);
