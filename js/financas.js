@@ -1,4 +1,4 @@
-﻿(function () {
+(function () {
   "use strict";
 
   var STORAGE_KEY = "fin-txs";
@@ -964,6 +964,51 @@
     document.getElementById("bd-day-sub").textContent = "Saldo projetado: " + fmtR(best.safeBal) + " — considerando saídas futuras programadas";
   }
 
+  function getCalendarDailyBalances(year, month) {
+    var earliest = null;
+    txs.forEach(function (tx) {
+      if (tx && tx.date && (!earliest || tx.date < earliest)) earliest = tx.date;
+    });
+    recurrenceRules.forEach(function (rule) {
+      if (rule && rule.startDate && (!earliest || rule.startDate < earliest)) earliest = rule.startDate;
+    });
+
+    var running = 0;
+    if (earliest) {
+      var start = new Date(earliest + "T12:00:00");
+      var y = start.getFullYear();
+      var m = start.getMonth();
+      while (y < year || (y === year && m < month)) {
+        expandRecurring(y, m).forEach(function (tx) {
+          running += getTxDelta(tx);
+        });
+        m += 1;
+        if (m > 11) {
+          m = 0;
+          y += 1;
+        }
+      }
+    }
+
+    var daysInMonth = new Date(year, month + 1, 0).getDate();
+    var daily = {};
+    var day;
+    for (day = 1; day <= daysInMonth; day += 1) {
+      daily[getMonthDateStr(year, month, day)] = 0;
+    }
+    expandRecurring(year, month).forEach(function (tx) {
+      if (Object.prototype.hasOwnProperty.call(daily, tx.date)) daily[tx.date] += getTxDelta(tx);
+    });
+
+    var balances = {};
+    for (day = 1; day <= daysInMonth; day += 1) {
+      var ds = getMonthDateStr(year, month, day);
+      running += daily[ds];
+      balances[ds] = Math.round(running * 100) / 100;
+    }
+    return balances;
+  }
+
   function renderCalendar() {
     var title = document.getElementById("cal-title");
     title.innerHTML = "<em>" + MONTHS_PT[calMonth] + "</em> " + calYear;
@@ -1002,6 +1047,9 @@
       if (!evMap[tx.date]) evMap[tx.date] = [];
       evMap[tx.date].push(tx);
     });
+
+    var dayBalances = getCalendarDailyBalances(calYear, calMonth);
+    var hasData = txs.length > 0 || recurrenceRules.length > 0;
 
     var totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
     var weekRows = totalCells / 7;
@@ -1042,7 +1090,7 @@
         evs.className = "fin-cal-events";
         var dayEvs = evMap[ds] || [];
         dayEvs.sort(function (a, b) { return (isFuture(a) ? 1 : 0) - (isFuture(b) ? 1 : 0); });
-        dayEvs.slice(0, 3).forEach(function (tx) {
+        dayEvs.forEach(function (tx) {
           var ev = document.createElement("div");
           var fut = isFuture(tx);
           var txClass = getTxClass(tx.type);
@@ -1064,14 +1112,16 @@
           });
           evs.appendChild(ev);
         });
-        if (dayEvs.length > 3) {
-          var more = document.createElement("div");
-          more.className = "fin-cal-ev";
-          more.style.cssText = "color:var(--fin-muted);font-size:9px;background:transparent";
-          more.textContent = "+" + (dayEvs.length - 3) + " mais";
-          evs.appendChild(more);
-        }
         cell.appendChild(evs);
+
+        if (hasData) {
+          var dayBal = dayBalances[ds] || 0;
+          var balEl = document.createElement("div");
+          balEl.className = "fin-cal-bal " + (dayBal < 0 ? "neg" : "pos") + (ds > todayStr ? " future" : "");
+          balEl.textContent = (dayBal < 0 ? "-" : "") + fmtR(Math.abs(dayBal)).replace("R$ ", "");
+          balEl.title = "Saldo em " + fmtD(ds) + ": " + fmtR(dayBal) + (ds > todayStr ? " (projetado)" : "");
+          cell.appendChild(balEl);
+        }
 
       } else {
         dayNum = i - firstDay - daysInMonth + 1;
