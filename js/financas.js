@@ -205,8 +205,10 @@
     return parts[2] + "/" + parts[1] + "/" + parts[0];
   }
 
+  // Data local (AAAA-MM-DD): toISOString() usa UTC e adianta o dia no Brasil a partir das 21h.
   function today() {
-    return new Date().toISOString().slice(0, 10);
+    var d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
   }
 
   function diffDays(dateA, dateB) {
@@ -547,22 +549,6 @@
       result.daysToGoal = Math.max(1, diffDays(today(), result.etaDate));
     }
     return result;
-  }
-
-  // Tentativa de projeção por histórico a cada login/abertura: recalcula e guarda o resultado.
-  function runSavingsProjectionOnLogin() {
-    var reserve = Math.max(0, getSavingsBalanceUntil(today()));
-    var projection = getSavingsProjection(reserve, savingsGoal);
-    var state = getState();
-    if (state && state.data && typeof state.data === "object") {
-      state.data.financasSavingsProjection = {
-        mode: projection.mode,
-        monthlyRate: projection.monthlyRate,
-        computedAt: new Date().toISOString()
-      };
-      saveState(state);
-    }
-    return projection;
   }
 
   function getSavingsPaceEstimate(reserve, goal) {
@@ -2096,8 +2082,14 @@
     calMonth = ym.m;
     resetModal();
     bindEvents();
-    runSavingsProjectionOnLogin();
     renderAll();
+
+    // Quando os dados da nuvem são aplicados (login/sincronização), recarrega e redesenha,
+    // refazendo a projeção da poupança com o histórico atualizado.
+    window.addEventListener("soter:remote-state-applied", function () {
+      loadData();
+      renderAll();
+    });
   }
 
   init();
