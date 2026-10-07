@@ -470,59 +470,117 @@
     return occurrences;
   }
 
-  function getSavingsPaceEstimate(reserve, goal) {
+  var SAVINGS_PROJECTION_CFG = {
+    windowMonths: 12,
+    minDeposits: 4,
+    minMonthsWithDeposit: 3,
+    recentWeight: 0.85,
+    outlierCap: 2.5
+  };
+
+  function monthIdxOf(dateStr) {
+    return Number(dateStr.slice(0, 4)) * 12 + (Number(dateStr.slice(5, 7)) - 1);
+  }
+
+  function medianOf(list) {
+    if (!list.length) return 0;
+    var sorted = list.slice().sort(function (x, y) { return x - y; });
+    var half = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[half] : (sorted[half - 1] + sorted[half]) / 2;
+  }
+
+  // Projeção mensal baseada no histórico de aportes (tempo + valor).
+  // mode "history": média ponderada dos meses (recentes pesam mais, meses sem aporte contam como 0).
+  // mode "monthly": padrão — média mensal simples quando o histórico é insuficiente.
+  function getSavingsProjection(reserve, goal) {
+    var cfg = SAVINGS_PROJECTION_CFG;
     var missing = Math.max(0, Number(goal || 0) - Number(reserve || 0));
-    if (goal <= 0) {
-      return {
-        summary: "Defina uma meta para calcular a estimativa.",
-        metaLeft: "Meta atual"
-      };
-    }
-    if (missing <= 0) {
-      return {
-        summary: "Objetivo concluído. A meta já foi atingida.",
-        metaLeft: "Meta atingida"
-      };
-    }
+    var nowIdx = monthIdxOf(today());
+    var deposits = getSavingsDepositOccurrencesUntil(today()).filter(function (item) {
+      return Number(item.value) > 0 && monthIdxOf(item.date) >= nowIdx - cfg.windowMonths;
+    });
+    var base = { mode: "none", monthlyRate: 0, missing: missing, monthsToGoal: null, etaDate: null, daysToGoal: null };
+    if (!deposits.length) return base;
 
-    var deposits = getSavingsDepositOccurrencesUntil(today());
-    if (!deposits.length) {
-      return {
-        summary: "Adicione aportes na poupança para estimar o tempo até a meta.",
-        metaLeft: "Meta atual"
-      };
-    }
+    var totals = {};
+    deposits.forEach(function (item) {
+      var idx = monthIdxOf(item.date);
+      totals[idx] = (totals[idx] || 0) + Number(item.value);
+    });
+    var firstIdx = monthIdxOf(deposits[0].date);
+    var lastIdx = nowIdx - 1 >= firstIdx ? nowIdx - 1 : nowIdx; // só meses fechados, se houver
+    var months = [];
+    for (var i = firstIdx; i <= lastIdx; i += 1) months.push({ idx: i, total: totals[i] || 0 });
 
-    var totalDeposited = deposits.reduce(function (sum, item) { return sum + Number(item.value || 0); }, 0);
-    var averageDeposit = totalDeposited / deposits.length;
-    var averageGapDays = null;
-    if (deposits.length > 1) {
-      var gapTotal = 0;
-      for (var idx = 1; idx < deposits.length; idx += 1) {
-        gapTotal += Math.max(1, diffDays(deposits[idx - 1].date, deposits[idx].date));
-      }
-      averageGapDays = gapTotal / (deposits.length - 1);
+    var paid = months.filter(function (m) { return m.total > 0; });
+    var cap = medianOf(paid.map(function (m) { return m.total; })) * cfg.outlierCap;
+    var historyOk = deposits.length >= cfg.minDeposits && paid.length >= cfg.minMonthsWithDeposit;
+    var rate;
+    var mode;
+    if (historyOk) {
+      mode = "history";
+      var num = 0;
+      var den = 0;
+      months.forEach(function (m) {
+        var weight = Math.pow(cfg.recentWeight, lastIdx - m.idx);
+        num += Math.min(m.total, cap) * weight;
+        den += weight;
+      });
+      rate = num / den;
     } else {
-      averageGapDays = 30;
+      mode = "monthly";
+      rate = months.reduce(function (sum, m) { return sum + m.total; }, 0) / Math.max(1, months.length);
     }
+    if (!(rate > 0)) return base;
 
-    if (!averageDeposit || averageDeposit <= 0 || !averageGapDays || averageGapDays <= 0) {
-      return {
-        summary: "Sem aportes suficientes para estimar com consistência.",
-        metaLeft: "Meta atual"
+    var typicalDay = Math.round(medianOf(deposits.map(function (item) { return Number(item.date.slice(8, 10)); })));
+    var result = { mode: mode, monthlyRate: rate, missing: missing, monthsToGoal: 0, etaDate: null, daysToGoal: 0, typicalDay: typicalDay };
+    if (missing > 0) {
+      var steps = Math.ceil(missing / rate);
+      var t = new Date(today() + "T12:00:00");
+      var target = new Date(t.getFullYear(), t.getMonth() + steps, 1, 12, 0, 0);
+      var lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+      target.setDate(Math.min(Math.max(1, typicalDay), lastDay));
+      if (target <= t) target = new Date(target.getFullYear(), target.getMonth() + 1, Math.min(Math.max(1, typicalDay), 28), 12, 0, 0);
+      result.monthsToGoal = steps;
+      result.etaDate = getMonthDateStr(target.getFullYear(), target.getMonth(), target.getDate());
+      result.daysToGoal = Math.max(1, diffDays(today(), result.etaDate));
+    }
+    return result;
+  }
+
+  // Tentativa de projeção por histórico a cada login/abertura: recalcula e guarda o resultado.
+  function runSavingsProjectionOnLogin() {
+    var reserve = Math.max(0, getSavingsBalanceUntil(today()));
+    var projection = getSavingsProjection(reserve, savingsGoal);
+    var state = getState();
+    if (state && state.data && typeof state.data === "object") {
+      state.data.financasSavingsProjection = {
+        mode: projection.mode,
+        monthlyRate: projection.monthlyRate,
+        computedAt: new Date().toISOString()
       };
+      saveState(state);
     }
+    return projection;
+  }
 
-    var cyclesNeeded = Math.ceil(missing / averageDeposit);
-    var estimatedDays = Math.max(1, Math.round(cyclesNeeded * averageGapDays));
-    var targetDateObj = new Date(today() + "T12:00:00");
-    targetDateObj.setDate(targetDateObj.getDate() + estimatedDays);
-    var targetDate = getMonthDateStr(targetDateObj.getFullYear(), targetDateObj.getMonth(), targetDateObj.getDate());
-    var frequencyText = averageGapDays <= 8 ? "semanal" : averageGapDays <= 20 ? "quinzenal" : "mensal";
-
+  function getSavingsPaceEstimate(reserve, goal) {
+    if (goal <= 0) {
+      return { summary: "Defina uma meta para calcular a estimativa.", metaLeft: "Meta atual" };
+    }
+    if (Math.max(0, goal - reserve) <= 0) {
+      return { summary: "Objetivo concluído. A meta já foi atingida.", metaLeft: "Meta atingida" };
+    }
+    var p = getSavingsProjection(reserve, goal);
+    if (p.mode === "none") {
+      return { summary: "Adicione aportes na poupança para estimar o tempo até a meta.", metaLeft: "Meta atual" };
+    }
+    var origem = p.mode === "history" ? "pelo seu histórico de aportes" : "em média mensal";
+    var meses = p.monthsToGoal === 1 ? "1 mês" : p.monthsToGoal + " meses";
     return {
-      summary: "Mantendo aportes m\u00e9dios de " + fmtR(averageDeposit) + " em ritmo " + frequencyText + ", a meta chega em cerca de " + estimatedDays + " dias.",
-      metaLeft: "Estimativa " + fmtD(targetDate)
+      summary: "Guardando cerca de " + fmtR(p.monthlyRate) + " por mês (" + origem + "), a meta chega em ~" + meses + ".",
+      metaLeft: "Estimativa " + fmtD(p.etaDate)
     };
   }
 
@@ -632,11 +690,12 @@
     });
     var reserveMonths = Object.keys(reserveMonthsMap);
     reserveMonths.sort();
-    var reserveAverage = reserveMonths.length ? reserveMonths.reduce(function (sum, key) { return sum + reserveMonthsMap[key]; }, 0) / reserveMonths.length : 0;
     var reserveMissing = Math.max(0, Number(savingsGoal || 0) - reserve);
     var reserveMonthSeries = reserveMonths.map(function (key) {
       return { key: key, value: reserveMonthsMap[key] };
     });
+    var savingsProjection = getSavingsProjection(reserve, savingsGoal);
+    var reserveAverage = savingsProjection.monthlyRate;
     var projectedDate = null;
     var projectedDays = null;
     var projectionSeries = [];
@@ -660,8 +719,8 @@
           });
         }
         if (runningReserve >= savingsGoal) {
-          projectedDate = getMonthDateStr(future.getFullYear(), future.getMonth(), 1);
-          projectedDays = Math.max(0, Math.ceil((future.getTime() - todayDate.getTime()) / 86400000));
+          projectedDate = savingsProjection.etaDate;
+          projectedDays = savingsProjection.daysToGoal;
         }
       }
     }
@@ -2037,6 +2096,7 @@
     calMonth = ym.m;
     resetModal();
     bindEvents();
+    runSavingsProjectionOnLogin();
     renderAll();
   }
 
