@@ -1040,7 +1040,11 @@ body[data-page="financas"] .app-content {
   gap: 4px;
   width: 100%;
   margin-top: 22px;
-  max-height: 68px;
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 60px;
+  margin-bottom: 14px;
+  overscroll-behavior: contain;
   overflow-y: auto;
   overflow-x: hidden;
   padding-right: 2px;
@@ -1129,11 +1133,21 @@ body[data-page="financas"] .app-content {
 .fin-cal-bal {
   position: absolute;
   bottom: 4px;
-  right: 6px;
+  right: 7px;
+  max-width: calc(100% - 14px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
   font-size: 9px;
+  font-weight: 700;
   font-family: var(--fin-font-mono);
-  opacity: 0.6;
+  opacity: 0.85;
 }
+
+.fin-cal-bal.pos { color: var(--fin-teal); }
+.fin-cal-bal.neg { color: var(--fin-rose); }
+.fin-cal-bal.future { opacity: 0.5; }
 
 .fin-cat-list {
   padding: 12px 20px 20px;
