@@ -18,7 +18,7 @@
     listas: 1
   };
   var DEFAULT_FILTERS = {
-    sort: "date",
+    sort: "priority-desc",
     status: "all",
     priority: "all",
     category: "all"
@@ -504,11 +504,20 @@
       return matchQuery && matchStatus && matchPriority && matchCategory;
     });
 
+    function prioRank(priority) {
+      return Object.prototype.hasOwnProperty.call(PRIO_ORDER, priority) ? PRIO_ORDER[priority] : 3;
+    }
+
     items.sort(function (a, b) {
       if (applied.sort === "name") return a.name.localeCompare(b.name, "pt-BR");
       if (applied.sort === "price-asc") return a.price - b.price;
       if (applied.sort === "price-desc") return b.price - a.price;
-      if (applied.sort === "priority") return (PRIO_ORDER[a.priority] || 2) - (PRIO_ORDER[b.priority] || 2);
+      if (applied.sort === "priority-desc" || applied.sort === "priority-asc") {
+        var diff = prioRank(a.priority) - prioRank(b.priority);
+        if (applied.sort === "priority-asc") diff = -diff;
+        if (diff !== 0) return diff;
+        return b.createdAt - a.createdAt;
+      }
       return b.createdAt - a.createdAt;
     });
 
