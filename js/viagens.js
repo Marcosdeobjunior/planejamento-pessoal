@@ -4,7 +4,11 @@
   var storage = window.SoterStorage || null;
   var state = storage ? storage.getState() : null;
   var STORAGE_KEY = "viagens";
-  var LEAFLET_SRC = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+  var LEAFLET_SRCS = [
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js",
+    "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js",
+    "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  ];
   var T = [];
   var lmap = null;
   var MKS = [];
@@ -147,9 +151,8 @@
       return;
     }
     lmap = window.L.map("map", { worldCopyJump: true, minZoom: 2, maxZoom: 18, zoomControl: true }).setView([-14, -51], 3);
-    window.L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-      attribution: "&copy; OpenStreetMap contributors &copy; CARTO",
-      subdomains: "abcd",
+    window.L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors",
       maxZoom: 19
     }).addTo(lmap);
     setTimeout(function () {
@@ -703,11 +706,18 @@
   }
 
   (function loadLeaflet() {
-    var s = document.createElement("script");
-    s.src = LEAFLET_SRC;
-    s.crossOrigin = "";
-    s.onload = function () { boot(false); };
-    s.onerror = function () { boot(true); };
-    document.head.appendChild(s);
+    var idx = 0;
+    function tryNext() {
+      var s;
+      if (typeof window.L !== "undefined") { boot(false); return; }
+      if (idx >= LEAFLET_SRCS.length) { boot(true); return; }
+      s = document.createElement("script");
+      s.src = LEAFLET_SRCS[idx];
+      idx += 1;
+      s.onload = function () { boot(false); };
+      s.onerror = function () { s.remove(); tryNext(); };
+      document.head.appendChild(s);
+    }
+    tryNext();
   }());
 }());
