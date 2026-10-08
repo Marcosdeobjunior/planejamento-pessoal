@@ -1,162 +1,190 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" type="image/png" href="img/soldesoter_logo.png">
-  <title>Viagens &mdash; Sol de S&oacute;ter</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/design-system.css">
-  <link rel="stylesheet" href="css/app-shell.css">
-  <link rel="stylesheet" href="css/viagens.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" crossorigin="">
-</head>
-<body data-page="viagens">
-  <canvas id="bg-canvas" aria-hidden="true" role="presentation"></canvas>
-  <div data-app-header></div>
+:root{
+  --bg:#0d0d12;--bg2:#13131c;--bg3:#1a1a27;
+  --border:rgba(255,255,255,0.07);
+  --text:#e8e4f0;--muted:#7a7590;
+  --a1:#c8a96e;--a2:#7c6fcd;--a3:#5ec4a8;--a4:#e06b8b;--a5:#e8864a;--a6:#4ab0e8;
+  --r:16px;
+  --fd:'Playfair Display',serif;
+  --fu:'Syne',sans-serif;
+  --fm:'DM Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;min-height:100%;}
+body{background:#04040c;color:var(--text);font-family:var(--fu);min-height:100vh;overflow-x:hidden;position:relative;}
+#bg-canvas{position:fixed;inset:0;z-index:0;pointer-events:none;}
+main{position:relative;z-index:1;}
 
-  <main class="app-content">
-    <div class="ph">
-      <div>
-        <h1 class="pt">Minhas <em>Viagens</em></h1>
-        <p class="ps">tracker &middot; mapa &middot; planejamento</p>
-      </div>
-      <div class="ha">
-        <button class="btn btn-p" id="btn-add" type="button">+ Nova Viagem</button>
-      </div>
-    </div>
+.app-content{width:min(1785px,calc(100% - 40px));max-width:1785px;margin:0 auto;padding:78px 0 0;}
+main{padding:0 24px 56px;min-height:100vh;}
 
-    <div class="stats">
-      <div class="st"><div class="stl">Total Destinos</div><div class="stv" id="s-total">0</div><div class="sts">registrados</div></div>
-      <div class="st"><div class="stl">Wishlist</div><div class="stv" id="s-wish" style="color:var(--a4)">0</div><div class="sts">desejados</div></div>
-      <div class="st"><div class="stl">Or&ccedil;amento Total</div><div class="stv" id="s-budget" style="color:var(--a3);font-size:18px;margin-top:5px">R$ 0</div><div class="sts">planejado</div></div>
-      <div class="st"><div class="stl">Cidades/Pa&iacute;ses</div><div class="stv" id="s-cities">0</div><div class="sts">registrados</div></div>
-    </div>
+.ph{margin-bottom:28px;display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:14px;padding-top:25px;}
+.pt{font-family:var(--fd);font-size:42px;font-weight:700;line-height:1.05;}
+.pt em{font-style:italic;color:var(--a1);}
+.ps{color:var(--muted);font-size:11px;margin-top:4px;font-family:var(--fm);letter-spacing:.5px;}
+.ha{display:flex;gap:9px;}
 
-    <div class="lay">
-      <div class="cp">
-        <div class="cph"><span class="cptit">Lista de Viagens</span><span class="cpcnt" id="c-cnt">0 destinos</span></div>
-        <div class="list-tools">
-          <input class="inp" id="travel-search" type="text" placeholder="🔍 Buscar...">
-          <div class="filter-wrap" id="travel-filter-wrap">
-            <button class="btn-filter" id="travel-filter-btn" type="button">⚙ Filtros <span class="filter-badge" id="travel-filter-badge">0</span></button>
-            <div class="filter-panel" id="travel-filter-panel">
-              <div class="filter-section-title">Tipo de Local</div>
-              <div class="filter-chips">
-                <button class="filter-chip" type="button" data-panel-filter="all">Todos</button>
-                <button class="filter-chip" type="button" data-panel-filter="Desejo">Wishlist</button>
-                <button class="filter-chip" type="button" data-panel-filter="Cidade/Pais">Cidade/Pais</button>
-                <button class="filter-chip" type="button" data-panel-filter="Restaurante">Restaurante</button>
-                <button class="filter-chip" type="button" data-panel-filter="Hotel">Hotel</button>
-                <button class="filter-chip" type="button" data-panel-filter="Museu">Museu</button>
-                <button class="filter-chip" type="button" data-panel-filter="Parque">Parque</button>
-                <button class="filter-chip" type="button" data-panel-filter="Ponto Turistico">P. Turistico</button>
-                <button class="filter-chip" type="button" data-panel-filter="Outro">Outro</button>
-              </div>
-              <div class="filter-actions">
-                <button class="btn btn-g" id="travel-filter-clear" type="button">Limpar</button>
-                <button class="btn btn-p" id="travel-filter-apply" type="button">Aplicar</button>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="cl" id="cards"></div>
-        <div class="pg" id="pag" style="display:none">
-          <button class="pb" id="p-prev" type="button">&#8249;</button>
-          <span class="pi" id="p-info">1/1</span>
-          <button class="pb" id="p-next" type="button">&#8250;</button>
-        </div>
-      </div>
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px;}
+.st{background:rgba(18,18,28,.72);backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;transition:border-color .2s;}
+.st:hover{border-color:rgba(255,255,255,.14)}
+.stl{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);font-family:var(--fm);margin-bottom:7px;}
+.stv{font-family:var(--fd);font-size:30px;font-weight:700;line-height:1;}
+.sts{font-size:10px;color:var(--muted);margin-top:2px;font-family:var(--fm);}
 
-      <div class="mp">
-        <div class="cph"><span class="cptit">Mapa das Viagens</span><span class="cpcnt" id="m-cnt">0 pins</span></div>
-        <div id="map"></div>
-        <div class="ml">
-          <div class="mli"><div class="mld" style="background:#10b981"></div>Cidade/Pa&iacute;s</div>
-          <div class="mli"><div class="mld" style="background:#f97316"></div>Restaurante</div>
-          <div class="mli"><div class="mld" style="background:#3b82f6"></div>Hotel</div>
-          <div class="mli"><div class="mld" style="background:#eab308"></div>Museu/P.T.</div>
-          <div class="mli"><div class="mld" style="background:#22c55e"></div>Parque</div>
-          <div class="mli"><div class="mld" style="background:#ec4899"></div>Desejo</div>
-          <div class="mli"><div class="mld" style="background:#a855f7"></div>Montanha</div>
-        </div>
-      </div>
-    </div>
-  </main>
+.fb{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:18px;}
+.fc{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:10px;font-family:var(--fm);color:var(--muted);cursor:pointer;transition:all .18s;}
+.fc:hover{color:var(--text);border-color:rgba(255,255,255,.2)}
+.fc.on{color:var(--a1);border-color:var(--a1);background:rgba(200,169,110,.08);}
 
-  <div data-app-footer></div>
+.lay{display:grid;grid-template-columns:340px 1fr;gap:18px;align-items:stretch;}
 
-  <div id="tc"></div>
+.cp{background:rgba(18,18,28,.72);backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column;height:100%;}
+.cph{padding:15px 18px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.cptit{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);font-family:var(--fm);}
+.cpcnt{font-size:10px;font-family:var(--fm);color:var(--a1);}
+.list-tools{padding:12px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;width:100%;}
+.list-tools .inp{flex:1;min-width:0;}
+.cl{padding:12px;display:flex;flex-direction:column;gap:9px;height:var(--travel-list-height, 520px);max-height:var(--travel-list-height, 520px);overflow-y:auto;overflow-x:hidden;}
+.cl::-webkit-scrollbar{width:3px}.cl::-webkit-scrollbar-track{background:transparent}.cl::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:3px}
 
-  <div class="mo" id="mo-travel">
-    <div class="md">
-      <div class="mdh">
-        <h3 class="mdt" id="mo-title">Nova Viagem</h3>
-        <button class="mdc" id="mo-close" type="button">&#10005;</button>
-      </div>
-      <form id="tform" autocomplete="off">
-        <div class="fg"><label class="fl">Destino *</label><input type="text" class="fi" id="f-dest" placeholder="Ex: T&oacute;quio, Jap&atilde;o" required></div>
-        <div class="fr">
-          <div class="fg"><label class="fl">Tipo de Local</label>
-            <select class="fs" id="f-type">
-              <option value="">Selecione...</option>
-              <option value="Desejo">Desejo (Wishlist)</option>
-              <option value="Cidade/Pais">Cidade/Pa&iacute;s</option>
-              <option value="Restaurante">Restaurante</option>
-              <option value="Museu">Museu</option>
-              <option value="Parque">Parque</option>
-              <option value="Hotel">Hotel</option>
-              <option value="Ponto Turistico">Ponto Tur&iacute;stico</option>
-              <option value="Outro">Outro</option>
-            </select>
-          </div>
-          <div class="fg"><label class="fl">Or&ccedil;amento (R$)</label><input type="number" class="fi" id="f-bud" min="0" step="0.01" placeholder="0,00"></div>
-        </div>
-        <div class="fr">
-          <div class="fg"><label class="fl">Data In&iacute;cio</label><input type="date" class="fi" id="f-s"></div>
-          <div class="fg"><label class="fl">Data T&eacute;rmino</label><input type="date" class="fi" id="f-e"></div>
-        </div>
-        <div class="fg"><label class="fl">Descri&ccedil;&atilde;o</label><textarea class="fta" id="f-desc" placeholder="Experi&ecirc;ncias, dicas, pontos de interesse..."></textarea></div>
-        <div class="fr">
-          <div class="fg"><label class="fl">Imagem (URL)</label><input type="url" class="fi" id="f-iurl" placeholder="https://..."></div>
-          <div class="fg"><label class="fl">Imagem (Arquivo)</label><input type="file" class="fi" id="f-ifile" accept="image/*" style="padding:7px 10px;cursor:pointer;"></div>
-        </div>
-        <input type="hidden" id="f-idata">
-        <div class="ma">
-          <button type="button" class="btn btn-d" id="btn-del" style="display:none;margin-right:auto">Excluir</button>
-          <button type="button" class="btn btn-g" id="btn-done" style="display:none">Concluir viagem</button>
-          <button type="button" class="btn btn-g" id="btn-can">Cancelar</button>
-          <button type="submit" class="btn btn-p" id="btn-sub">Adicionar</button>
-        </div>
-      </form>
-    </div>
-  </div>
+.vc{background:rgba(22,22,36,.65);border:1px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;transition:all .2s;position:relative;flex-shrink:0;}
+.vc:hover{border-color:rgba(255,255,255,.16);transform:translateX(3px)}
+.vcbar{height:2.5px;}
+.vcb{padding:12px 14px;display:flex;gap:11px;align-items:flex-start;}
+.vct{width:48px;height:48px;border-radius:9px;background:var(--bg3);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px;overflow:hidden;position:relative;}
+.vct img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0;border-radius:9px;}
+.vci{flex:1;min-width:0;}
+.vcd{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.vcm{display:flex;align-items:center;gap:7px;margin-top:3px;flex-wrap:wrap;}
+.vctg{font-size:9px;font-family:var(--fm);padding:1px 7px;border-radius:20px;}
+.vcdt{font-size:10px;color:var(--muted);font-family:var(--fm);}
+.vcbg{font-size:10px;font-family:var(--fm);color:var(--a3);margin-top:3px;}
+.vcds{font-size:10px;color:var(--muted);margin-top:3px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.vch{position:absolute;top:8px;right:9px;opacity:0;font-size:9px;color:var(--muted);transition:opacity .2s;font-family:var(--fm);}
+.vc:hover .vch{opacity:1}
+.tc{background:rgba(94,196,168,.15);color:var(--a3);}
+.tr{background:rgba(232,134,74,.15);color:var(--a5);}
+.th{background:rgba(74,176,232,.15);color:var(--a6);}
+.tm{background:rgba(200,169,110,.15);color:var(--a1);}
+.tp{background:rgba(94,196,168,.15);color:var(--a3);}
+.tw{background:rgba(224,107,139,.15);color:var(--a4);}
+.to{background:rgba(124,111,205,.15);color:var(--a2);}
 
-  <div class="mo" id="mo-data">
-    <div class="md" style="max-width:380px">
-      <div class="mdh">
-        <h3 class="mdt">Gerenciar Dados</h3>
-        <button class="mdc" id="mo-data-close" type="button">&#10005;</button>
-      </div>
-      <div class="do">
-        <button class="dob" id="btn-exp" type="button">
-          <span class="dob-ico">Exportar</span>
-          <span>Exportar</span><small>Baixar backup JSON</small>
-        </button>
-        <button class="dob" id="btn-imp" type="button">
-          <span class="dob-ico">Importar</span>
-          <span>Importar</span><small>Carregar backup JSON</small>
-        </button>
-      </div>
-      <input type="file" id="f-json" accept=".json" style="display:none">
-    </div>
-  </div>
+.es{padding:44px 18px;text-align:center;color:var(--muted);}
+.es-ico{font-size:32px;margin-bottom:12px;display:block;opacity:.35;}
+.es h4{font-size:14px;margin-bottom:5px;color:var(--text);}
+.es p{font-size:11px;font-family:var(--fm);}
 
-  <script src="js/firebase-config.js"></script>
-  <script src="js/app-shell.js"></script>
-  <script src="js/index.js"></script>
-  <script src="js/viagens.js"></script>
-</body>
-</html>
+.pg{padding:12px 14px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:center;gap:11px;}
+.pb{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:7px;padding:5px 14px;color:var(--muted);font-size:15px;font-weight:700;cursor:pointer;transition:all .2s;font-family:var(--fu);}
+.pb:hover:not(:disabled){color:var(--text);border-color:var(--a1)}.pb:disabled{opacity:.3;cursor:not-allowed}
+.pi{font-size:10px;font-family:var(--fm);color:var(--muted);}
+
+.mp{background:rgba(18,18,28,.72);backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;position:sticky;top:70px;display:flex;flex-direction:column;}
+#map{height:500px;width:100%;}
+
+.leaflet-container{font-family:var(--fu) !important;}
+.leaflet-popup-content-wrapper{background:rgba(12,12,22,.97) !important;color:var(--text) !important;border:1px solid rgba(255,255,255,.14) !important;border-radius:12px !important;box-shadow:0 16px 48px rgba(0,0,0,.7) !important;padding:0 !important;}
+.leaflet-popup-content{margin:0 !important;padding:14px 16px !important;}
+.leaflet-popup-tip-container{display:none}
+.leaflet-popup-close-button{color:var(--muted) !important;font-size:18px !important;top:6px !important;right:8px !important;}
+
+.ml{padding:11px 16px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:9px;}
+.mli{display:flex;align-items:center;gap:4px;font-size:9px;font-family:var(--fm);color:var(--muted);}
+.mld{width:9px;height:9px;border-radius:50%;}
+
+.btn{padding:8px 16px;border-radius:8px;border:none;font-family:var(--fu);font-weight:700;font-size:12px;cursor:pointer;transition:all .2s;letter-spacing:.4px;display:inline-flex;align-items:center;gap:6px;}
+.btn-p{background:var(--a1);color:#0d0d12;}.btn-p:hover{opacity:.86;transform:translateY(-1px)}
+.btn-g{background:transparent;color:var(--muted);border:1px solid var(--border);}.btn-g:hover{color:var(--text);border-color:rgba(255,255,255,.2)}
+.btn-d{background:rgba(224,107,139,.12);color:var(--a4);border:1px solid rgba(224,107,139,.22);}.btn-d:hover{background:rgba(224,107,139,.22)}
+
+.mo{position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.68);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:18px;}
+.mo.open{display:flex;animation:moFI .18s ease;}
+@keyframes moFI{from{opacity:0}to{opacity:1}}
+.md{background:rgba(12,12,20,.98);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:28px;width:100%;max-width:500px;max-height:92vh;overflow-y:auto;box-shadow:0 28px 72px rgba(0,0,0,.8);animation:mdSU .22s cubic-bezier(.22,1,.36,1);}
+@keyframes mdSU{from{transform:translateY(18px);opacity:0}to{transform:translateY(0);opacity:1}}
+.md::-webkit-scrollbar{width:3px}.md::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:3px}
+.mdh{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;}
+.mdt{font-family:var(--fd);font-size:20px;font-weight:700;}
+.mdc{background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+.mdc:hover{color:var(--text);background:rgba(255,255,255,.06)}
+.fg{margin-bottom:14px;}
+.fl{display:block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);font-family:var(--fm);margin-bottom:6px;}
+.fi,.fs,.fta{width:100%;background:rgba(6,6,14,.8);border:1px solid var(--border);border-radius:8px;padding:9px 13px;color:var(--text);font-family:var(--fu);font-size:13px;outline:none;transition:border-color .2s;}
+.fi:focus,.fs:focus,.fta:focus{border-color:var(--a1);box-shadow:0 0 0 2px rgba(200,169,110,.07);}
+.fi::placeholder,.fta::placeholder{color:var(--muted);}
+.fs option{background:#0d0d1a;}
+.fta{resize:vertical;min-height:74px;}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+.ma{display:flex;gap:9px;margin-top:22px;justify-content:flex-end;}
+.do{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:7px;}
+.dob{background:rgba(20,20,32,.7);border:1px solid var(--border);border-radius:13px;padding:20px 16px;cursor:pointer;transition:all .2s;text-align:center;color:var(--text);}
+.dob:hover{border-color:rgba(255,255,255,.18);transform:translateY(-2px)}
+.dob-ico{font-size:24px;margin-bottom:9px;display:block;}
+.dob span{font-size:12px;font-weight:700;display:block;}
+.dob small{font-size:10px;color:var(--muted);font-family:var(--fm);margin-top:2px;display:block;}
+
+#tc{position:fixed;bottom:26px;right:26px;z-index:9000;display:flex;flex-direction:column;gap:7px;}
+.toast{background:rgba(12,12,22,.97);border:1px solid rgba(255,255,255,.12);border-radius:11px;padding:12px 16px;font-size:12px;display:flex;align-items:center;gap:9px;box-shadow:0 8px 28px rgba(0,0,0,.5);animation:tIn .28s cubic-bezier(.22,1,.36,1);max-width:300px;}
+.ts{border-left:3px solid var(--a3)}.te{border-left:3px solid var(--a4)}.ti{border-left:3px solid var(--a6)}
+@keyframes tIn{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:translateX(0)}}
+@keyframes tOut{to{opacity:0;transform:translateX(18px)}}
+
+.ico{display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;}
+
+.inp{
+  background:rgba(8,8,16,0.7);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:9px 13px;
+  color:var(--text);
+  font-family:var(--fu);
+  font-size:13px;
+  outline:none;
+  transition:border-color .2s,background .2s,box-shadow .2s;
+}
+.inp:focus{border-color:rgba(200,169,110,.5);background:rgba(200,169,110,.04);box-shadow:0 0 0 3px rgba(200,169,110,.07);}
+.inp::placeholder{color:rgba(122,117,144,.6);}
+select.inp option{background:#0d0c1e;}
+
+.filter-wrap{position:relative;flex-shrink:0;}
+.btn-filter{
+  display:flex;align-items:center;gap:6px;padding:9px 14px;
+  border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.04);
+  color:var(--muted);font-family:var(--fu);font-size:12.5px;font-weight:700;
+  cursor:pointer;transition:all .2s;white-space:nowrap;letter-spacing:.4px;
+}
+.btn-filter:hover{color:var(--text);border-color:rgba(255,255,255,.2);background:rgba(255,255,255,.07);}
+.btn-filter.active{color:var(--a1);border-color:rgba(200,169,110,.5);background:rgba(200,169,110,.08);}
+.btn-filter .filter-badge{display:none;background:var(--a1);color:#0d0d12;font-size:9px;font-weight:800;border-radius:50%;width:16px;height:16px;align-items:center;justify-content:center;}
+.btn-filter.active .filter-badge{display:flex;}
+.filter-panel{
+  position:absolute;top:calc(100% + 6px);right:0;z-index:300;
+  background:rgba(8,7,20,.98);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:1px solid rgba(255,255,255,.1);border-top:2px solid var(--a1);
+  border-radius:0 0 14px 14px;width:260px;padding:14px 16px 16px;
+  box-shadow:0 20px 50px rgba(0,0,0,.7);opacity:0;visibility:hidden;transform:translateY(-6px);
+  transition:opacity .2s,transform .2s,visibility .2s;
+}
+.filter-panel.open{opacity:1;visibility:visible;transform:translateY(0);}
+.filter-section-title{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);font-family:var(--fm);margin-bottom:8px;}
+.filter-chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:2px;}
+.filter-chip{font-size:11px;font-family:var(--fm);padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;letter-spacing:.3px;}
+.filter-chip:hover{color:var(--text);border-color:rgba(255,255,255,.2);}
+.filter-chip.selected{background:rgba(200,169,110,.12);color:var(--a1);border-color:rgba(200,169,110,.45);font-weight:700;}
+.filter-actions{display:flex;gap:7px;margin-top:14px;}
+.filter-actions .btn{flex:1;font-size:11.5px;padding:8px 10px;}
+
+@media(max-width:960px){.lay{grid-template-columns:1fr}.cp,.mp{height:auto;min-height:0}.cl{height:auto;max-height:none}.mp{position:static}.stats{grid-template-columns:repeat(2,1fr)}.app-content{width:min(1785px,calc(100% - 32px));max-width:1785px;padding:74px 0 0}main{padding:0 16px 38px}}
+@media(max-width:560px){.stats{grid-template-columns:1fr 1fr}.pt{font-size:27px}.fr{grid-template-columns:1fr}.do{grid-template-columns:1fr}.list-tools{flex-wrap:wrap}.filter-wrap{width:100%}.btn-filter{width:100%;justify-content:center}.filter-panel{width:100%;}}
+
+@media(max-width:560px){
+  main{padding:0 10px 28px}
+  .app-content{width:calc(100% - 20px);padding-top:102px}
+  .ph,.cph,.mdh,.ma,.ml,.vcm,.pg{flex-direction:column;align-items:stretch}
+  .cp,.mp,.md,.vc{border-radius:18px}
+  .list-tools{padding:10px}
+  .cl{padding:10px}
+  .vcb{padding:12px}
+  #map{height:300px}
+  .toast{max-width:calc(100vw - 32px)}
+}
