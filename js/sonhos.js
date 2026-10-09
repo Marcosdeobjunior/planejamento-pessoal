@@ -194,30 +194,85 @@ function snIsLate(prazo, feita) {
   return snDaysDiff(prazo) < 0;
 }
 
+// ── Segurança / ids / imagens ─────────────────────────────────────────────
+function snEsc(v) {
+  return String(v == null ? '' : v).replace(/[&<>"']/g, function (ch) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+  });
+}
+
+function snFind(id) {
+  return S.sonhos.find(function (x) { return String(x.id) === String(id); });
+}
+
+// id único (numérico) dentro de uma lista
+function snUid(list) {
+  let id = Date.now();
+  const used = new Set((list || []).map(function (x) { return String(x.id); }));
+  while (used.has(String(id))) id++;
+  return id;
+}
+
+// Só aceita URLs http(s), data:image, blob: ou caminhos relativos
+function snSafeImg(u) {
+  const v = String(u || '').trim();
+  if (!v) return '';
+  const scheme = /^([a-z][a-z0-9+.\-]*):/i.exec(v);
+  if (!scheme) return v;
+  const sc = scheme[1].toLowerCase();
+  if (sc === 'http' || sc === 'https' || sc === 'blob') return v;
+  if (sc === 'data' && /^data:image\//i.test(v)) return v;
+  return '';
+}
+
+// Compressão única para capa: mesmo tamanho/qualidade no modal e no drawer.
+const SN_IMG_MAX_W = 960, SN_IMG_MAX_H = 540, SN_IMG_MAX_BYTES = 140 * 1024;
+function snCompressImage(file, done) {
+  if (!file || !/^image\//.test(file.type || '')) { alert('Selecione um arquivo de imagem.'); return; }
+  const reader = new FileReader();
+  reader.onerror = function () { alert('Não foi possível ler a imagem.'); };
+  reader.onload = function (ev) {
+    const im = new Image();
+    im.onerror = function () { alert('Não foi possível abrir esta imagem.'); };
+    im.onload = function () {
+      let scale = Math.min(1, SN_IMG_MAX_W / im.width, SN_IMG_MAX_H / im.height);
+      let q = 0.82, out = '';
+      for (let i = 0; i < 12; i++) {
+        const w = Math.max(1, Math.round(im.width * scale));
+        const h = Math.max(1, Math.round(im.height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#0c0b1a'; ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(im, 0, 0, w, h);
+        out = canvas.toDataURL('image/jpeg', q);
+        if (out.length * 0.75 <= SN_IMG_MAX_BYTES) break;
+        if (q > 0.5) q -= 0.08; else scale *= 0.85;
+      }
+      done(out);
+    };
+    im.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
 // ══════════════════════════════════════════════════════════════════════════
 // HUB STATE
 // ══════════════════════════════════════════════════════════════════════════
 let hubSonhoId   = null;
 let hubEditImg   = '';   // image data during inline edit
-let hubEditOpen  = false;
 
 // ── Open / Close ──────────────────────────────────────────────────────────
 function snOpenHub(id) {
-  hubSonhoId = String(id);
-  const s = S.sonhos.find(x => String(x.id) === String(id));
+  const s = snFind(id);
   if (!s) return;
+  hubSonhoId = String(s.id);
   const hub = document.getElementById('sn-hub');
   hub.scrollTop = 0;
   hub.classList.add('open');
   document.body.style.overflow = 'hidden';
   const header = document.querySelector('.site-header');
   if (header) header.style.zIndex = '1';
-  // close edit panel if was open
-  hubEditOpen = false;
-  const ep = document.getElementById('hub-edit-panel');
-  if (ep) ep.classList.remove('open');
-  document.getElementById('hub-edit-btn-lbl').textContent = 'Editar';
-  document.getElementById('hub-edit-toggle-btn').classList.remove('editing');
   hubRender(s);
 }
 
@@ -226,17 +281,32 @@ function snHubClose() {
   document.body.style.overflow = '';
   const header = document.querySelector('.site-header');
   if (header) header.style.zIndex = '';
-  hubSonhoId  = null;
-  hubEditOpen = false;
+  hubSonhoId = null;
   hubLockScroll(false);
 }
 
 // ── Drawer de edição ──────────────────────────────────────────────────────
 let _drawerImg = '';
+let _drawerSnap = null;
+const HD_FIELDS = ['hd-titulo','hd-icon','hd-categoria','hd-horizonte','hd-inicio','hd-fim',
+                   'hd-desc','hd-intencao','hd-nota','hd-custo','hd-acumulado'];
+
+function hubDrawerSnapshot() {
+  const vals = HD_FIELDS.map(function (id) { const el = document.getElementById(id); return el ? el.value : ''; });
+  const zone = document.getElementById('hd-cover-zone');
+  return JSON.stringify([vals, _drawerImg, !!(zone && zone.classList.contains('hci'))]);
+}
+function hubDrawerIsDirty() { return _drawerSnap !== null && hubDrawerSnapshot() !== _drawerSnap; }
+
+// Fechamento iniciado pelo usuário (X, Cancelar, fundo, Esc): avisa se há alterações.
+function hubDrawerRequestClose() {
+  if (hubDrawerIsDirty() && !confirm('Você tem alterações não salvas. Descartar e fechar?')) return;
+  hubDrawerClose();
+}
 
 function hubDrawerOpen() {
   if (!hubSonhoId) return;
-  const s = S.sonhos.find(x => String(x.id) === String(hubSonhoId)); if (!s) return;
+  const s = snFind(hubSonhoId); if (!s) return;
   document.getElementById('hd-titulo').value    = s.titulo      || '';
   document.getElementById('hd-icon').value      = s.icon        || '🌙';
   document.getElementById('hd-categoria').value = s.categoria   || 'pessoal';
@@ -249,11 +319,12 @@ function hubDrawerOpen() {
   document.getElementById('hd-custo').value     = s.custo       || '';
   document.getElementById('hd-acumulado').value = s.acumulado   || '';
   document.getElementById('hd-head-title').textContent = s.titulo || 'Editar sonho';
-  _drawerImg = s.img || '';
+  _drawerImg = snSafeImg(s.img);
   const zone = document.getElementById('hd-cover-zone');
   const img  = document.getElementById('hd-cover-img');
   img.src = _drawerImg; zone.classList.toggle('hci', !!_drawerImg);
   document.getElementById('hd-img-web').value = s.img || '';
+  _drawerSnap = hubDrawerSnapshot();
   document.getElementById('hub-drawer').classList.add('open');
   document.getElementById('hub-drawer-bd').classList.add('open');
   hubLockScroll(true);
@@ -264,6 +335,7 @@ function hubDrawerOpen() {
 function hubDrawerClose() {
   document.getElementById('hub-drawer').classList.remove('open');
   document.getElementById('hub-drawer-bd').classList.remove('open');
+  _drawerSnap = null;
   hubLockScroll(false);
 }
 
@@ -285,8 +357,9 @@ function hubDrawerRemoveImg() {
 
 function hubDrawerApplyWebImg() {
   const input = document.getElementById('hd-img-web');
-  const value = String(input.value || '').trim();
-  if (!value) return;
+  const value = snSafeImg(input.value);
+  if (!String(input.value || '').trim()) return;
+  if (!value) { alert('URL de imagem inválida. Use um endereço http(s).'); return; }
   _drawerImg = value;
   document.getElementById('hd-cover-img').src = _drawerImg;
   document.getElementById('hd-cover-zone').classList.add('hci');
@@ -294,23 +367,11 @@ function hubDrawerApplyWebImg() {
 
 function hubDrawerHandleImg(e) {
   const file = e.target.files[0]; if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    const im = new Image();
-    im.onload = () => {
-      const canvas = document.createElement('canvas');
-      const maxW=1200, maxH=675; let w=im.width, h=im.height;
-      const r = w/h;
-      if (r>maxW/maxH){w=maxW;h=Math.round(w/r);}else{h=maxH;w=Math.round(h*r);}
-      canvas.width=w; canvas.height=h;
-      canvas.getContext('2d').drawImage(im,0,0,w,h);
-      _drawerImg = canvas.toDataURL('image/jpeg',.87);
-      document.getElementById('hd-cover-img').src = _drawerImg;
-      document.getElementById('hd-cover-zone').classList.add('hci');
-    };
-    im.src = ev.target.result;
-  };
-  reader.readAsDataURL(file);
+  snCompressImage(file, function (dataUrl) {
+    _drawerImg = dataUrl;
+    document.getElementById('hd-cover-img').src = _drawerImg;
+    document.getElementById('hd-cover-zone').classList.add('hci');
+  });
 }
 
 function hubDrawerSalvar() {
@@ -344,8 +405,6 @@ function hubDrawerDeletar() {
   S.sonhos = S.sonhos.filter(x=>String(x.id)!==String(hubSonhoId));
   save(); renderSonhos(); hubDrawerClose(); snHubClose();
 }
-
-function hubToggleEditPanel() { hubDrawerOpen(); }
 
 // ── Main render ───────────────────────────────────────────────────────────
 function hubRender(s) {
@@ -541,8 +600,8 @@ function hubRenderFinance(s) {
       ? `<div class="hub-meta-empty" style="padding:10px 0">Sem aportes registrados.</div>`
       : info.hist.slice().reverse().slice(0,12).map(function (h) {
           return `<div class="hub-fin-item">
-            <div><div class="meta">${h.mes}</div><div class="val">${fmt(h.valor)}</div></div>
-            <button class="hub-fin-del" onclick='hubDelDeposito(${JSON.stringify(String(h.id))})' title="Remover">✕</button>
+            <div><div class="meta">${snEsc(h.mes)}</div><div class="val">${fmt(h.valor)}</div></div>
+            <button class="hub-fin-del" data-sn-act="hub-del-deposito" data-sn-id="${snEsc(h.id)}" title="Remover">✕</button>
           </div>`;
         }).join('');
   }
@@ -625,13 +684,13 @@ function hubRenderMetaList(s) {
     }
     chips.push(`<span class="hub-meta-chip ${pColorMap[m.prioridade||'media']}">${pLblMap[m.prioridade||'media']}</span>`);
     return `<div class="hub-meta-item" style="animation-delay:${i*0.035}s">
-      <button class="hub-meta-check ${checkCls}" onclick="hubToggleMeta(${m.id})" title="${m.feita?'Desmarcar':'Concluir'}">${m.feita?'✓':''}</button>
+      <button class="hub-meta-check ${checkCls}" data-sn-act="hub-toggle-meta" data-sn-id="${snEsc(m.id)}" title="${m.feita?'Desmarcar':'Concluir'}">${m.feita?'✓':''}</button>
       <div class="hub-meta-body">
-        <div class="hub-meta-name ${m.feita?'done':''}">${m.texto}</div>
+        <div class="hub-meta-name ${m.feita?'done':''}">${snEsc(m.texto)}</div>
         ${chips.length ? `<div class="hub-meta-chips">${chips.join('')}</div>` : ''}
       </div>
       <div class="hub-meta-side">
-        <button class="hub-meta-side-btn" onclick="hubDelMeta(${m.id})" title="Remover">✕</button>
+        <button class="hub-meta-side-btn" data-sn-act="hub-del-meta" data-sn-id="${snEsc(m.id)}" title="Remover">✕</button>
       </div>
     </div>`;
   }).join('');
@@ -693,11 +752,11 @@ function hubToggleMetaForm() {
 function hubAddMeta() {
   const texto = document.getElementById('hub-meta-texto').value.trim();
   if (!texto || !hubSonhoId) return;
-  const s = S.sonhos.find(x => String(x.id) === String(hubSonhoId));
+  const s = snFind(hubSonhoId);
   if (!s) return;
   if (!s.metas) s.metas = [];
   s.metas.push({
-    id:         Date.now(),
+    id:         snUid(s.metas),
     texto,
     feita:      false,
     prioridade: document.getElementById('hub-meta-prioridade').value,
@@ -711,28 +770,28 @@ function hubAddMeta() {
 }
 
 function hubToggleMeta(metaId) {
-  const s = S.sonhos.find(x => String(x.id) === String(hubSonhoId)); if (!s) return;
-  const m = (s.metas||[]).find(x => x.id === metaId); if (!m) return;
+  const s = snFind(hubSonhoId); if (!s) return;
+  const m = (s.metas||[]).find(x => String(x.id) === String(metaId)); if (!m) return;
   m.feita = !m.feita;
   m.dataConclusao = m.feita ? new Date().toISOString() : '';
   save(); hubRender(s); renderSonhos();
 }
 
 function hubDelMeta(metaId) {
-  const s = S.sonhos.find(x => String(x.id) === String(hubSonhoId)); if (!s) return;
-  s.metas = (s.metas||[]).filter(x => x.id !== metaId);
+  const s = snFind(hubSonhoId); if (!s) return;
+  s.metas = (s.metas||[]).filter(x => String(x.id) !== String(metaId));
   save(); hubRender(s); renderSonhos();
 }
 
 function hubToggleRealizado() {
-  const s = S.sonhos.find(x => String(x.id) === String(hubSonhoId)); if (!s) return;
+  const s = snFind(hubSonhoId); if (!s) return;
   s.realizado = !s.realizado;
+  s.realizadoAt = s.realizado ? new Date().toISOString() : '';
   if (s.realizado) addNotif('Sonho realizado! 🎉', '"'+s.titulo+'"', 'sonho');
   save(); hubRender(s); renderSonhos();
 }
 
-// ── Modal (criar/editar via card) — mantido para + Novo Sonho ─────────────
-let snEditId   = null;
+// ── Modal: usado SOMENTE para criar. A edição é feita no hub-drawer. ──────
 let snImgData  = '';
 let snModalMetas = [];
 
@@ -741,18 +800,13 @@ function snSetModalUiOpen(isOpen) {
   document.body.classList.toggle('sn-modal-open', !!isOpen);
 }
 
-function snOpenModal(editId) {
-  editId = editId || null;
-  snEditId  = editId; snImgData = ''; snModalMetas = [];
+function snOpenModal() {
+  snImgData = ''; snModalMetas = [];
   const modal     = document.getElementById('sn-modal');
-  const label     = document.getElementById('sn-modal-label');
-  const delBtn    = document.getElementById('sn-del-btn');
   const coverZone = document.getElementById('sn-modal-cover-zone');
   const coverImg  = document.getElementById('sn-modal-cover-img');
 
-  ['sn-m-titulo','sn-m-icon','sn-m-desc','sn-m-data-inicio','sn-m-data-fim']
-    .forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
-  ['sn-m-custo','sn-m-acumulado']
+  ['sn-m-titulo','sn-m-icon','sn-m-desc','sn-m-data-inicio','sn-m-data-fim','sn-m-custo','sn-m-acumulado','sn-m-nova-meta']
     .forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
   document.getElementById('sn-m-horizonte').value = '1 ano';
   document.getElementById('sn-m-categoria').value = 'pessoal';
@@ -760,25 +814,6 @@ function snOpenModal(editId) {
   document.getElementById('sn-img-input').value='';
   document.getElementById('sn-img-web').value='';
 
-  if (editId) {
-    const s = S.sonhos.find(x => x.id === editId); if(!s) return;
-    label.innerHTML = 'Editar <em>Sonho</em>';
-    delBtn.style.display = 'block';
-    document.getElementById('sn-m-titulo').value    = s.titulo    || '';
-    document.getElementById('sn-m-icon').value      = s.icon      || '🌙';
-    document.getElementById('sn-m-horizonte').value = s.horizonte || '1 ano';
-    document.getElementById('sn-m-categoria').value = s.categoria || 'pessoal';
-    document.getElementById('sn-m-desc').value      = s.desc      || '';
-    document.getElementById('sn-m-custo').value     = s.custo     || '';
-    document.getElementById('sn-m-acumulado').value = s.acumulado || '';
-    const di=document.getElementById('sn-m-data-inicio'); if(di) di.value=s.dataInicio||'';
-    const df=document.getElementById('sn-m-data-fim');    if(df) df.value=s.dataFim||'';
-    snModalMetas = (s.metas||[]).map(m=>Object.assign({},m));
-    if(s.img){ snImgData=s.img; coverImg.src=s.img; coverZone.classList.add('has-img'); document.getElementById('sn-img-web').value=s.img; }
-  } else {
-    label.innerHTML = 'Novo <em>Sonho</em>';
-    delBtn.style.display = 'none';
-  }
   snRenderModalMetas();
   modal.classList.add('open');
   snSetModalUiOpen(true);
@@ -793,29 +828,18 @@ function snCloseModalOutside(e) { if(e.target.id==='sn-modal') snCloseModal(); }
 
 function snHandleImg(e) {
   const file=e.target.files[0]; if(!file) return;
-  const reader=new FileReader();
-  reader.onload=ev=>{
-    const im=new Image();
-    im.onload=()=>{
-      const canvas=document.createElement('canvas');
-      const maxW=640,maxH=360; let w=im.width,h=im.height;
-      const ratio=w/h;
-      if(ratio>maxW/maxH){w=maxW;h=Math.round(w/ratio);}else{h=maxH;w=Math.round(h*ratio);}
-      canvas.width=w; canvas.height=h;
-      canvas.getContext('2d').drawImage(im,0,0,w,h);
-      snImgData=canvas.toDataURL('image/jpeg',.7);
-      document.getElementById('sn-modal-cover-img').src=snImgData;
-      document.getElementById('sn-modal-cover-zone').classList.add('has-img');
-    };
-    im.src=ev.target.result;
-  };
-  reader.readAsDataURL(file);
+  snCompressImage(file, function (dataUrl) {
+    snImgData = dataUrl;
+    document.getElementById('sn-modal-cover-img').src = snImgData;
+    document.getElementById('sn-modal-cover-zone').classList.add('has-img');
+  });
 }
 
 function snApplyWebImg() {
   const input = document.getElementById('sn-img-web');
-  const value = String(input.value || '').trim();
-  if (!value) return;
+  if (!String(input.value || '').trim()) return;
+  const value = snSafeImg(input.value);
+  if (!value) { alert('URL de imagem inválida. Use um endereço http(s).'); return; }
   snImgData = value;
   document.getElementById('sn-modal-cover-img').src = snImgData;
   document.getElementById('sn-modal-cover-zone').classList.add('has-img');
@@ -824,19 +848,19 @@ function snApplyWebImg() {
 function snModalAddMeta() {
   const inp=document.getElementById('sn-m-nova-meta');
   const t=inp.value.trim(); if(!t) return;
-  snModalMetas.push({id:Date.now(),texto:t,feita:false,prioridade:'media',dataInicio:'',prazo:''});
+  snModalMetas.push({id:snUid(snModalMetas),texto:t,feita:false,prioridade:'media',dataInicio:'',prazo:''});
   inp.value=''; snRenderModalMetas();
 }
-function snModalToggleMeta(id){const m=snModalMetas.find(x=>x.id===id);if(m){m.feita=!m.feita;snRenderModalMetas();}}
-function snModalDelMeta(id){snModalMetas=snModalMetas.filter(x=>x.id!==id);snRenderModalMetas();}
+function snModalToggleMeta(id){const m=snModalMetas.find(x=>String(x.id)===String(id));if(m){m.feita=!m.feita;snRenderModalMetas();}}
+function snModalDelMeta(id){snModalMetas=snModalMetas.filter(x=>String(x.id)!==String(id));snRenderModalMetas();}
 function snRenderModalMetas(){
   const list=document.getElementById('sn-modal-metas-list');if(!list)return;
   if(!snModalMetas.length){list.innerHTML='';return;}
   list.innerHTML=snModalMetas.map(m=>
     '<div class="sn-meta-item">'+
-    '<button class="sn-meta-check '+(m.feita?'done':'')+'" onclick="snModalToggleMeta('+m.id+')">'+(m.feita?'✓':'')+'</button>'+
-    '<span class="sn-meta-text '+(m.feita?'done':'')+'">'+m.texto+'</span>'+
-    '<button class="sn-meta-del" onclick="snModalDelMeta('+m.id+')">✕</button>'+
+    '<button type="button" class="sn-meta-check '+(m.feita?'done':'')+'" data-sn-act="modal-toggle-meta" data-sn-id="'+snEsc(m.id)+'" aria-label="'+(m.feita?'Desmarcar meta':'Concluir meta')+'">'+(m.feita?'✓':'')+'</button>'+
+    '<span class="sn-meta-text '+(m.feita?'done':'')+'">'+snEsc(m.texto)+'</span>'+
+    '<button type="button" class="sn-meta-del" data-sn-act="modal-del-meta" data-sn-id="'+snEsc(m.id)+'" aria-label="Remover meta">✕</button>'+
     '</div>'
   ).join('');
 }
@@ -847,7 +871,7 @@ function snSalvar() {
   const di=document.getElementById('sn-m-data-inicio');
   const df=document.getElementById('sn-m-data-fim');
   const item={
-    id:snEditId||Date.now(), titulo,
+    id:snUid(S.sonhos), titulo,
     icon:document.getElementById('sn-m-icon').value.trim()||'🌙',
     horizonte:document.getElementById('sn-m-horizonte').value,
     categoria:document.getElementById('sn-m-categoria').value,
@@ -857,38 +881,28 @@ function snSalvar() {
     acumulado:num(document.getElementById('sn-m-acumulado').value),
     img:snImgData,
     metas:snModalMetas.map(m=>Object.assign({},m)),
-    realizado:snEditId?(S.sonhos.find(x=>String(x.id)===String(snEditId))||{}).realizado||false:false,
-    createdAt: snEditId ? (S.sonhos.find(x=>String(x.id)===String(snEditId))||{}).createdAt || new Date().toISOString() : new Date().toISOString(),
-    realizadoAt: snEditId ? (S.sonhos.find(x=>String(x.id)===String(snEditId))||{}).realizadoAt || '' : '',
-    financeHistory: snEditId ? (S.sonhos.find(x=>String(x.id)===String(snEditId))||{}).financeHistory || [] : [],
+    realizado:false,
+    createdAt:new Date().toISOString(),
+    realizadoAt:'',
+    financeHistory:[],
   };
-  if(snEditId){const idx=S.sonhos.findIndex(x=>String(x.id)===String(snEditId));if(idx>=0)S.sonhos[idx]=item;else S.sonhos.push(item);}
-  else{S.sonhos.push(item);addNotif('Sonho adicionado','"'+titulo+'"','sonho');}
+  S.sonhos.push(item);
+  addNotif('Sonho adicionado','"'+titulo+'"','sonho');
   save(); renderSonhos(); snCloseModal();
-  if(String(hubSonhoId)===String(item.id)) hubRender(item);
-}
-
-function snDeletar(){
-  if(!snEditId)return;
-  const s=S.sonhos.find(x=>String(x.id)===String(snEditId));
-  if(!confirm('Excluir "'+(s?s.titulo:'este sonho')+'"?'))return;
-  S.sonhos=S.sonhos.filter(x=>String(x.id)!==String(snEditId));
-  save();renderSonhos();snCloseModal();
-  if(String(hubSonhoId)===String(snEditId))snHubClose();
 }
 
 function snToggleRealizado(id,e){
-  e.stopPropagation();
-  const s=S.sonhos.find(x=>x.id===id);if(!s)return;
+  if(e&&e.stopPropagation)e.stopPropagation();
+  const s=snFind(id);if(!s)return;
   s.realizado=!s.realizado;
   s.realizadoAt = s.realizado ? new Date().toISOString() : '';
   if(s.realizado)addNotif('Sonho realizado! 🎉','"'+s.titulo+'"','sonho');
   save();snMigrateData();renderSonhos();
 }
 function snToggleMeta(sonhoId,metaId,e){
-  e.stopPropagation();
-  const s=S.sonhos.find(x=>x.id===sonhoId);if(!s)return;
-  const m=(s.metas||[]).find(x=>x.id===metaId);if(!m)return;
+  if(e&&e.stopPropagation)e.stopPropagation();
+  const s=snFind(sonhoId);if(!s)return;
+  const m=(s.metas||[]).find(x=>String(x.id)===String(metaId));if(!m)return;
   m.feita=!m.feita;
   m.dataConclusao = m.feita ? new Date().toISOString() : '';
   save();renderSonhos();
@@ -913,6 +927,8 @@ function renderSonhos() {
   }
 
   grid.innerHTML=S.sonhos.map(s=>{
+    const id=snEsc(s.id), titulo=snEsc(s.titulo), icon=snEsc(s.icon||'🌙'), horizonte=snEsc(s.horizonte||'—');
+    const img=snSafeImg(s.img);
     const metas=s.metas||[];
     const totalM=metas.length,doneM=metas.filter(m=>m.feita).length;
     const pct=totalM>0?Math.round(doneM/totalM*100):0;
@@ -920,27 +936,28 @@ function renderSonhos() {
     const isReal=s.realizado;
     const metaRows=metas.slice(0,3).map(m=>
       '<div class="sn-meta-item">'+
-      '<button class="sn-meta-check '+(m.feita?'done':'')+'" onclick="snToggleMeta('+s.id+','+m.id+',event)">'+(m.feita?'✓':'')+'</button>'+
-      '<span class="sn-meta-text '+(m.feita?'done':'')+'">'+m.texto+'</span>'+
+      '<button type="button" class="sn-meta-check '+(m.feita?'done':'')+'" data-sn-act="toggle-card-meta" data-sn-id="'+id+'" data-sn-id2="'+snEsc(m.id)+'" aria-label="'+(m.feita?'Desmarcar meta':'Concluir meta')+'">'+(m.feita?'✓':'')+'</button>'+
+      '<span class="sn-meta-text '+(m.feita?'done':'')+'">'+snEsc(m.texto)+'</span>'+
       '</div>'
     ).join('');
     const moreLabel=totalM>3?'<div style="font-size:10px;font-family:var(--font-mono);color:var(--muted);padding:3px 0 0 24px">+'+(totalM-3)+' mais…</div>':'';
-    return '<div class="sn-card '+(isReal?'realizado':'')+'" onclick="snOpenHub('+s.id+')">'+
-      '<div class="sn-cover '+(s.img?'has-img':'')+'" style="border-bottom:2px solid '+catColor+'22">'+
-        (s.img?'<img class="sn-cover-img" src="'+s.img+'" alt="">':'')+
-        '<div class="sn-cover-placeholder"><div class="sn-cover-placeholder-icon">'+(s.icon||'🌙')+'</div><div class="sn-cover-placeholder-label">Sem imagem</div></div>'+
+    return '<div class="sn-card '+(isReal?'realizado':'')+'" data-sn-act="open-card" data-sn-id="'+id+'" tabindex="0" role="group" aria-haspopup="menu" aria-label="Sonho: '+titulo+'. Enter para abrir, tecla de menu para ações rápidas.">'+
+      '<div class="sn-cover '+(img?'has-img':'')+'" style="border-bottom:2px solid '+catColor+'22">'+
+        (img?'<img class="sn-cover-img" src="'+snEsc(img)+'" alt="">':'')+
+        '<div class="sn-cover-placeholder"><div class="sn-cover-placeholder-icon">'+icon+'</div><div class="sn-cover-placeholder-label">Sem imagem</div></div>'+
         '<div class="sn-cover-overlay" style="background:linear-gradient(180deg,rgba(0,0,0,.05) 0%,'+(isReal?'rgba(10,30,24,.93)':'rgba(12,11,26,.93)')+' 100%)"></div>'+
-        '<span class="sn-horizonte-badge">⏳ '+(s.horizonte||'—')+'</span>'+
+        '<span class="sn-horizonte-badge">⏳ '+horizonte+'</span>'+
         (isReal?'<span class="sn-realizado-badge">✓ Realizado</span>':'')+
       '</div>'+
       '<div class="sn-body">'+
         '<div class="sn-top">'+
-          '<div class="sn-titulo">'+s.titulo+'</div>'+
-          '<div class="sn-actions" onclick="event.stopPropagation()">'+
-            '<button class="sn-action-btn done-btn" onclick="snToggleRealizado('+s.id+',event)" title="'+(isReal?'Pendente':'Realizado')+'">'+(isReal?'✅':'○')+'</button>'+
+          '<div class="sn-titulo">'+titulo+'</div>'+
+          '<div class="sn-actions" data-sn-act="noop">'+
+            '<button type="button" class="sn-action-btn done-btn" data-sn-act="toggle-realizado" data-sn-id="'+id+'" title="'+(isReal?'Marcar como pendente':'Marcar como realizado')+'" aria-label="'+(isReal?'Marcar como pendente':'Marcar como realizado')+'" aria-pressed="'+(isReal?'true':'false')+'">'+(isReal?'✅':'○')+'</button>'+
+            '<button type="button" class="sn-action-btn more-btn" data-sn-act="card-menu" data-sn-id="'+id+'" title="Ações rápidas" aria-label="Ações rápidas" aria-haspopup="menu">⋯</button>'+
           '</div>'+
         '</div>'+
-        (s.desc?'<div class="sn-desc">'+s.desc+'</div>':'')+
+        (s.desc?'<div class="sn-desc">'+snEsc(s.desc)+'</div>':'')+
         (totalM>0?
           '<div class="sn-metas-section">'+
             '<div class="sn-metas-header"><span class="sn-metas-label">Metas</span><span class="sn-metas-pct">'+pct+'%</span></div>'+
@@ -950,7 +967,7 @@ function renderSonhos() {
         :'<div style="font-size:11px;font-family:var(--font-mono);color:rgba(122,117,144,.35);letter-spacing:.5px;margin-top:4px">Clique para ver detalhes</div>')+
       '</div>'+
       '<div class="sn-footer">'+
-        '<span class="sn-footer-horizonte">'+(s.icon||'🌙')+' '+(s.horizonte||'—')+'</span>'+
+        '<span class="sn-footer-horizonte">'+icon+' '+horizonte+'</span>'+
         (totalM>0?'<span class="sn-footer-metas-count">'+doneM+'/'+totalM+'</span>':'')+
       '</div>'+
     '</div>';
@@ -1031,7 +1048,7 @@ function sanRender() {
       const color = SN_CAT_COLORS[d.cat] || '#7c6fcd';
       const fill  = d.real ? 'rgba(94,196,168,.6)' : color;
       return `<div class="san-bar-item">
-        <div class="san-bar-label">${d.icon} ${d.nome}</div>
+        <div class="san-bar-label">${snEsc(d.icon)} ${snEsc(d.nome)}</div>
         <div class="san-bar-track"><div class="san-bar-fill" style="width:0%;background:${fill}" data-w="${d.pct}"></div></div>
         <div class="san-bar-val">${d.pct}%</div>
       </div>`;
@@ -1073,7 +1090,7 @@ function sanRender() {
     legendEl.innerHTML = catEntries.slice(0, 6).map(([cat, cnt]) =>
       `<div class="san-legend-item">
         <div class="san-legend-dot" style="background:${SN_CAT_COLORS[cat]||'#7c6fcd'}"></div>
-        <span class="san-legend-lbl">${SN_CAT_LABELS[cat]||cat}</span>
+        <span class="san-legend-lbl">${snEsc(SN_CAT_LABELS[cat]||cat)}</span>
         <span class="san-legend-val">${cnt}</span>
       </div>`
     ).join('');
@@ -1132,11 +1149,11 @@ function sanRender() {
       const diffColor = diff < 0 ? 'var(--accent4)' : diff <= 7 ? 'var(--accent1)' : 'var(--muted)';
       const metas = s.metas||[];
       const pct   = metas.length ? Math.round(metas.filter(m=>m.feita).length/metas.length*100) : 0;
-      return `<div class="san-rank-item" onclick="snOpenHub('${String(s.id)}');snCloseAnalytics()">
+      return `<div class="san-rank-item" data-sn-act="open-analytics-dream" data-sn-id="${snEsc(s.id)}">
         <div class="san-rank-pos">${i+1}</div>
-        <div class="san-rank-icon">${s.icon||'🌙'}</div>
+        <div class="san-rank-icon">${snEsc(s.icon||'🌙')}</div>
         <div class="san-rank-info">
-          <div class="san-rank-name">${s.titulo}</div>
+          <div class="san-rank-name">${snEsc(s.titulo)}</div>
           <div class="san-rank-meta" style="color:${diffColor}">${diffTxt}</div>
         </div>
         <div class="san-rank-pct" style="color:${SN_CAT_COLORS[s.categoria]||'#7c6fcd'}">${pct}%</div>
@@ -1186,12 +1203,12 @@ function sanRender() {
       return { ...s, pct };
     }).sort((a,b)=>b.pct-a.pct).slice(0,5);
     tpEl.innerHTML = ranked.map((s,i) =>
-      `<div class="san-rank-item" onclick="snOpenHub('${String(s.id)}');snCloseAnalytics()">
+      `<div class="san-rank-item" data-sn-act="open-analytics-dream" data-sn-id="${snEsc(s.id)}">
         <div class="san-rank-pos">${i+1}</div>
-        <div class="san-rank-icon">${s.icon||'🌙'}</div>
+        <div class="san-rank-icon">${snEsc(s.icon||'🌙')}</div>
         <div class="san-rank-info">
-          <div class="san-rank-name">${s.titulo}</div>
-          <div class="san-rank-meta">${SN_CAT_LABELS[s.categoria]||s.categoria} · ${s.horizonte||'—'}</div>
+          <div class="san-rank-name">${snEsc(s.titulo)}</div>
+          <div class="san-rank-meta">${snEsc(SN_CAT_LABELS[s.categoria]||s.categoria)} · ${snEsc(s.horizonte||'—')}</div>
         </div>
         <div class="san-rank-pct" style="color:${s.realizado?'var(--accent3)':SN_CAT_COLORS[s.categoria]||'#7c6fcd'}">${s.pct}%</div>
       </div>`
@@ -1229,11 +1246,11 @@ function sanRender() {
     riskWrap.innerHTML = !riskData.length
       ? '<div style="color:var(--muted);font-size:12px;font-family:var(--font-mono)">Sem sonhos ativos para análise de risco.</div>'
       : riskData.map((r, i) =>
-        `<div class="san-rank-item" onclick="snOpenHub('${String(r.sonho.id)}');snCloseAnalytics()">
+        `<div class="san-rank-item" data-sn-act="open-analytics-dream" data-sn-id="${snEsc(r.sonho.id)}">
           <div class="san-rank-pos">${i+1}</div>
-          <div class="san-rank-icon">${r.sonho.icon||'🌙'}</div>
+          <div class="san-rank-icon">${snEsc(r.sonho.icon||'🌙')}</div>
           <div class="san-rank-info">
-            <div class="san-rank-name">${r.sonho.titulo}</div>
+            <div class="san-rank-name">${snEsc(r.sonho.titulo)}</div>
             <div class="san-rank-meta">Progresso ${r.progresso}%</div>
           </div>
           <span class="risk-chip ${r.cls}">${r.label}</span>
@@ -1254,11 +1271,11 @@ function sanRender() {
       : money.map((m, i) => {
         const restTxt = 'R$ ' + m.restante.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         const prevTxt = m.meses === null ? 'sem histórico' : (m.meses + ' mes(es)');
-        return `<div class="san-rank-item" onclick="snOpenHub('${String(m.sonho.id)}');snCloseAnalytics()">
+        return `<div class="san-rank-item" data-sn-act="open-analytics-dream" data-sn-id="${snEsc(m.sonho.id)}">
           <div class="san-rank-pos">${i+1}</div>
-          <div class="san-rank-icon">${m.sonho.icon||'🌙'}</div>
+          <div class="san-rank-icon">${snEsc(m.sonho.icon||'🌙')}</div>
           <div class="san-rank-info">
-            <div class="san-rank-name">${m.sonho.titulo}</div>
+            <div class="san-rank-name">${snEsc(m.sonho.titulo)}</div>
             <div class="san-rank-meta">Falta ${restTxt} • previsão: ${prevTxt}</div>
           </div>
           <div class="san-rank-pct" style="color:var(--accent1)">${m.media>0 ? 'R$ '+m.media.toLocaleString('pt-BR', { maximumFractionDigits: 0 }) : '—'}</div>
@@ -1302,34 +1319,38 @@ function sanRender() {
 
 
 // ══════════════════════════════════════════════════════════════════════════
-// MENU DE CONTEXTO (botão direito)
+// AÇÕES RÁPIDAS (clique direito, botão ⋯, toque longo e teclado)
 // ══════════════════════════════════════════════════════════════════════════
 let snCtxEl = null;
+let snCtxAuto = false;          // fecha ao sair com o mouse (só quando aberto por mouse)
+let snCtxReturnFocus = null;
+let snSuppressClickUntil = 0;
 
-function snCtxClose() {
-  if (snCtxEl) { snCtxEl.remove(); snCtxEl = null; }
+function snCtxClose(restoreFocus) {
+  if (!snCtxEl) return;
+  snCtxEl.remove(); snCtxEl = null; snCtxAuto = false;
+  const rf = snCtxReturnFocus; snCtxReturnFocus = null;
+  if (restoreFocus === true && rf && document.contains(rf)) rf.focus({ preventScroll: true });
 }
+function snCtxCloseSoft() { snCtxClose(false); }
 
-function snCtxEsc(t) {
-  return String(t == null ? '' : t).replace(/[&<>"']/g, function (ch) {
-    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
-  });
-}
-
-function snCtxShow(x, y, items, title) {
+function snCtxShow(x, y, items, title, opts) {
+  opts = opts || {};
   snCtxClose();
+  snCtxAuto = !!opts.auto;
+  snCtxReturnFocus = opts.returnFocus || null;
   const el = document.createElement('div');
   el.className = 'tk-quick-actions open';
   el.setAttribute('role', 'menu');
   el.innerHTML =
     '<div class="tk-quick-actions-head">' +
       '<div class="tk-quick-actions-kicker">Ações rápidas</div>' +
-      '<div class="tk-quick-actions-title">' + snCtxEsc(title) + '</div>' +
+      '<div class="tk-quick-actions-title">' + snEsc(title) + '</div>' +
     '</div>' +
     '<div class="tk-quick-actions-list">' +
     items.map(function (it, i) {
       return '<button type="button" role="menuitem" class="tk-quick-action-btn' + (it.danger ? ' danger' : '') + '" data-i="' + i + '">' +
-        snCtxEsc(it.label) + '</button>';
+        snEsc(it.label) + '</button>';
     }).join('') +
     '</div>';
   document.body.appendChild(el);
@@ -1342,6 +1363,15 @@ function snCtxShow(x, y, items, title) {
     if (it && it.action) it.action();
   });
   el.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+  el.addEventListener('keydown', function (e) {
+    const btns = Array.prototype.slice.call(el.querySelectorAll('.tk-quick-action-btn'));
+    const i = btns.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown') { e.preventDefault(); btns[(i + 1) % btns.length].focus(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); btns[(i - 1 + btns.length) % btns.length].focus(); }
+    else if (e.key === 'Home') { e.preventDefault(); btns[0].focus(); }
+    else if (e.key === 'End') { e.preventDefault(); btns[btns.length - 1].focus(); }
+    else if (e.key === 'Escape' || e.key === 'Tab') { e.preventDefault(); e.stopPropagation(); snCtxClose(true); }
+  });
 
   // posiciona dentro da viewport mantendo o cursor SEMPRE dentro do menu
   const r = el.getBoundingClientRect();
@@ -1355,21 +1385,18 @@ function snCtxShow(x, y, items, title) {
   if (y > ny + r.height - 2) ny = y - r.height + 2;
   el.style.left = nx + 'px';
   el.style.top  = ny + 'px';
+
+  if (opts.focusFirst) { const b = el.querySelector('.tk-quick-action-btn'); if (b) b.focus({ preventScroll: true }); }
 }
 
 function snCtxCardActions(id) {
-  const s = S.sonhos.find(function (x) { return String(x.id) === String(id); });
+  const s = snFind(id);
   if (!s) return [];
   return [
     { label: 'Abrir sonho', action: function () { snOpenHub(s.id); } },
-    { label: 'Editar', action: function () { snOpenModal(s.id); } },
+    { label: 'Editar', action: function () { snOpenHub(s.id); hubDrawerOpen(); } },
     { label: s.realizado ? 'Marcar como pendente' : 'Marcar como realizado',
-      action: function () {
-        s.realizado = !s.realizado;
-        s.realizadoAt = s.realizado ? new Date().toISOString() : '';
-        if (s.realizado) addNotif('Sonho realizado! 🎉', '"' + s.titulo + '"', 'sonho');
-        save(); renderSonhos();
-      } },
+      action: function () { snToggleRealizado(s.id); } },
     { label: 'Excluir', danger: true,
       action: function () {
         if (!confirm('Excluir "' + s.titulo + '"? Esta ação não pode ser desfeita.')) return;
@@ -1379,49 +1406,116 @@ function snCtxCardActions(id) {
   ];
 }
 
+function snCtxOpenForCard(id, x, y, opts) {
+  const s = snFind(id); if (!s) return;
+  snCtxShow(x, y, snCtxCardActions(s.id), s.titulo, opts);
+}
+
+function snCtxPointFromEl(el) {
+  const r = el.getBoundingClientRect();
+  return { x: r.left + Math.min(r.width / 2, 48), y: r.top + Math.min(r.height / 2, 32) };
+}
+
 function snCtxIsBlocked() {
   const open = function (id) { const el = document.getElementById(id); return el && el.classList.contains('open'); };
   return open('sn-hub') || open('sn-analytics') || open('sn-modal');
 }
 
-function snInitContextMenu() {
+function snInitInteractions() {
+  // ── cliques (delegação: sem onclick inline nem ids dentro de strings) ──
+  document.addEventListener('click', function (e) {
+    const el = e.target.closest && e.target.closest('[data-sn-act]');
+    if (!el) return;
+    const act = el.dataset.snAct, id = el.dataset.snId, id2 = el.dataset.snId2;
+    switch (act) {
+      case 'noop': return;
+      case 'open-card':
+        if (Date.now() < snSuppressClickUntil) return;
+        snOpenHub(id); return;
+      case 'toggle-realizado':     snToggleRealizado(id); return;
+      case 'toggle-card-meta':     snToggleMeta(id, id2); return;
+      case 'card-menu': {
+        const kb = e.detail === 0;                       // ativado por teclado
+        const r = el.getBoundingClientRect();
+        snCtxOpenForCard(id, kb ? r.left + r.width / 2 : e.clientX, kb ? r.bottom - 4 : e.clientY,
+          { auto: !kb, focusFirst: kb, returnFocus: el });
+        return;
+      }
+      case 'hub-toggle-meta':      hubToggleMeta(id); return;
+      case 'hub-del-meta':         hubDelMeta(id); return;
+      case 'hub-del-deposito':     hubDelDeposito(id); return;
+      case 'modal-toggle-meta':    snModalToggleMeta(id); return;
+      case 'modal-del-meta':       snModalDelMeta(id); return;
+      case 'open-analytics-dream': snOpenHub(id); snCloseAnalytics(); return;
+    }
+  });
+
+  // ── clique direito (e tecla de menu) ──
   document.addEventListener('contextmenu', function (e) {
     if (snCtxIsBlocked()) { snCtxClose(); return; }
     const t = e.target;
     if (!t || !t.closest) return;
-    // mantém o menu nativo em campos de texto
-    if (t.closest('input, textarea, select')) return;
+    if (t.closest('input, textarea, select')) return;      // mantém o menu nativo nos campos
+    const card = t.closest('.sn-card[data-sn-id]');
+    if (!card) { snCtxClose(); return; }
+    e.preventDefault();
+    const mouse = e.button === 2 || e.ctrlKey || e.pointerType === 'mouse';
+    if (snCtxEl && (!mouse || Date.now() < snSuppressClickUntil)) return;   // já aberto (toque longo / teclado)
+    let x = e.clientX, y = e.clientY;
+    if (!x && !y) { const p = snCtxPointFromEl(card); x = p.x; y = p.y; }
+    snCtxOpenForCard(card.dataset.snId, x, y,
+      { auto: mouse, focusFirst: !mouse && document.activeElement === card, returnFocus: card });
+  });
 
-    const card = t.closest('.sn-card');
-    if (card) {
-      const m = /snOpenHub\((.+?)\)/.exec(card.getAttribute('onclick') || '');
-      if (m) {
-        e.preventDefault();
-        const s = S.sonhos.find(function (x) { return String(x.id) === m[1]; });
-        snCtxShow(e.clientX, e.clientY, snCtxCardActions(m[1]), s ? s.titulo : '');
-        return;
-      }
+  // ── teclado no card: Enter/Espaço abrem; tecla de menu / Shift+F10 = ações rápidas ──
+  document.addEventListener('keydown', function (e) {
+    const card = e.target && e.target.classList && e.target.classList.contains('sn-card') ? e.target : null;
+    if (!card) return;
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); snOpenHub(card.dataset.snId); }
+    else if (e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey)) {
+      e.preventDefault();
+      const p = snCtxPointFromEl(card);
+      snCtxOpenForCard(card.dataset.snId, p.x, p.y, { auto: false, focusFirst: true, returnFocus: card });
     }
-
-    snCtxClose();
   });
 
-  // fecha ao clicar fora, rolar, redimensionar ou apertar Esc
-  document.addEventListener('mousedown', function (e) {
-    if (snCtxEl && !snCtxEl.contains(e.target)) snCtxClose();
+  // ── toque longo (celular) ──
+  let lpTimer = null, lpX = 0, lpY = 0;
+  document.addEventListener('pointerdown', function (e) {
+    if (snCtxEl && !snCtxEl.contains(e.target)) snCtxClose();   // clique/toque fora fecha
+    if (e.pointerType !== 'touch') return;
+    const card = e.target.closest && e.target.closest('.sn-card[data-sn-id]');
+    if (!card || snCtxIsBlocked()) return;
+    lpX = e.clientX; lpY = e.clientY;
+    clearTimeout(lpTimer);
+    lpTimer = setTimeout(function () {
+      lpTimer = null;
+      snSuppressClickUntil = Date.now() + 700;
+      snCtxOpenForCard(card.dataset.snId, lpX, lpY, { auto: false });
+      if (navigator.vibrate) navigator.vibrate(10);
+    }, 550);
   });
-  // saiu da área do popup → fecha sozinho
+  ['pointerup', 'pointercancel'].forEach(function (ev) {
+    document.addEventListener(ev, function () { clearTimeout(lpTimer); lpTimer = null; });
+  });
+  document.addEventListener('pointermove', function (e) {
+    if (lpTimer && (Math.abs(e.clientX - lpX) > 10 || Math.abs(e.clientY - lpY) > 10)) {
+      clearTimeout(lpTimer); lpTimer = null;
+    }
+  });
+
+  // ── saiu da área do popup (aberto por mouse) → fecha sozinho ──
   document.addEventListener('mousemove', function (e) {
-    if (!snCtxEl) return;
+    if (!snCtxEl || !snCtxAuto) return;
     const r = snCtxEl.getBoundingClientRect();
     const inside = e.clientX >= r.left && e.clientX <= r.right &&
                    e.clientY >= r.top  && e.clientY <= r.bottom;
     if (!inside) snCtxClose();
   });
-  document.addEventListener('mouseleave', snCtxClose);
-  window.addEventListener('scroll', snCtxClose, true);
-  window.addEventListener('resize', snCtxClose);
-  window.addEventListener('blur', snCtxClose);
+  document.addEventListener('mouseleave', function () { if (snCtxAuto) snCtxClose(); });
+  window.addEventListener('scroll', snCtxCloseSoft, true);
+  window.addEventListener('resize', snCtxCloseSoft);
+  window.addEventListener('blur', snCtxCloseSoft);
 }
 
 (function initSonhosPage() {
@@ -1434,7 +1528,7 @@ function snInitContextMenu() {
 
   load();
   renderSonhos();
-  snInitContextMenu();
+  snInitInteractions();
 
   const pendingDreamId = sessionStorage.getItem(DREAM_OPEN_KEY);
   if (pendingDreamId) {
@@ -1446,12 +1540,12 @@ function snInitContextMenu() {
   }
 
   document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape") {
-      snCtxClose();
-      snCloseModal();
-      hubDrawerClose();
-      snCloseAnalytics();
-    }
+    if (e.key !== "Escape") return;
+    if (snCtxEl) { snCtxClose(true); return; }
+    const drawer = document.getElementById('hub-drawer');
+    if (drawer && drawer.classList.contains('open')) { hubDrawerRequestClose(); return; }
+    snCloseModal();
+    snCloseAnalytics();
   });
 }());
 
@@ -1465,7 +1559,6 @@ Object.assign(globalThis, {
   snModalToggleMeta: snModalToggleMeta,
   snModalDelMeta: snModalDelMeta,
   snSalvar: snSalvar,
-  snDeletar: snDeletar,
   snOpenHub: snOpenHub,
   snHubClose: snHubClose,
   snOpenAnalytics: snOpenAnalytics,
@@ -1474,6 +1567,7 @@ Object.assign(globalThis, {
   snToggleMeta: snToggleMeta,
   hubDrawerOpen: hubDrawerOpen,
   hubDrawerClose: hubDrawerClose,
+  hubDrawerRequestClose: hubDrawerRequestClose,
   hubDrawerRemoveImg: hubDrawerRemoveImg,
   hubDrawerHandleImg: hubDrawerHandleImg,
   hubDrawerApplyWebImg: hubDrawerApplyWebImg,
