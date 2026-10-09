@@ -924,7 +924,7 @@ textarea.inp { resize: vertical; min-height: 70px; }
 
 
     /* ------------------------------------------
-     HUB DE SONHO ? redesign imersivo
+     HUB DE SONHO · redesign imersivo
   ------------------------------------------ */
 
   #sn-hub {
@@ -1100,7 +1100,7 @@ textarea.inp { resize: vertical; min-height: 70px; }
   .hub-hero-chip.success { color: var(--accent3); border-color: rgba(94,196,168,.25); background: rgba(94,196,168,.07); }
 
   /* -- EDIT PANEL (inline, within hub) -- */
-  /* -- DRAWER DE EDI??O ------------------------------------------------ */
+  /* -- DRAWER DE EDIÇÃO ------------------------------------------------ */
   #hub-drawer-bd {
     position:fixed;inset:0;z-index:580;
     background:rgba(2,1,12,.72);
@@ -1116,7 +1116,7 @@ textarea.inp { resize: vertical; min-height: 70px; }
     border-left: 1px solid rgba(255,255,255,.08);
     box-shadow: -40px 0 120px rgba(0,0,0,.8), -1px 0 0 rgba(124,111,205,.12);
     display: flex; flex-direction: column;
-    /* overflow DEVE ser visible ou clip, nunca hidden ? hidden corta o footer */
+    /* overflow DEVE ser visible ou clip, nunca hidden · hidden corta o footer */
     overflow: clip;
     transform: translateX(110%);
     transition: transform .42s cubic-bezier(.16,1,.3,1);
@@ -1130,7 +1130,7 @@ textarea.inp { resize: vertical; min-height: 70px; }
     opacity: .85;
   }
 
-  /* Cabe?alho */
+  /* Cabeçalho */
   .hd-head {
     display: flex; align-items: center; gap: 12px;
     padding: 20px 24px 17px;
@@ -1211,7 +1211,7 @@ textarea.inp { resize: vertical; min-height: 70px; }
   .hd-cover-zone:hover .hd-cover-hint-icon { opacity: .9; }
   .hd-cover-zone:hover .hd-cover-hint-txt  { opacity: 1; }
 
-  /* Remo??o de imagem */
+  /* Remoção de imagem */
   .hd-cover-remove {
     position: absolute; top: 8px; right: 8px; z-index: 2;
     background: rgba(0,0,0,.6); border: 1px solid rgba(255,255,255,.12);
@@ -1265,7 +1265,7 @@ textarea.inp { resize: vertical; min-height: 70px; }
   .hd-emoji-field { width: 64px !important; flex: none !important; }
   .hd-emoji-inp { text-align: center; font-size: 24px; padding: 7px 4px; height: 46px; line-height: 1; }
 
-  /* Rodap? fixo ? flex-shrink:0 e padding-bottom com env() para iPhones */
+  /* Rodapé fixo · flex-shrink:0 e padding-bottom com env() para iPhones */
   .hd-footer {
     flex-shrink: 0;
     padding: 16px 24px calc(18px + env(safe-area-inset-bottom, 0px));
@@ -1583,7 +1583,7 @@ textarea.inp { resize: vertical; min-height: 70px; }
   .hub-tip-title{font-size:13.5px;font-weight:700;color:var(--text);line-height:1.3;margin-bottom:7px;}
   .hub-tip-desc{font-size:11.5px;color:var(--muted);line-height:1.65;flex:1;}
 
-  /* -- Inten??o & Nota display -- */
+  /* -- Intenção & Nota display -- */
   .hub-intencao-display {
     font-size: 13px; line-height: 1.6; color: var(--text);
     font-family: var(--font-ui); padding: 12px 14px;
@@ -1595,7 +1595,7 @@ textarea.inp { resize: vertical; min-height: 70px; }
     word-break: break-word;
   }
   .hub-intencao-display:empty::before {
-    content: 'Nenhuma inten??o definida para hoje.';
+    content: 'Nenhuma intenção definida para hoje.';
     color: rgba(122,117,144,.4); font-style: italic; font-size: 12px;
   }
   .hub-nota-display {
@@ -1939,4 +1939,22 @@ body.sn-drawer-lock { overflow: hidden !important; }
 .tk-quick-action-btn.danger:hover {
   background: rgba(224,107,139,.14);
   border-color: rgba(224,107,139,.34);
+}
+
+
+/* ── Acessibilidade / toque dos cards ─────────────────────────────────── */
+.sn-card:focus-visible {
+  outline: 2px solid rgba(200,169,110,.75);
+  outline-offset: 3px;
+}
+.sn-action-btn.more-btn {
+  font-size: 18px; line-height: 1; letter-spacing: 1px; padding-bottom: 4px;
+}
+.sn-action-btn:focus-visible {
+  outline: 2px solid rgba(200,169,110,.75); outline-offset: 1px;
+  color: var(--text); background: rgba(255,255,255,.07);
+}
+@media (hover: none) {
+  .sn-card { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+  .sn-action-btn { width: 36px; height: 36px; }
 }
