@@ -1,4 +1,4 @@
-﻿"use strict";
+"use strict";
 
 const DATA_KEY = "sonhosHub";
 const DREAM_OPEN_KEY = "soter_open_dream_id";
@@ -228,6 +228,7 @@ function snHubClose() {
   if (header) header.style.zIndex = '';
   hubSonhoId  = null;
   hubEditOpen = false;
+  hubLockScroll(false);
 }
 
 // ── Drawer de edição ──────────────────────────────────────────────────────
@@ -255,12 +256,23 @@ function hubDrawerOpen() {
   document.getElementById('hd-img-web').value = s.img || '';
   document.getElementById('hub-drawer').classList.add('open');
   document.getElementById('hub-drawer-bd').classList.add('open');
-  setTimeout(() => document.getElementById('hd-titulo').focus(), 180);
+  hubLockScroll(true);
+  const hdBody = document.querySelector('#hub-drawer .hd-body'); if (hdBody) hdBody.scrollTop = 0;
+  setTimeout(() => document.getElementById('hd-titulo').focus({ preventScroll: true }), 180);
 }
 
 function hubDrawerClose() {
   document.getElementById('hub-drawer').classList.remove('open');
   document.getElementById('hub-drawer-bd').classList.remove('open');
+  hubLockScroll(false);
+}
+
+// Com o drawer aberto, só o .hd-body rola; hub e página ficam travados.
+function hubLockScroll(lock) {
+  const hub = document.getElementById('sn-hub');
+  if (hub) hub.classList.toggle('drawer-open', !!lock);
+  document.documentElement.classList.toggle('sn-drawer-lock', !!lock);
+  document.body.classList.toggle('sn-drawer-lock', !!lock);
 }
 
 function hubDrawerRemoveImg() {
@@ -1288,6 +1300,117 @@ function sanRender() {
   }
 }
 
+
+// ══════════════════════════════════════════════════════════════════════════
+// MENU DE CONTEXTO (botão direito)
+// ══════════════════════════════════════════════════════════════════════════
+let snCtxEl = null;
+
+function snCtxClose() {
+  if (snCtxEl) { snCtxEl.remove(); snCtxEl = null; }
+}
+
+function snCtxShow(x, y, items, title) {
+  snCtxClose();
+  const el = document.createElement('div');
+  el.className = 'sn-ctx';
+  el.setAttribute('role', 'menu');
+  el.innerHTML =
+    (title ? '<div class="sn-ctx-title">' + title + '</div>' : '') +
+    items.map(function (it, i) {
+      if (it.sep) return '<div class="sn-ctx-sep"></div>';
+      return '<button type="button" role="menuitem" class="sn-ctx-item' + (it.danger ? ' danger' : '') + '" data-i="' + i + '">' +
+        '<span class="sn-ctx-ico">' + it.icon + '</span><span>' + it.label + '</span></button>';
+    }).join('');
+  document.body.appendChild(el);
+  snCtxEl = el;
+
+  el.addEventListener('click', function (e) {
+    const btn = e.target.closest('.sn-ctx-item'); if (!btn) return;
+    const it = items[Number(btn.dataset.i)];
+    snCtxClose();
+    if (it && it.action) it.action();
+  });
+  el.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+
+  // posiciona dentro da viewport
+  const r = el.getBoundingClientRect();
+  const nx = Math.max(8, Math.min(x, window.innerWidth  - r.width  - 8));
+  const ny = Math.max(8, Math.min(y, window.innerHeight - r.height - 8));
+  el.style.left = nx + 'px';
+  el.style.top  = ny + 'px';
+  requestAnimationFrame(function () { el.classList.add('show'); });
+}
+
+function snCtxCardActions(id) {
+  const s = S.sonhos.find(function (x) { return String(x.id) === String(id); });
+  if (!s) return [];
+  return [
+    { icon: '👁️', label: 'Abrir sonho', action: function () { snOpenHub(s.id); } },
+    { icon: '✎',  label: 'Editar', action: function () { snOpenModal(s.id); } },
+    { icon: s.realizado ? '↩️' : '✅', label: s.realizado ? 'Marcar como pendente' : 'Marcar como realizado',
+      action: function () {
+        s.realizado = !s.realizado;
+        s.realizadoAt = s.realizado ? new Date().toISOString() : '';
+        if (s.realizado) addNotif('Sonho realizado! 🎉', '"' + s.titulo + '"', 'sonho');
+        save(); renderSonhos();
+      } },
+    { sep: true },
+    { icon: '✨', label: 'Novo sonho', action: function () { snOpenModal(); } },
+    { sep: true },
+    { icon: '🗑️', label: 'Excluir', danger: true,
+      action: function () {
+        if (!confirm('Excluir "' + s.titulo + '"? Esta ação não pode ser desfeita.')) return;
+        S.sonhos = S.sonhos.filter(function (x) { return String(x.id) !== String(s.id); });
+        save(); renderSonhos();
+      } }
+  ];
+}
+
+function snCtxIsBlocked() {
+  const open = function (id) { const el = document.getElementById(id); return el && el.classList.contains('open'); };
+  return open('sn-hub') || open('sn-analytics') || open('sn-modal');
+}
+
+function snInitContextMenu() {
+  document.addEventListener('contextmenu', function (e) {
+    if (snCtxIsBlocked()) { snCtxClose(); return; }
+    const t = e.target;
+    if (!t || !t.closest) return;
+    // mantém o menu nativo em campos de texto
+    if (t.closest('input, textarea, select')) return;
+
+    const card = t.closest('.sn-card');
+    if (card) {
+      const m = /snOpenHub\((.+?)\)/.exec(card.getAttribute('onclick') || '');
+      if (m) {
+        e.preventDefault();
+        const s = S.sonhos.find(function (x) { return String(x.id) === m[1]; });
+        snCtxShow(e.clientX, e.clientY, snCtxCardActions(m[1]), s ? (s.icon || '🌙') + ' ' + s.titulo : '');
+        return;
+      }
+    }
+
+    // fora dos cards (dentro da área da página de sonhos): botão de adicionar
+    if (t.closest('#page-sonhos, .sonhos-content')) {
+      e.preventDefault();
+      snCtxShow(e.clientX, e.clientY, [
+        { icon: '✨', label: 'Novo sonho', action: function () { snOpenModal(); } }
+      ]);
+      return;
+    }
+    snCtxClose();
+  });
+
+  // fecha ao clicar fora, rolar, redimensionar ou apertar Esc
+  document.addEventListener('mousedown', function (e) {
+    if (snCtxEl && !snCtxEl.contains(e.target)) snCtxClose();
+  });
+  window.addEventListener('scroll', snCtxClose, true);
+  window.addEventListener('resize', snCtxClose);
+  window.addEventListener('blur', snCtxClose);
+}
+
 (function initSonhosPage() {
   const app = getAppState();
   if (app && app.data) {
@@ -1298,6 +1421,7 @@ function sanRender() {
 
   load();
   renderSonhos();
+  snInitContextMenu();
 
   const pendingDreamId = sessionStorage.getItem(DREAM_OPEN_KEY);
   if (pendingDreamId) {
@@ -1310,6 +1434,7 @@ function sanRender() {
 
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape") {
+      snCtxClose();
       snCloseModal();
       hubDrawerClose();
       snCloseAnalytics();
@@ -1349,6 +1474,3 @@ Object.assign(globalThis, {
   hubDelMeta: hubDelMeta,
   hubToggleRealizado: hubToggleRealizado
 });
-
-
-
