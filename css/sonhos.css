@@ -1857,3 +1857,44 @@ textarea.inp { resize: vertical; min-height: 70px; }
     }
   }
 
+
+
+/* ── Trava de scroll com o drawer de edição aberto ─────────────────────
+   Só o .hd-body rola; hub e página ficam parados. */
+html.sn-drawer-lock,
+body.sn-drawer-lock { overflow: hidden !important; }
+#sn-hub.drawer-open { overflow: hidden !important; }
+#hub-drawer { overscroll-behavior: contain; }
+#hub-drawer .hd-body { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+#hub-drawer-bd { touch-action: none; overscroll-behavior: contain; }
+
+/* ── Menu de contexto (botão direito) ─────────────────────────────────── */
+.sn-ctx {
+  position: fixed; z-index: 650; min-width: 210px; max-width: 280px;
+  padding: 6px;
+  background: linear-gradient(180deg, #0f0d26 0%, #09081c 100%);
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 14px;
+  box-shadow: 0 24px 60px rgba(0,0,0,.7), 0 0 0 1px rgba(124,111,205,.12);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  opacity: 0; transform: scale(.96) translateY(-4px); transform-origin: top left;
+  transition: opacity .14s ease, transform .18s cubic-bezier(.22,1,.36,1);
+}
+.sn-ctx.show { opacity: 1; transform: none; }
+.sn-ctx-title {
+  padding: 8px 10px 6px; font-family: var(--font-mono); font-size: 9px;
+  letter-spacing: 1.6px; text-transform: uppercase; color: var(--muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sn-ctx-sep { height: 1px; margin: 5px 6px; background: rgba(255,255,255,.07); }
+.sn-ctx-item {
+  width: 100%; display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px; border: 0; border-radius: 9px; cursor: pointer;
+  background: transparent; color: var(--text); text-align: left;
+  font-family: var(--font-ui); font-size: 13px;
+  transition: background .15s, color .15s;
+}
+.sn-ctx-item:hover, .sn-ctx-item:focus-visible { background: rgba(200,169,110,.12); color: #f0ead8; outline: none; }
+.sn-ctx-item.danger { color: var(--accent4); }
+.sn-ctx-item.danger:hover { background: rgba(224,107,139,.14); }
+.sn-ctx-ico { width: 20px; text-align: center; font-size: 14px; flex-shrink: 0; }
