@@ -1310,55 +1310,67 @@ function snCtxClose() {
   if (snCtxEl) { snCtxEl.remove(); snCtxEl = null; }
 }
 
+function snCtxEsc(t) {
+  return String(t == null ? '' : t).replace(/[&<>"']/g, function (ch) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+  });
+}
+
 function snCtxShow(x, y, items, title) {
   snCtxClose();
   const el = document.createElement('div');
-  el.className = 'sn-ctx';
+  el.className = 'tk-quick-actions open';
   el.setAttribute('role', 'menu');
   el.innerHTML =
-    (title ? '<div class="sn-ctx-title">' + title + '</div>' : '') +
+    '<div class="tk-quick-actions-head">' +
+      '<div class="tk-quick-actions-kicker">Ações rápidas</div>' +
+      '<div class="tk-quick-actions-title">' + snCtxEsc(title) + '</div>' +
+    '</div>' +
+    '<div class="tk-quick-actions-list">' +
     items.map(function (it, i) {
-      if (it.sep) return '<div class="sn-ctx-sep"></div>';
-      return '<button type="button" role="menuitem" class="sn-ctx-item' + (it.danger ? ' danger' : '') + '" data-i="' + i + '">' +
-        '<span class="sn-ctx-ico">' + it.icon + '</span><span>' + it.label + '</span></button>';
-    }).join('');
+      return '<button type="button" role="menuitem" class="tk-quick-action-btn' + (it.danger ? ' danger' : '') + '" data-i="' + i + '">' +
+        snCtxEsc(it.label) + '</button>';
+    }).join('') +
+    '</div>';
   document.body.appendChild(el);
   snCtxEl = el;
 
   el.addEventListener('click', function (e) {
-    const btn = e.target.closest('.sn-ctx-item'); if (!btn) return;
+    const btn = e.target.closest('.tk-quick-action-btn'); if (!btn) return;
     const it = items[Number(btn.dataset.i)];
     snCtxClose();
     if (it && it.action) it.action();
   });
   el.addEventListener('contextmenu', function (e) { e.preventDefault(); });
 
-  // posiciona dentro da viewport
+  // posiciona dentro da viewport mantendo o cursor SEMPRE dentro do menu
   const r = el.getBoundingClientRect();
-  const nx = Math.max(8, Math.min(x, window.innerWidth  - r.width  - 8));
-  const ny = Math.max(8, Math.min(y, window.innerHeight - r.height - 8));
+  const pad = 8, inset = 10;
+  let nx = x - inset, ny = y - inset;
+  nx = Math.max(pad, Math.min(nx, window.innerWidth  - r.width  - pad));
+  ny = Math.max(pad, Math.min(ny, window.innerHeight - r.height - pad));
+  if (x < nx + 2) nx = x - 2;
+  if (x > nx + r.width - 2) nx = x - r.width + 2;
+  if (y < ny + 2) ny = y - 2;
+  if (y > ny + r.height - 2) ny = y - r.height + 2;
   el.style.left = nx + 'px';
   el.style.top  = ny + 'px';
-  requestAnimationFrame(function () { el.classList.add('show'); });
 }
 
 function snCtxCardActions(id) {
   const s = S.sonhos.find(function (x) { return String(x.id) === String(id); });
   if (!s) return [];
   return [
-    { icon: '👁️', label: 'Abrir sonho', action: function () { snOpenHub(s.id); } },
-    { icon: '✎',  label: 'Editar', action: function () { snOpenModal(s.id); } },
-    { icon: s.realizado ? '↩️' : '✅', label: s.realizado ? 'Marcar como pendente' : 'Marcar como realizado',
+    { label: 'Abrir sonho', action: function () { snOpenHub(s.id); } },
+    { label: 'Editar', action: function () { snOpenModal(s.id); } },
+    { label: s.realizado ? 'Marcar como pendente' : 'Marcar como realizado',
       action: function () {
         s.realizado = !s.realizado;
         s.realizadoAt = s.realizado ? new Date().toISOString() : '';
         if (s.realizado) addNotif('Sonho realizado! 🎉', '"' + s.titulo + '"', 'sonho');
         save(); renderSonhos();
       } },
-    { sep: true },
-    { icon: '✨', label: 'Novo sonho', action: function () { snOpenModal(); } },
-    { sep: true },
-    { icon: '🗑️', label: 'Excluir', danger: true,
+    { label: 'Excluir', danger: true,
       action: function () {
         if (!confirm('Excluir "' + s.titulo + '"? Esta ação não pode ser desfeita.')) return;
         S.sonhos = S.sonhos.filter(function (x) { return String(x.id) !== String(s.id); });
@@ -1386,19 +1398,11 @@ function snInitContextMenu() {
       if (m) {
         e.preventDefault();
         const s = S.sonhos.find(function (x) { return String(x.id) === m[1]; });
-        snCtxShow(e.clientX, e.clientY, snCtxCardActions(m[1]), s ? (s.icon || '🌙') + ' ' + s.titulo : '');
+        snCtxShow(e.clientX, e.clientY, snCtxCardActions(m[1]), s ? s.titulo : '');
         return;
       }
     }
 
-    // fora dos cards (dentro da área da página de sonhos): botão de adicionar
-    if (t.closest('#page-sonhos, .sonhos-content')) {
-      e.preventDefault();
-      snCtxShow(e.clientX, e.clientY, [
-        { icon: '✨', label: 'Novo sonho', action: function () { snOpenModal(); } }
-      ]);
-      return;
-    }
     snCtxClose();
   });
 
@@ -1406,6 +1410,15 @@ function snInitContextMenu() {
   document.addEventListener('mousedown', function (e) {
     if (snCtxEl && !snCtxEl.contains(e.target)) snCtxClose();
   });
+  // saiu da área do popup → fecha sozinho
+  document.addEventListener('mousemove', function (e) {
+    if (!snCtxEl) return;
+    const r = snCtxEl.getBoundingClientRect();
+    const inside = e.clientX >= r.left && e.clientX <= r.right &&
+                   e.clientY >= r.top  && e.clientY <= r.bottom;
+    if (!inside) snCtxClose();
+  });
+  document.addEventListener('mouseleave', snCtxClose);
   window.addEventListener('scroll', snCtxClose, true);
   window.addEventListener('resize', snCtxClose);
   window.addEventListener('blur', snCtxClose);
