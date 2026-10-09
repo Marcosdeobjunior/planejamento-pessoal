@@ -57,7 +57,7 @@
     </div>
 
     <!-- -- DRAWER DE EDIÇÃO -- -->
-    <div id="hub-drawer-bd" onclick="hubDrawerClose()"></div>
+    <div id="hub-drawer-bd" onclick="hubDrawerRequestClose()"></div>
     <div id="hub-drawer">
       <div class="hd-stripe"></div>
       <div class="hd-head">
@@ -66,7 +66,7 @@
           <div class="hd-head-title" id="hd-head-title">Editar sonho</div>
           <div class="hd-head-sub">Alterações salvas ao clicar em salvar</div>
         </div>
-        <button class="hd-close-btn" onclick="hubDrawerClose()" title="Fechar">✕</button>
+        <button class="hd-close-btn" onclick="hubDrawerRequestClose()" title="Fechar">✕</button>
       </div>
       <div class="hd-body">
         <div class="hd-cover-zone" id="hd-cover-zone" onclick="document.getElementById('hd-img-input').click()">
@@ -175,7 +175,7 @@
       <div class="hd-footer">
         <button class="hd-save-btn" onclick="hubDrawerSalvar()">💾 Salvar alterações</button>
         <div class="hd-footer-row">
-          <button class="hd-cancel-btn" onclick="hubDrawerClose()">Cancelar</button>
+          <button class="hd-cancel-btn" onclick="hubDrawerRequestClose()">Cancelar</button>
           <button class="hd-del-btn"    onclick="hubDrawerDeletar()">🗑️ Excluir sonho</button>
         </div>
       </div>
@@ -230,7 +230,7 @@
         <!-- Progress ring -->
         <div class="hub-section">
           <div class="hub-section-hd">
-            <div class="hub-section-hd-icon">?</div>
+            <div class="hub-section-hd-icon">📈</div>
             <span class="hub-section-label">Progresso</span>
           </div>
           <div class="hub-ring-wrap">
@@ -335,7 +335,7 @@
           <span><i class="hub-fin-dot acum"></i>Acumulado</span>
         </div>
         <div class="hub-fin-add">
-          <input class="hub-meta-inp" id="hub-fin-mes" type="month" title="M?s do aporte">
+          <input class="hub-meta-inp" id="hub-fin-mes" type="month" title="Mês do aporte">
           <input class="hub-meta-inp" id="hub-fin-valor" type="number" min="0" step="0.01" placeholder="Valor aportado">
           <button class="btn btn-primary" onclick="hubAddDeposito()">+ Registrar</button>
         </div>
@@ -369,7 +369,7 @@
             <span>Voltar</span>
           </button>
         </div>
-        <div class="page-subtitle" id="san-header-sub">Vis?o geral de todos os seus sonhos</div>
+        <div class="page-subtitle" id="san-header-sub">Visão geral de todos os seus sonhos</div>
       </div>
 
       <div class="san-kpi-row" id="san-kpi-row"></div>
@@ -513,8 +513,7 @@
         <div style="display:flex;gap:8px">
           <button class="btn btn-primary" style="flex:1" onclick="snSalvar()">💾 &nbsp;Salvar</button>
           <button class="btn btn-ghost" onclick="snCloseModal()">Cancelar</button>
-          <button class="btn btn-danger" id="sn-del-btn" onclick="snDeletar()" style="display:none">🗑️</button>
-        </div>
+          </div>
       </div>
     </div>
   </div>
