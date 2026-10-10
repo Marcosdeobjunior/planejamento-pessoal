@@ -589,55 +589,7 @@ function hubRenderFinance(s) {
     }
   }
 
-  const chart = document.getElementById('hub-fin-chart');
-  if (chart) {
-    const w = 420, h = 150, pl = 10, pr = 10, pt = 14, pb = 22;
-    if (!chart.getAttribute('viewBox')) chart.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
-    const hist = info.hist.slice(-12);
-    if (!hist.length) {
-      chart.innerHTML = `<text x="${w/2}" y="${h/2}" text-anchor="middle" fill="rgba(122,117,144,.55)" font-family="var(--font-mono)" font-size="10">Sem depósitos no histórico</text>`;
-    } else {
-      // acumulado considera TODO o histórico (não só os 12 últimos meses exibidos)
-      const prior = info.hist.slice(0, info.hist.length - hist.length).reduce(function (a, x) { return a + x.valor; }, 0);
-      let acc = info.base + prior;
-      const aporteVals = hist.map(function (x) { return x.valor; });
-      const acumVals = hist.map(function (x) { acc += x.valor; return acc; });
-      const goal = info.custo > 0 ? info.custo : 0;
-      const maxV = Math.max(...aporteVals, ...acumVals, goal, 1);
-      const innerW = w - pl - pr, innerH = h - pt - pb;
-      const band = innerW / hist.length;
-      const barW = Math.min(34, band * 0.55);
-      const cx = function (i) { return pl + band * i + band / 2; };
-      const toY = function (v) { return pt + innerH - (v / maxV) * innerH; };
-      const short = function (v) { return v >= 1000 ? (Math.round(v / 100) / 10).toLocaleString('pt-BR') + 'k' : String(Math.round(v)); };
-      const mesLbl = function (ym) { const p = String(ym).split('-'); return p.length >= 2 ? p[1] + '/' + p[0].slice(2) : ym; };
-
-      let svg = `<line x1="${pl}" y1="${toY(0)}" x2="${w - pr}" y2="${toY(0)}" stroke="rgba(122,117,144,.35)" stroke-width="1"/>`;
-      if (goal > 0) {
-        svg += `<line x1="${pl}" y1="${toY(goal)}" x2="${w - pr}" y2="${toY(goal)}" stroke="var(--accent3)" stroke-width="1" stroke-dasharray="4 4" opacity=".7"/>` +
-               `<text x="${w - pr}" y="${toY(goal) - 3}" text-anchor="end" fill="var(--accent3)" font-family="var(--font-mono)" font-size="8" opacity=".85">meta ${short(goal)}</text>`;
-      }
-      // barras = aporte de cada mês
-      hist.forEach(function (x, i) {
-        const y = toY(x.valor), bh = Math.max(2, toY(0) - y);
-        svg += `<rect x="${cx(i) - barW / 2}" y="${toY(0) - bh}" width="${barW}" height="${bh}" rx="3" fill="var(--accent1)" opacity=".55"><title>${snEsc(x.mes)}: ${fmt(x.valor)}</title></rect>`;
-      });
-      // linha = acumulado
-      if (hist.length > 1) {
-        svg += `<polyline points="${acumVals.map(function (v, i) { return cx(i) + ',' + toY(v); }).join(' ')}" fill="none" stroke="var(--accent3)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
-      }
-      acumVals.forEach(function (v, i) {
-        svg += `<circle cx="${cx(i)}" cy="${toY(v)}" r="3.5" fill="var(--accent3)"><title>Acumulado: ${fmt(v)}</title></circle>`;
-      });
-      // rótulos de mês
-      const step = hist.length > 8 ? 2 : 1;
-      hist.forEach(function (x, i) {
-        if (i % step) return;
-        svg += `<text x="${cx(i)}" y="${h - 7}" text-anchor="middle" fill="rgba(122,117,144,.75)" font-family="var(--font-mono)" font-size="8">${mesLbl(x.mes)}</text>`;
-      });
-      chart.innerHTML = svg;
-    }
-  }
+  hubDrawFinChart(s, info);
 
   const list = document.getElementById('hub-fin-list');
   if (list) {
@@ -653,6 +605,172 @@ function hubRenderFinance(s) {
 
   const monthInp = document.getElementById('hub-fin-mes');
   if (monthInp && !monthInp.value) monthInp.value = nowYm();
+}
+
+// ── Gráfico financeiro (SVG medido em px: 1 unidade do viewBox = 1 px) ─────
+let hubFinChartW = 0;
+let hubFinChartRO = null;
+
+function hubFinNiceMax(v) {
+  if (v <= 0) return 1;
+  const pow = Math.pow(10, Math.floor(Math.log10(v)));
+  const n = v / pow;
+  const step = n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10;
+  return step * pow;
+}
+function hubFinCompact(v) {
+  const a = Math.abs(v);
+  const f = function (x, suf) { return x.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + suf; };
+  if (a >= 1e6) return f(v / 1e6, ' mi');
+  if (a >= 1e3) return f(v / 1e3, ' mil');
+  return Math.round(v).toLocaleString('pt-BR');
+}
+function hubFinMonthIdx(ym) { const p = String(ym).split('-'); return (+p[0]) * 12 + (+p[1] - 1); }
+function hubFinIdxMonth(i) { return Math.floor(i / 12) + '-' + String((i % 12) + 1).padStart(2, '0'); }
+function hubFinMonthLbl(ym) {
+  const n = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  const p = String(ym).split('-');
+  return (n[(+p[1]) - 1] || p[1]) + '/' + String(p[0]).slice(2);
+}
+
+function hubDrawFinChart(s, info) {
+  const chart = document.getElementById('hub-fin-chart'); if (!chart) return;
+  info = info || buildFinanceInfo(s);
+
+  // observa mudança de largura (hub abrindo, resize, rotação do celular)
+  if (!hubFinChartRO && typeof ResizeObserver !== 'undefined') {
+    hubFinChartRO = new ResizeObserver(function () {
+      const el = document.getElementById('hub-fin-chart');
+      const cur = hubSonhoId && snFind(hubSonhoId);
+      if (!el || !cur) return;
+      const w = Math.round(el.getBoundingClientRect().width);
+      if (w && Math.abs(w - hubFinChartW) > 1) hubDrawFinChart(cur);
+    });
+    hubFinChartRO.observe(chart);
+  }
+
+  const rect = chart.getBoundingClientRect();
+  const W = Math.round(rect.width) || (chart.parentNode && chart.parentNode.clientWidth) || 560;
+  const H = Math.round(rect.height) || 220;
+  hubFinChartW = W;
+  chart.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  chart.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+  chart.setAttribute('role', 'img');
+
+  const fmt = function (v) { return 'R$ ' + num(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+
+  // legenda: item "Meta" só quando há custo definido
+  const legend = document.querySelector('#hub-finance-section .hub-fin-legend');
+  if (legend) {
+    let g = legend.querySelector('.hub-fin-legend-goal');
+    if (info.custo > 0 && !g) {
+      g = document.createElement('span');
+      g.className = 'hub-fin-legend-goal';
+      g.innerHTML = '<span class="hub-fin-dot goal"></span>Meta';
+      legend.appendChild(g);
+    } else if (!(info.custo > 0) && g) g.remove();
+  }
+
+  if (!info.hist.length) {
+    chart.setAttribute('aria-label', 'Sem depósitos no histórico');
+    chart.innerHTML =
+      '<text class="hfc-empty-t" x="' + (W / 2) + '" y="' + (H / 2 - 4) + '" text-anchor="middle">Sem depósitos no histórico</text>' +
+      '<text class="hfc-empty-s" x="' + (W / 2) + '" y="' + (H / 2 + 14) + '" text-anchor="middle">Registre um aporte abaixo para ver a evolução</text>';
+    return;
+  }
+
+  // 1) agrupa depósitos por mês e monta uma linha do tempo contínua (meses sem aporte = 0)
+  const byMonth = {};
+  info.hist.forEach(function (d) { byMonth[d.mes] = (byMonth[d.mes] || 0) + d.valor; });
+  const keys = Object.keys(byMonth).sort();
+  const endI = hubFinMonthIdx(keys[keys.length - 1]);
+  const startI = Math.max(hubFinMonthIdx(keys[0]), endI - 11);
+  const months = [];
+  for (let i = startI; i <= endI; i++) { const ym = hubFinIdxMonth(i); months.push({ ym: ym, v: byMonth[ym] || 0 }); }
+  let acc = info.base;
+  keys.forEach(function (k) { if (hubFinMonthIdx(k) < startI) acc += byMonth[k]; });
+  const acum = months.map(function (m) { acc += m.v; return acc; });
+
+  // 2) escala
+  const goal = info.custo > 0 ? info.custo : 0;
+  const dataMax = Math.max.apply(null, acum.concat(months.map(function (m) { return m.v; }), [1]));
+  // meta só entra na escala se estiver perto; longe demais, ela achataria as barras
+  const goalInScale = goal > 0 && goal <= dataMax * 2;
+  const maxRaw = goalInScale ? Math.max(dataMax, goal) : dataMax;
+  const tickStep = hubFinNiceMax(maxRaw * 1.05 / 4);          // passo redondo: 1, 2, 2.5, 5 × 10^k
+  const ticks = Math.max(1, Math.ceil(maxRaw * 1.05 / tickStep));
+  const maxV = tickStep * ticks;
+  const labW = Math.max(30, hubFinCompact(maxV).length * 6 + 10);
+  const pl = labW, pr = 14, pt = 26, pb = 26;
+  const innerW = Math.max(40, W - pl - pr), innerH = Math.max(40, H - pt - pb);
+  const n = months.length, band = innerW / n;
+  const barW = Math.max(4, Math.min(44, band * 0.52));
+  const cx = function (i) { return pl + band * i + band / 2; };
+  const toY = function (v) { return pt + innerH - (Math.min(v, maxV) / maxV) * innerH; };
+  const y0 = toY(0);
+
+  let svg =
+    '<defs>' +
+    '<linearGradient id="hfc-bar-grad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="hfc-s-bar-a"/><stop offset="1" class="hfc-s-bar-b"/></linearGradient>' +
+    '<linearGradient id="hfc-area-grad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="hfc-s-area-a"/><stop offset="1" class="hfc-s-area-b"/></linearGradient>' +
+    '</defs>';
+
+  // grade + eixo Y
+  for (let t = 0; t <= ticks; t++) {
+    const v = (maxV / ticks) * t, y = toY(v);
+    svg += '<line class="' + (t === 0 ? 'hfc-axis' : 'hfc-grid') + '" x1="' + pl + '" y1="' + y + '" x2="' + (W - pr) + '" y2="' + y + '"/>' +
+           '<text class="hfc-tick" x="' + (pl - 6) + '" y="' + (y + 3) + '" text-anchor="end">' + hubFinCompact(v) + '</text>';
+  }
+
+  // meta (linha tracejada)
+  if (goalInScale) {
+    const gy = toY(goal);
+    svg += '<line class="hfc-goal" x1="' + pl + '" y1="' + gy + '" x2="' + (W - pr) + '" y2="' + gy + '"/>' +
+           '<text class="hfc-goal-lbl" x="' + (W - pr) + '" y="' + (gy - 5) + '" text-anchor="end">Meta ' + hubFinCompact(goal) + '</text>';
+  } else if (goal > 0) {
+    // meta acima da escala: etiqueta no topo com seta
+    const tx = W - pr;
+    svg += '<polygon class="hfc-goal-arrow" points="' + (tx - 4) + ',13 ' + tx + ',5 ' + (tx + 4) + ',13"/>' +
+           '<text class="hfc-goal-lbl" x="' + (tx - 9) + '" y="13" text-anchor="end">Meta ' + hubFinCompact(goal) + '</text>';
+  }
+
+  // área + linha do acumulado
+  const pts = acum.map(function (v, i) { return [cx(i), toY(v)]; });
+  if (n > 1) {
+    svg += '<path class="hfc-area" d="M' + pts[0][0] + ',' + y0 + ' L' + pts.map(function (q) { return q[0] + ',' + q[1]; }).join(' L') + ' L' + pts[n - 1][0] + ',' + y0 + ' Z"/>';
+  }
+
+  // barras de aporte (topo arredondado)
+  months.forEach(function (m, i) {
+    if (m.v <= 0) return;
+    const top = toY(m.v), bh = Math.max(3, y0 - top), r = Math.min(5, barW / 2, bh), x = cx(i) - barW / 2, y = y0 - bh;
+    svg += '<path class="hfc-bar" d="M' + x + ',' + y0 + ' L' + x + ',' + (y + r) + ' Q' + x + ',' + y + ' ' + (x + r) + ',' + y +
+           ' L' + (x + barW - r) + ',' + y + ' Q' + (x + barW) + ',' + y + ' ' + (x + barW) + ',' + (y + r) + ' L' + (x + barW) + ',' + y0 + ' Z">' +
+           '<title>' + snEsc(hubFinMonthLbl(m.ym)) + ': ' + fmt(m.v) + '</title></path>';
+  });
+
+  if (n > 1) svg += '<polyline class="hfc-line" points="' + pts.map(function (q) { return q[0] + ',' + q[1]; }).join(' ') + '"/>';
+  pts.forEach(function (q, i) {
+    svg += '<circle class="hfc-dot" cx="' + q[0] + '" cy="' + q[1] + '" r="' + (i === n - 1 ? 4.5 : 3.5) + '"><title>Acumulado em ' + snEsc(hubFinMonthLbl(months[i].ym)) + ': ' + fmt(acum[i]) + '</title></circle>';
+  });
+
+  // destaque do valor acumulado atual (último ponto), sempre dentro do quadro
+  const last = pts[n - 1], txt = 'R$ ' + hubFinCompact(acum[n - 1]);
+  const pw = txt.length * 6.2 + 14, ph = 18;
+  const px = Math.min(Math.max(last[0] - pw / 2, pl), W - pr - pw);
+  const py = Math.max(last[1] - ph - 9, (goal > 0 && !goalInScale) ? 20 : 4);   // não colide com a etiqueta da meta
+  svg += '<rect class="hfc-pill" x="' + px + '" y="' + py + '" width="' + pw + '" height="' + ph + '" rx="9"/>' +
+         '<text class="hfc-pill-t" x="' + (px + pw / 2) + '" y="' + (py + 12.5) + '" text-anchor="middle">' + txt + '</text>';
+
+  // rótulos de mês (pula alguns se não couberem)
+  const step = Math.max(1, Math.ceil(42 / band));
+  months.forEach(function (m, i) {
+    if ((n - 1 - i) % step) return;   // sempre rotula o último mês
+    svg += '<text class="hfc-month" x="' + cx(i) + '" y="' + (H - 8) + '" text-anchor="middle">' + hubFinMonthLbl(m.ym) + '</text>';
+  });
+
+  chart.setAttribute('aria-label', 'Evolução dos depósitos: acumulado de ' + fmt(acum[n - 1]) + (goal > 0 ? ' da meta de ' + fmt(goal) : ''));
+  chart.innerHTML = svg;
 }
 
 function hubAddDeposito() {
