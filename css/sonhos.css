@@ -1623,10 +1623,11 @@ textarea.inp { resize: vertical; min-height: 70px; }
   }
 
   .hub-fin-stat {
+    min-width: 0;
     border: 1px solid rgba(255,255,255,.07);
     border-radius: 10px;
     background: rgba(255,255,255,.025);
-    padding: 8px;
+    padding: 10px 12px;
   }
   .hub-fin-stat span {
     display: block;
@@ -1638,23 +1639,54 @@ textarea.inp { resize: vertical; min-height: 70px; }
     margin-bottom: 4px;
   }
   .hub-fin-stat strong {
-    font-size: 12px;
+    display: block;
+    font-size: 13px;
+    line-height: 1.35;
     font-family: var(--font-display);
     color: var(--text);
+    overflow-wrap: anywhere;
   }
 
+  /* O JS mede o elemento e usa viewBox = tamanho real em px (1 unidade = 1 px),
+     então nada é esticado ou achatado. Só a altura é definida aqui. */
   #hub-fin-chart {
+    display: block;
     width: 100%;
-    height: 140px;
-    border-radius: 10px;
+    height: 220px;
+    border-radius: 12px;
     border: 1px solid rgba(255,255,255,.06);
-    background: rgba(10,10,20,.6);
-    margin-bottom: 8px;
+    background: linear-gradient(180deg, rgba(16,15,32,.85), rgba(10,10,20,.6));
+    margin-bottom: 10px;
+    overflow: hidden;
   }
+  #hub-fin-chart text { font-family: var(--font-mono, monospace); }
+
+  .hfc-grid   { stroke: rgba(255,255,255,.06); stroke-width: 1; }
+  .hfc-axis   { stroke: rgba(122,117,144,.4);  stroke-width: 1; }
+  .hfc-tick   { fill: rgba(122,117,144,.75); font-size: 9px; }
+  .hfc-month  { fill: rgba(122,117,144,.85); font-size: 9px; }
+  .hfc-s-bar-a  { stop-color: var(--accent1, #c8a96e); stop-opacity: .95; }
+  .hfc-s-bar-b  { stop-color: var(--accent1, #c8a96e); stop-opacity: .35; }
+  .hfc-s-area-a { stop-color: var(--accent3, #5ec4a8); stop-opacity: .28; }
+  .hfc-s-area-b { stop-color: var(--accent3, #5ec4a8); stop-opacity: 0; }
+  .hfc-bar    { fill: url(#hfc-bar-grad); transition: opacity .15s; }
+  .hfc-bar:hover { opacity: .8; }
+  .hfc-area   { fill: url(#hfc-area-grad); stroke: none; }
+  .hfc-line   { fill: none; stroke: var(--accent3, #5ec4a8); stroke-width: 2.25; stroke-linejoin: round; stroke-linecap: round; }
+  .hfc-dot    { fill: var(--accent3, #5ec4a8); stroke: rgba(10,10,20,.95); stroke-width: 2; }
+  .hfc-goal   { stroke: var(--accent2, #7c6fcd); stroke-width: 1.25; stroke-dasharray: 5 4; opacity: .85; }
+  .hfc-goal-lbl { fill: var(--accent2, #7c6fcd); font-size: 9px; }
+  .hfc-goal-arrow { fill: var(--accent2, #7c6fcd); opacity: .9; }
+  .hfc-pill   { fill: rgba(94,196,168,.16); stroke: rgba(94,196,168,.5); stroke-width: 1; }
+  .hfc-pill-t { fill: var(--accent3, #5ec4a8); font-size: 10px; font-weight: 700; }
+  .hfc-empty-t { fill: rgba(122,117,144,.7); font-size: 11px; }
+  .hfc-empty-s { fill: rgba(122,117,144,.45); font-size: 9.5px; }
 
   .hub-fin-legend {
     display: flex;
-    gap: 14px;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 14px;
     font-size: 10px;
     font-family: var(--font-mono);
     color: var(--muted);
@@ -1669,6 +1701,10 @@ textarea.inp { resize: vertical; min-height: 70px; }
   }
   .hub-fin-dot.aporte { background: var(--accent1); }
   .hub-fin-dot.acum { background: var(--accent3); }
+  .hub-fin-dot.goal {
+    width: 14px; height: 0; border-radius: 0; vertical-align: middle;
+    border-top: 2px dashed var(--accent2, #7c6fcd);
+  }
 
   .hub-fin-add {
     display: grid;
@@ -1782,6 +1818,7 @@ textarea.inp { resize: vertical; min-height: 70px; }
     #hub-drawer { width: 100vw; max-width: 100vw; }
   }
   @media (max-width: 600px) {
+    #hub-fin-chart { height: 190px; }
     .hub-tips-grid { grid-template-columns: 1fr; }
     #hub-drawer { width: 100vw; }
   }
