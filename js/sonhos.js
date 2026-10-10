@@ -271,6 +271,8 @@ function snCompressImage(file, done) {
 // HUB STATE
 // ══════════════════════════════════════════════════════════════════════════
 let hubSonhoId   = null;
+let hubEditMetaId = null;   // meta em edição inline no hub
+let snModalEditId = null;   // meta em edição no modal de criação
 let hubEditImg   = '';   // image data during inline edit
 
 // ── Open / Close ──────────────────────────────────────────────────────────
@@ -278,6 +280,7 @@ function snOpenHub(id) {
   const s = snFind(id);
   if (!s) return;
   hubSonhoId = String(s.id);
+  hubEditMetaId = null;
   const hub = document.getElementById('sn-hub');
   hub.scrollTop = 0;
   hub.classList.add('open');
@@ -293,6 +296,7 @@ function snHubClose() {
   const header = document.querySelector('.site-header');
   if (header) header.style.zIndex = '';
   hubSonhoId = null;
+  hubEditMetaId = null;
   hubLockScroll(false);
 }
 
@@ -730,17 +734,40 @@ function hubRenderMetaList(s) {
       chips.push(`<span class="hub-meta-chip ${cls}">${lbl}</span>`);
     }
     chips.push(`<span class="hub-meta-chip ${pColorMap[m.prioridade||'media']}">${pLblMap[m.prioridade||'media']}</span>`);
+    if (String(m.id) === String(hubEditMetaId)) {
+      const pr = m.prioridade || 'media';
+      const opt = (v, l) => `<option value="${v}"${pr === v ? ' selected' : ''}>${l}</option>`;
+      return `<div class="hub-meta-item sn-meta-editing">
+        <div class="sn-meta-edit">
+          <input type="text" class="sn-me-input" id="hub-me-texto" value="${snEsc(m.texto)}" placeholder="Descrição da meta" aria-label="Descrição da meta">
+          <div class="sn-me-row">
+            <label>Prioridade<select id="hub-me-prio">${opt('alta','🔴 Alta')}${opt('media','🟡 Média')}${opt('baixa','🟢 Baixa')}</select></label>
+            <label>Início<input type="date" id="hub-me-inicio" value="${snEsc(m.dataInicio || '')}"></label>
+            <label>Prazo<input type="date" id="hub-me-prazo" value="${snEsc(m.prazo || '')}"></label>
+          </div>
+          <div class="sn-me-actions">
+            <button type="button" class="sn-me-btn ghost" data-sn-act="hub-cancel-meta">Cancelar</button>
+            <button type="button" class="sn-me-btn" data-sn-act="hub-save-meta" data-sn-id="${snEsc(m.id)}">Salvar</button>
+          </div>
+        </div>
+      </div>`;
+    }
     return `<div class="hub-meta-item" style="animation-delay:${i*0.035}s">
       <button class="hub-meta-check ${checkCls}" data-sn-act="hub-toggle-meta" data-sn-id="${snEsc(m.id)}" title="${m.feita?'Desmarcar':'Concluir'}">${m.feita?'✓':''}</button>
       <div class="hub-meta-body">
-        <div class="hub-meta-name ${m.feita?'done':''}">${snEsc(m.texto)}</div>
+        <div class="hub-meta-name ${m.feita?'done':''}" data-sn-act="hub-edit-meta" data-sn-id="${snEsc(m.id)}" title="Clique duas vezes para editar">${snEsc(m.texto)}</div>
         ${chips.length ? `<div class="hub-meta-chips">${chips.join('')}</div>` : ''}
       </div>
       <div class="hub-meta-side">
+        <button class="hub-meta-side-btn" data-sn-act="hub-edit-meta" data-sn-id="${snEsc(m.id)}" title="Editar">✎</button>
         <button class="hub-meta-side-btn" data-sn-act="hub-del-meta" data-sn-id="${snEsc(m.id)}" title="Remover">✕</button>
       </div>
     </div>`;
   }).join('');
+  if (hubEditMetaId !== null) {
+    const inp = document.getElementById('hub-me-texto');
+    if (inp) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }
+  }
 }
 
 function hubRenderTips(s) {
@@ -816,6 +843,41 @@ function hubAddMeta() {
   renderSonhos();
 }
 
+function snFlash(el) {
+  if (!el) return;
+  el.focus(); el.style.borderColor = 'rgba(224,107,139,.65)';
+  setTimeout(function () { el.style.borderColor = ''; }, 1400);
+}
+
+function hubEditMeta(metaId) {
+  const s = snFind(hubSonhoId); if (!s) return;
+  hubEditMetaId = String(metaId);
+  hubRenderMetaList(s);
+}
+
+function hubCancelMeta() {
+  const s = snFind(hubSonhoId); hubEditMetaId = null;
+  if (s) hubRenderMetaList(s);
+}
+
+function hubSaveMeta(metaId) {
+  const s = snFind(hubSonhoId); if (!s) return;
+  const m = (s.metas||[]).find(x => String(x.id) === String(metaId)); if (!m) return;
+  const tEl = document.getElementById('hub-me-texto');
+  const iEl = document.getElementById('hub-me-inicio');
+  const pEl = document.getElementById('hub-me-prazo');
+  const texto = (tEl ? tEl.value : '').trim();
+  if (!texto) { snFlash(tEl); return; }
+  const inicio = iEl ? iEl.value : '', prazo = pEl ? pEl.value : '';
+  if (inicio && prazo && prazo < inicio) { snFlash(pEl); return; }
+  m.texto = texto;
+  m.prioridade = (document.getElementById('hub-me-prio') || {}).value || 'media';
+  m.dataInicio = inicio;
+  m.prazo = prazo;
+  hubEditMetaId = null;
+  save(); hubRender(s); renderSonhos();
+}
+
 function hubToggleMeta(metaId) {
   const s = snFind(hubSonhoId); if (!s) return;
   const m = (s.metas||[]).find(x => String(x.id) === String(metaId)); if (!m) return;
@@ -848,7 +910,7 @@ function snSetModalUiOpen(isOpen) {
 }
 
 function snOpenModal() {
-  snImgData = ''; snModalMetas = [];
+  snImgData = ''; snModalMetas = []; snModalEditId = null;
   const modal     = document.getElementById('sn-modal');
   const coverZone = document.getElementById('sn-modal-cover-zone');
   const coverImg  = document.getElementById('sn-modal-cover-img');
@@ -899,17 +961,34 @@ function snModalAddMeta() {
   inp.value=''; snRenderModalMetas();
 }
 function snModalToggleMeta(id){const m=snModalMetas.find(x=>String(x.id)===String(id));if(m){m.feita=!m.feita;snRenderModalMetas();}}
-function snModalDelMeta(id){snModalMetas=snModalMetas.filter(x=>String(x.id)!==String(id));snRenderModalMetas();}
+function snModalDelMeta(id){snModalMetas=snModalMetas.filter(x=>String(x.id)!==String(id));if(String(snModalEditId)===String(id))snModalEditId=null;snRenderModalMetas();}
+function snModalEditMeta(id){snModalEditId=String(id);snRenderModalMetas();}
+function snModalCancelMeta(){snModalEditId=null;snRenderModalMetas();}
+function snModalSaveMeta(id){
+  const m=snModalMetas.find(x=>String(x.id)===String(id));if(!m)return;
+  const inp=document.getElementById('sn-me-texto');
+  const t=(inp?inp.value:'').trim();
+  if(!t){snFlash(inp);return;}
+  m.texto=t;snModalEditId=null;snRenderModalMetas();
+}
 function snRenderModalMetas(){
   const list=document.getElementById('sn-modal-metas-list');if(!list)return;
   if(!snModalMetas.length){list.innerHTML='';return;}
   list.innerHTML=snModalMetas.map(m=>
+    String(m.id)===String(snModalEditId)?
+    '<div class="sn-meta-item sn-meta-editing">'+
+    '<input type="text" class="sn-me-input" id="sn-me-texto" value="'+snEsc(m.texto)+'" aria-label="Editar meta">'+
+    '<button type="button" class="sn-me-btn" data-sn-act="modal-save-meta" data-sn-id="'+snEsc(m.id)+'">Salvar</button>'+
+    '<button type="button" class="sn-me-btn ghost" data-sn-act="modal-cancel-meta">Cancelar</button>'+
+    '</div>':
     '<div class="sn-meta-item">'+
     '<button type="button" class="sn-meta-check '+(m.feita?'done':'')+'" data-sn-act="modal-toggle-meta" data-sn-id="'+snEsc(m.id)+'" aria-label="'+(m.feita?'Desmarcar meta':'Concluir meta')+'">'+(m.feita?'✓':'')+'</button>'+
-    '<span class="sn-meta-text '+(m.feita?'done':'')+'">'+snEsc(m.texto)+'</span>'+
+    '<span class="sn-meta-text '+(m.feita?'done':'')+'" data-sn-act="modal-edit-meta" data-sn-id="'+snEsc(m.id)+'" title="Clique duas vezes para editar">'+snEsc(m.texto)+'</span>'+
+    '<button type="button" class="sn-meta-del" data-sn-act="modal-edit-meta" data-sn-id="'+snEsc(m.id)+'" aria-label="Editar meta" title="Editar">✎</button>'+
     '<button type="button" class="sn-meta-del" data-sn-act="modal-del-meta" data-sn-id="'+snEsc(m.id)+'" aria-label="Remover meta">✕</button>'+
     '</div>'
   ).join('');
+  if(snModalEditId!==null){const ei=document.getElementById('sn-me-texto');if(ei){ei.focus();ei.setSelectionRange(ei.value.length,ei.value.length);}}
 }
 
 function snSalvar() {
@@ -965,7 +1044,18 @@ function snInjectFinStyle() {
     '.sn-fin-bar{margin-top:5px}' +
     '.sn-fin-fill{background:linear-gradient(90deg,var(--accent1),var(--accent3))!important;transition:width .6s ease}' +
     '.sn-fin-values{display:flex;justify-content:space-between;gap:8px;margin-top:5px;font-size:10px;font-family:var(--font-mono);color:var(--muted)}' +
-    '.sn-fin-section + .sn-metas-section{margin-top:12px}';
+    '.sn-fin-section + .sn-metas-section{margin-top:12px}' +
+    '.hub-meta-name[data-sn-act],.sn-meta-text[data-sn-act]{cursor:text}' +
+    '.sn-meta-editing{display:flex;gap:8px;align-items:center;width:100%}' +
+    '.sn-meta-edit{display:flex;flex-direction:column;gap:10px;width:100%;padding:4px 0}' +
+    '.sn-me-input,.sn-meta-edit select,.sn-meta-edit input[type=date]{background:rgba(255,255,255,.04);border:1px solid rgba(124,111,205,.35);border-radius:8px;color:inherit;font:inherit;font-size:13px;padding:8px 10px;outline:none;min-width:0}' +
+    '.sn-me-input{flex:1;width:100%}' +
+    '.sn-me-input:focus,.sn-meta-edit select:focus,.sn-meta-edit input[type=date]:focus{border-color:var(--accent2,#7c6fcd)}' +
+    '.sn-me-row{display:flex;flex-wrap:wrap;gap:10px}' +
+    '.sn-me-row label{display:flex;flex-direction:column;gap:4px;font-size:10px;font-family:var(--font-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.5px;flex:1;min-width:120px}' +
+    '.sn-me-actions{display:flex;justify-content:flex-end;gap:8px}' +
+    '.sn-me-btn{background:var(--accent1,#c8a96e);color:#14121f;border:0;border-radius:8px;padding:7px 14px;font:inherit;font-size:12px;font-weight:600;cursor:pointer}' +
+    '.sn-me-btn.ghost{background:transparent;color:var(--muted);border:1px solid rgba(122,117,144,.35)}';
   document.head.appendChild(st);
 }
 
@@ -1511,6 +1601,16 @@ function snInitInteractions() {
           { auto: !kb, focusFirst: kb, returnFocus: el });
         return;
       }
+      case 'hub-edit-meta':
+        if (!el.classList.contains('hub-meta-name')) hubEditMeta(id);   // o nome só edita no duplo clique
+        return;
+      case 'hub-save-meta':        hubSaveMeta(id); return;
+      case 'hub-cancel-meta':      hubCancelMeta(); return;
+      case 'modal-edit-meta':
+        if (!el.classList.contains('sn-meta-text')) snModalEditMeta(id);
+        return;
+      case 'modal-save-meta':      snModalSaveMeta(id); return;
+      case 'modal-cancel-meta':    snModalCancelMeta(); return;
       case 'hub-toggle-meta':      hubToggleMeta(id); return;
       case 'hub-del-meta':         hubDelMeta(id); return;
       case 'hub-add-deposito':     hubAddDeposito(); return;
@@ -1520,6 +1620,28 @@ function snInitInteractions() {
       case 'open-analytics-dream': snOpenHub(id); snCloseAnalytics(); return;
     }
   });
+
+  // ── duplo clique no texto da meta = editar ──
+  document.addEventListener('dblclick', function (e) {
+    const el = e.target.closest && e.target.closest('.hub-meta-name[data-sn-id], .sn-meta-text[data-sn-id]');
+    if (!el) return;
+    if (el.classList.contains('hub-meta-name')) hubEditMeta(el.dataset.snId);
+    else snModalEditMeta(el.dataset.snId);
+  });
+
+  // ── Enter salva / Esc cancela dentro dos campos de edição de meta ──
+  document.addEventListener('keydown', function (e) {
+    const t = e.target;
+    if (!t || !t.closest || !t.closest('.sn-meta-editing')) return;
+    const inModal = !!t.closest('#sn-modal');
+    if (e.key === 'Enter' && t.tagName === 'INPUT') {
+      e.preventDefault();
+      if (inModal) snModalSaveMeta(snModalEditId); else hubSaveMeta(hubEditMetaId);
+    } else if (e.key === 'Escape') {
+      e.preventDefault(); e.stopImmediatePropagation();
+      if (inModal) snModalCancelMeta(); else hubCancelMeta();
+    }
+  }, true);
 
   // ── clique direito (e tecla de menu) ──
   document.addEventListener('contextmenu', function (e) {
@@ -1646,6 +1768,12 @@ Object.assign(globalThis, {
   hubDrawerDeletar: hubDrawerDeletar,
   hubToggleMetaForm: hubToggleMetaForm,
   hubAddMeta: hubAddMeta,
+  hubEditMeta: hubEditMeta,
+  hubSaveMeta: hubSaveMeta,
+  hubCancelMeta: hubCancelMeta,
+  snModalEditMeta: snModalEditMeta,
+  snModalSaveMeta: snModalSaveMeta,
+  snModalCancelMeta: snModalCancelMeta,
   hubAddDeposito: hubAddDeposito,
   hubDelDeposito: hubDelDeposito,
   hubToggleMeta: hubToggleMeta,
