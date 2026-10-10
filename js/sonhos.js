@@ -99,8 +99,15 @@ function addNotif() {}
 
 function num(v) {
   if (v === null || v === undefined || v === "") return 0;
-  var n = Number(String(v).replace(",", "."));
+  if (typeof v === "number") return Number.isFinite(v) ? v : 0;
+  var t = String(v).replace(/[^\d,.\-]/g, "");
+  if (t.indexOf(",") >= 0) t = t.replace(/\./g, "").replace(",", ".");   // 1.500,50 -> 1500.50
+  var n = Number(t);
   return Number.isFinite(n) ? n : 0;
+}
+
+function fmtBRL(v) {
+  return "R$ " + num(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function ymFromDate(d) {
@@ -122,7 +129,11 @@ function buildFinanceInfo(s) {
   var custo = num(s.custo);
   var hist = Array.isArray(s.financeHistory) ? s.financeHistory.slice() : [];
   hist = hist
-    .map(function (h) { return { id: h.id || Date.now(), mes: String(h.mes || ""), valor: num(h.valor) }; })
+    .map(function (h, i) {
+      var mes = String((h && h.mes) || "");
+      if (mes.length > 7 && /^\d{4}-\d{2}/.test(mes)) mes = mes.slice(0, 7);
+      return { id: (h && h.id) || ("d" + i), mes: mes, valor: num(h && h.valor) };
+    })
     .filter(function (h) { return h.mes && h.valor > 0; })
     .sort(function (a, b) { return a.mes.localeCompare(b.mes); });
 
@@ -576,21 +587,51 @@ function hubRenderFinance(s) {
 
   const chart = document.getElementById('hub-fin-chart');
   if (chart) {
-    const w = 420, h = 140, p = 12;
+    const w = 420, h = 150, pl = 10, pr = 10, pt = 14, pb = 22;
+    if (!chart.getAttribute('viewBox')) chart.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
     const hist = info.hist.slice(-12);
     if (!hist.length) {
       chart.innerHTML = `<text x="${w/2}" y="${h/2}" text-anchor="middle" fill="rgba(122,117,144,.55)" font-family="var(--font-mono)" font-size="10">Sem depósitos no histórico</text>`;
     } else {
-      let acc = info.base;
+      // acumulado considera TODO o histórico (não só os 12 últimos meses exibidos)
+      const prior = info.hist.slice(0, info.hist.length - hist.length).reduce(function (a, x) { return a + x.valor; }, 0);
+      let acc = info.base + prior;
       const aporteVals = hist.map(function (x) { return x.valor; });
       const acumVals = hist.map(function (x) { acc += x.valor; return acc; });
-      const maxV = Math.max(...aporteVals, ...acumVals, 1);
-      const toX = function (i) { return p + (i * ((w - p * 2) / Math.max(1, hist.length - 1))); };
-      const toY = function (v) { return h - p - (v / maxV) * (h - p * 2); };
-      const line = function (vals) { return vals.map(function (v, i) { return toX(i) + "," + toY(v); }).join(" "); };
-      chart.innerHTML =
-        `<polyline points="${line(aporteVals)}" fill="none" stroke="var(--accent1)" stroke-width="2"/>` +
-        `<polyline points="${line(acumVals)}" fill="none" stroke="var(--accent3)" stroke-width="2"/>`;
+      const goal = info.custo > 0 ? info.custo : 0;
+      const maxV = Math.max(...aporteVals, ...acumVals, goal, 1);
+      const innerW = w - pl - pr, innerH = h - pt - pb;
+      const band = innerW / hist.length;
+      const barW = Math.min(34, band * 0.55);
+      const cx = function (i) { return pl + band * i + band / 2; };
+      const toY = function (v) { return pt + innerH - (v / maxV) * innerH; };
+      const short = function (v) { return v >= 1000 ? (Math.round(v / 100) / 10).toLocaleString('pt-BR') + 'k' : String(Math.round(v)); };
+      const mesLbl = function (ym) { const p = String(ym).split('-'); return p.length >= 2 ? p[1] + '/' + p[0].slice(2) : ym; };
+
+      let svg = `<line x1="${pl}" y1="${toY(0)}" x2="${w - pr}" y2="${toY(0)}" stroke="rgba(122,117,144,.35)" stroke-width="1"/>`;
+      if (goal > 0) {
+        svg += `<line x1="${pl}" y1="${toY(goal)}" x2="${w - pr}" y2="${toY(goal)}" stroke="var(--accent3)" stroke-width="1" stroke-dasharray="4 4" opacity=".7"/>` +
+               `<text x="${w - pr}" y="${toY(goal) - 3}" text-anchor="end" fill="var(--accent3)" font-family="var(--font-mono)" font-size="8" opacity=".85">meta ${short(goal)}</text>`;
+      }
+      // barras = aporte de cada mês
+      hist.forEach(function (x, i) {
+        const y = toY(x.valor), bh = Math.max(2, toY(0) - y);
+        svg += `<rect x="${cx(i) - barW / 2}" y="${toY(0) - bh}" width="${barW}" height="${bh}" rx="3" fill="var(--accent1)" opacity=".55"><title>${snEsc(x.mes)}: ${fmt(x.valor)}</title></rect>`;
+      });
+      // linha = acumulado
+      if (hist.length > 1) {
+        svg += `<polyline points="${acumVals.map(function (v, i) { return cx(i) + ',' + toY(v); }).join(' ')}" fill="none" stroke="var(--accent3)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+      }
+      acumVals.forEach(function (v, i) {
+        svg += `<circle cx="${cx(i)}" cy="${toY(v)}" r="3.5" fill="var(--accent3)"><title>Acumulado: ${fmt(v)}</title></circle>`;
+      });
+      // rótulos de mês
+      const step = hist.length > 8 ? 2 : 1;
+      hist.forEach(function (x, i) {
+        if (i % step) return;
+        svg += `<text x="${cx(i)}" y="${h - 7}" text-anchor="middle" fill="rgba(122,117,144,.75)" font-family="var(--font-mono)" font-size="8">${mesLbl(x.mes)}</text>`;
+      });
+      chart.innerHTML = svg;
     }
   }
 
@@ -611,20 +652,26 @@ function hubRenderFinance(s) {
 }
 
 function hubAddDeposito() {
-  const s = S.sonhos.find(x => String(x.id) === String(hubSonhoId)); if (!s) return;
-  const mes = (document.getElementById('hub-fin-mes') || {}).value || nowYm();
-  const valor = num((document.getElementById('hub-fin-valor') || {}).value);
-  if (!mes || valor <= 0) return;
+  const s = snFind(hubSonhoId); if (!s) return;
+  const mesEl = document.getElementById('hub-fin-mes');
+  const valEl = document.getElementById('hub-fin-valor');
+  let mes = (mesEl && mesEl.value) || nowYm();
+  if (mes.length > 7 && /^\d{4}-\d{2}/.test(mes)) mes = mes.slice(0, 7);
+  const valor = num(valEl && valEl.value);
+  if (valor <= 0) {
+    if (valEl) { valEl.focus(); valEl.style.borderColor = 'rgba(224,107,139,.65)'; setTimeout(function () { valEl.style.borderColor = ''; }, 1400); }
+    return;
+  }
   if (!Array.isArray(s.financeHistory)) s.financeHistory = [];
-  s.financeHistory.push({ id: Date.now() + "_" + Math.floor(Math.random()*9999), mes: mes, valor: valor });
-  const vEl = document.getElementById('hub-fin-valor'); if (vEl) vEl.value = '';
-  save(); hubRenderFinance(s); sanRender();
+  s.financeHistory.push({ id: Date.now() + "_" + Math.floor(Math.random() * 9999), mes: mes, valor: valor });
+  if (valEl) valEl.value = '';
+  save(); hubRenderFinance(s); renderSonhos();
 }
 
 function hubDelDeposito(depId) {
   const s = S.sonhos.find(x => String(x.id) === String(hubSonhoId)); if (!s) return;
   s.financeHistory = (s.financeHistory || []).filter(function (d) { return String(d.id) !== String(depId); });
-  save(); hubRenderFinance(s); sanRender();
+  save(); hubRenderFinance(s); renderSonhos();
 }
 
 function hubRenderDates(s) {
@@ -909,7 +956,21 @@ function snToggleMeta(sonhoId,metaId,e){
 }
 
 // ── Render cards ──────────────────────────────────────────────────────────
+function snInjectFinStyle() {
+  if (document.getElementById('sn-fin-style')) return;
+  const st = document.createElement('style');
+  st.id = 'sn-fin-style';
+  st.textContent =
+    '.sn-fin-section{margin-top:10px}' +
+    '.sn-fin-bar{margin-top:5px}' +
+    '.sn-fin-fill{background:linear-gradient(90deg,var(--accent1),var(--accent3))!important;transition:width .6s ease}' +
+    '.sn-fin-values{display:flex;justify-content:space-between;gap:8px;margin-top:5px;font-size:10px;font-family:var(--font-mono);color:var(--muted)}' +
+    '.sn-fin-section + .sn-metas-section{margin-top:12px}';
+  document.head.appendChild(st);
+}
+
 function renderSonhos() {
+  snInjectFinStyle();
   snMigrateData();
   const grid=document.getElementById('sonhos-grid');if(!grid)return;
   const total    =S.sonhos.length;
@@ -940,6 +1001,14 @@ function renderSonhos() {
       '<span class="sn-meta-text '+(m.feita?'done':'')+'">'+snEsc(m.texto)+'</span>'+
       '</div>'
     ).join('');
+    const fi=buildFinanceInfo(s);
+    const finPct=fi.custo>0?Math.min(100,Math.round(fi.atual/fi.custo*100)):0;
+    const finHtml=fi.custo>0?
+      '<div class="sn-fin-section">'+
+        '<div class="sn-metas-header"><span class="sn-metas-label">💰 Meta financeira</span><span class="sn-metas-pct">'+finPct+'%</span></div>'+
+        '<div class="sn-progress-bar sn-fin-bar"><div class="sn-progress-fill sn-fin-fill" style="width:'+finPct+'%"></div></div>'+
+        '<div class="sn-fin-values"><span>'+snEsc(fmtBRL(fi.atual))+'</span><span>de '+snEsc(fmtBRL(fi.custo))+'</span></div>'+
+      '</div>':'';
     const moreLabel=totalM>3?'<div style="font-size:10px;font-family:var(--font-mono);color:var(--muted);padding:3px 0 0 24px">+'+(totalM-3)+' mais…</div>':'';
     return '<div class="sn-card '+(isReal?'realizado':'')+'" data-sn-act="open-card" data-sn-id="'+id+'" tabindex="0" role="group" aria-haspopup="menu" aria-label="Sonho: '+titulo+'. Enter para abrir, tecla de menu para ações rápidas.">'+
       '<div class="sn-cover '+(img?'has-img':'')+'" style="border-bottom:2px solid '+catColor+'22">'+
@@ -958,13 +1027,14 @@ function renderSonhos() {
           '</div>'+
         '</div>'+
         (s.desc?'<div class="sn-desc">'+snEsc(s.desc)+'</div>':'')+
+        finHtml+
         (totalM>0?
           '<div class="sn-metas-section">'+
             '<div class="sn-metas-header"><span class="sn-metas-label">Metas</span><span class="sn-metas-pct">'+pct+'%</span></div>'+
             '<div class="sn-progress-bar"><div class="sn-progress-fill" style="width:'+pct+'%"></div></div>'+
             metaRows+moreLabel+
           '</div>'
-        :'<div style="font-size:11px;font-family:var(--font-mono);color:rgba(122,117,144,.35);letter-spacing:.5px;margin-top:4px">Clique para ver detalhes</div>')+
+        :(fi.custo>0?'':'<div style="font-size:11px;font-family:var(--font-mono);color:rgba(122,117,144,.35);letter-spacing:.5px;margin-top:4px">Clique para ver detalhes</div>'))+
       '</div>'+
       '<div class="sn-footer">'+
         '<span class="sn-footer-horizonte">'+icon+' '+horizonte+'</span>'+
@@ -1443,6 +1513,7 @@ function snInitInteractions() {
       }
       case 'hub-toggle-meta':      hubToggleMeta(id); return;
       case 'hub-del-meta':         hubDelMeta(id); return;
+      case 'hub-add-deposito':     hubAddDeposito(); return;
       case 'hub-del-deposito':     hubDelDeposito(id); return;
       case 'modal-toggle-meta':    snModalToggleMeta(id); return;
       case 'modal-del-meta':       snModalDelMeta(id); return;
