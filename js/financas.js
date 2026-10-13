@@ -1098,6 +1098,53 @@
     return balances;
   }
 
+  // Total acumulado na poupança ao fim de cada dia do mês (mesma lógica do saldo diário do calendário,
+  // mas somando só aportes e retiradas da poupança; lançamentos futuros entram como projeção).
+  function getCalendarDailySavings(year, month) {
+    var earliest = null;
+    txs.forEach(function (tx) {
+      if (tx && tx.date && (!earliest || tx.date < earliest)) earliest = tx.date;
+    });
+    recurrenceRules.forEach(function (rule) {
+      if (rule && rule.startDate && (!earliest || rule.startDate < earliest)) earliest = rule.startDate;
+    });
+
+    var running = 0;
+    if (earliest) {
+      var start = new Date(earliest + "T12:00:00");
+      var y = start.getFullYear();
+      var m = start.getMonth();
+      while (y < year || (y === year && m < month)) {
+        expandRecurring(y, m).forEach(function (tx) {
+          running = Math.max(0, running + getSavingsDelta(tx));
+        });
+        m += 1;
+        if (m > 11) {
+          m = 0;
+          y += 1;
+        }
+      }
+    }
+
+    var daysInMonth = new Date(year, month + 1, 0).getDate();
+    var daily = {};
+    var day;
+    for (day = 1; day <= daysInMonth; day += 1) {
+      daily[getMonthDateStr(year, month, day)] = 0;
+    }
+    expandRecurring(year, month).forEach(function (tx) {
+      if (Object.prototype.hasOwnProperty.call(daily, tx.date)) daily[tx.date] += getSavingsDelta(tx);
+    });
+
+    var totals = {};
+    for (day = 1; day <= daysInMonth; day += 1) {
+      var ds = getMonthDateStr(year, month, day);
+      running = Math.max(0, running + daily[ds]);
+      totals[ds] = Math.round(running * 100) / 100;
+    }
+    return totals;
+  }
+
   function renderCalendar() {
     var title = document.getElementById("cal-title");
     title.innerHTML = "<em>" + MONTHS_PT[calMonth] + "</em> " + calYear;
@@ -1138,6 +1185,7 @@
     });
 
     var dayBalances = getCalendarDailyBalances(calYear, calMonth);
+    var daySavings = getCalendarDailySavings(calYear, calMonth);
     var hasData = txs.length > 0 || recurrenceRules.length > 0;
 
     var totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
@@ -1210,6 +1258,16 @@
           balEl.textContent = (dayBal < 0 ? "-" : "") + fmtR(Math.abs(dayBal)).replace("R$ ", "");
           balEl.title = "Saldo em " + fmtD(ds) + ": " + fmtR(dayBal) + (ds > todayStr ? " (projetado)" : "");
           cell.appendChild(balEl);
+
+          var daySave = daySavings[ds] || 0;
+          if (daySave > 0) {
+            var savEl = document.createElement("div");
+            savEl.className = "fin-cal-sav" + (ds > todayStr ? " future" : "");
+            savEl.style.cssText = "color:#c8a96e;font-size:.85em;line-height:1.2;white-space:nowrap;" + (ds > todayStr ? "opacity:.7;" : "");
+            savEl.textContent = "\uD83C\uDFE6 " + fmtR(daySave).replace("R$ ", "");
+            savEl.title = "Poupança em " + fmtD(ds) + ": " + fmtR(daySave) + (ds > todayStr ? " (projetado)" : "");
+            cell.appendChild(savEl);
+          }
         }
 
       } else {
