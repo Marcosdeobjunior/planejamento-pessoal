@@ -464,115 +464,156 @@
     return balance;
   }
 
-  function getSavingsDepositOccurrencesUntil(dateStr, ignoreTxId) {
-    var occurrences = [];
+  // Projeção da meta com base nos lançamentos já cadastrados no sistema:
+  // aportes e retiradas da poupança (únicos, mensais, semanais e regras recorrentes).
+  // Não usa histórico nem média: percorre os lançamentos futuros em ordem de data
+  // e encontra o primeiro dia em que o saldo da poupança alcança a meta.
+  // Não há limite de meses para lançamentos únicos: qualquer data futura é considerada.
+  // Para lançamentos recorrentes (que se repetem para sempre) a busca se amplia em etapas
+  // e para assim que a meta é atingida; o teto de 100 anos é só trava contra laço infinito.
+  var SAVINGS_SCHEDULE_YEARS_STEPS = [5, 10, 25, 50, 100];
+  var SAVINGS_CHART_MAX_POINTS = 36;
+
+  function getSavingsScheduledEvents(startExclusive, endStr) {
+    var events = [];
+    function add(date, delta) {
+      if (!delta) return;
+      if (date <= startExclusive || date > endStr) return;
+      events.push({ date: date, delta: delta });
+    }
     txs.forEach(function (tx) {
-      if (ignoreTxId && tx.id === ignoreTxId) return;
-      if (tx.type !== "save") return;
+      if (!isSavingsType(tx.type)) return;
+      var delta = getSavingsDelta(tx);
       if (tx.recurrence === "monthly") {
-        getMonthlyOccurrenceDates(tx.date, dateStr).forEach(function (occurrenceDate) {
-          occurrences.push({
-            date: occurrenceDate,
-            value: Number(tx.value || 0)
-          });
+        getMonthlyOccurrenceDates(tx.date, endStr).forEach(function (occurrenceDate) {
+          add(occurrenceDate, delta);
         });
       } else if (tx.recurrence === "weekly") {
         var weeklyCur = new Date(tx.date + "T12:00:00");
-        var endWeekly = new Date(dateStr + "T12:00:00");
+        var endWeekly = new Date(endStr + "T12:00:00");
         while (weeklyCur <= endWeekly) {
-          occurrences.push({
-            date: getMonthDateStr(weeklyCur.getFullYear(), weeklyCur.getMonth(), weeklyCur.getDate()),
-            value: Number(tx.value || 0)
-          });
+          add(getMonthDateStr(weeklyCur.getFullYear(), weeklyCur.getMonth(), weeklyCur.getDate()), delta);
           weeklyCur.setDate(weeklyCur.getDate() + 7);
         }
-      } else if (tx.date <= dateStr) {
-        occurrences.push({ date: tx.date, value: Number(tx.value || 0) });
+      } else {
+        add(tx.date, delta);
       }
     });
-    getRuleOccurrencesUntil(dateStr).forEach(function (tx) {
-      if (tx.type !== "save") return;
-      occurrences.push({ date: tx.date, value: Number(tx.value || 0) });
+    getRuleOccurrencesUntil(endStr).forEach(function (tx) {
+      if (isSavingsType(tx.type)) add(tx.date, getSavingsDelta(tx));
     });
-    occurrences.sort(function (a, b) { return a.date.localeCompare(b.date); });
-    return occurrences;
+    events.sort(function (a, b) { return a.date.localeCompare(b.date); });
+    return events;
   }
 
-  var SAVINGS_PROJECTION_CFG = {
-    windowMonths: 12,
-    minDeposits: 4,
-    minMonthsWithDeposit: 3,
-    recentWeight: 0.85,
-    outlierCap: 2.5
-  };
-
-  function monthIdxOf(dateStr) {
-    return Number(dateStr.slice(0, 4)) * 12 + (Number(dateStr.slice(5, 7)) - 1);
-  }
-
-  function medianOf(list) {
-    if (!list.length) return 0;
-    var sorted = list.slice().sort(function (x, y) { return x - y; });
-    var half = Math.floor(sorted.length / 2);
-    return sorted.length % 2 ? sorted[half] : (sorted[half - 1] + sorted[half]) / 2;
-  }
-
-  // Projeção mensal baseada no histórico de aportes (tempo + valor).
-  // mode "history": média ponderada dos meses (recentes pesam mais, meses sem aporte contam como 0).
-  // mode "monthly": padrão — média mensal simples quando o histórico é insuficiente.
-  function getSavingsProjection(reserve, goal) {
-    var cfg = SAVINGS_PROJECTION_CFG;
-    var missing = Math.max(0, Number(goal || 0) - Number(reserve || 0));
-    var nowIdx = monthIdxOf(today());
-    var deposits = getSavingsDepositOccurrencesUntil(today()).filter(function (item) {
-      return Number(item.value) > 0 && monthIdxOf(item.date) >= nowIdx - cfg.windowMonths;
+  function simulateSavingsSchedule(reserve, goal, events) {
+    // agrupa por dia (aporte e retirada no mesmo dia se compensam) e aplica na ordem
+    var byDate = {};
+    var dates = [];
+    events.forEach(function (ev) {
+      if (!(ev.date in byDate)) { byDate[ev.date] = 0; dates.push(ev.date); }
+      byDate[ev.date] += ev.delta;
     });
-    var base = { mode: "none", monthlyRate: 0, missing: missing, monthsToGoal: null, etaDate: null, daysToGoal: null };
-    if (!deposits.length) return base;
-
-    var totals = {};
-    deposits.forEach(function (item) {
-      var idx = monthIdxOf(item.date);
-      totals[idx] = (totals[idx] || 0) + Number(item.value);
-    });
-    var firstIdx = monthIdxOf(deposits[0].date);
-    var lastIdx = nowIdx - 1 >= firstIdx ? nowIdx - 1 : nowIdx; // só meses fechados, se houver
-    var months = [];
-    for (var i = firstIdx; i <= lastIdx; i += 1) months.push({ idx: i, total: totals[i] || 0 });
-
-    var paid = months.filter(function (m) { return m.total > 0; });
-    var cap = medianOf(paid.map(function (m) { return m.total; })) * cfg.outlierCap;
-    var historyOk = deposits.length >= cfg.minDeposits && paid.length >= cfg.minMonthsWithDeposit;
-    var rate;
-    var mode;
-    if (historyOk) {
-      mode = "history";
-      var num = 0;
-      var den = 0;
-      months.forEach(function (m) {
-        var weight = Math.pow(cfg.recentWeight, lastIdx - m.idx);
-        num += Math.min(m.total, cap) * weight;
-        den += weight;
-      });
-      rate = num / den;
-    } else {
-      mode = "monthly";
-      rate = months.reduce(function (sum, m) { return sum + m.total; }, 0) / Math.max(1, months.length);
+    var sim = { running: reserve, monthEnd: {}, plannedTotal: 0, plannedCount: 0, etaDate: null, lastEventDate: null };
+    var i;
+    for (i = 0; i < dates.length; i += 1) {
+      var d = dates[i];
+      sim.running = Math.max(0, sim.running + byDate[d]);
+      sim.plannedTotal += byDate[d];
+      sim.plannedCount += 1;
+      sim.monthEnd[d.slice(0, 7)] = sim.running;
+      sim.lastEventDate = d;
+      if (sim.running >= goal) { sim.etaDate = d; break; }
     }
-    if (!(rate > 0)) return base;
+    return sim;
+  }
 
-    var typicalDay = Math.round(medianOf(deposits.map(function (item) { return Number(item.date.slice(8, 10)); })));
-    var result = { mode: mode, monthlyRate: rate, missing: missing, monthsToGoal: 0, etaDate: null, daysToGoal: 0, typicalDay: typicalDay };
-    if (missing > 0) {
-      var steps = Math.ceil(missing / rate);
-      var t = new Date(today() + "T12:00:00");
-      var target = new Date(t.getFullYear(), t.getMonth() + steps, 1, 12, 0, 0);
-      var lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
-      target.setDate(Math.min(Math.max(1, typicalDay), lastDay));
-      if (target <= t) target = new Date(target.getFullYear(), target.getMonth() + 1, Math.min(Math.max(1, typicalDay), 28), 12, 0, 0);
-      result.monthsToGoal = steps;
-      result.etaDate = getMonthDateStr(target.getFullYear(), target.getMonth(), target.getDate());
-      result.daysToGoal = Math.max(1, diffDays(today(), result.etaDate));
+  function getSavingsProjection(reserve, goal) {
+    reserve = Number(reserve || 0);
+    goal = Number(goal || 0);
+    var missing = Math.max(0, goal - reserve);
+    var result = {
+      mode: "none", missing: missing, monthlyRate: 0, monthsToGoal: null,
+      etaDate: null, daysToGoal: null, plannedTotal: 0, plannedCount: 0,
+      lastEventDate: null, finalBalance: reserve, series: [], endless: false
+    };
+    if (goal <= 0) return result;
+    if (reserve >= goal) {
+      result.mode = "reached";
+      result.etaDate = today();
+      result.daysToGoal = 0;
+      result.monthsToGoal = 0;
+      result.series = [{ label: "Hoje", value: reserve, current: true }];
+      return result;
+    }
+
+    var t = new Date(today() + "T12:00:00");
+    var hasRecurring = txs.some(function (tx) {
+      return isSavingsType(tx.type) && (tx.recurrence === "monthly" || tx.recurrence === "weekly");
+    }) || recurrenceRules.some(function (rule) {
+      return !!rule && isSavingsType(rule.type) && Number(rule.value) > 0;
+    });
+    // sem recorrência, todos os lançamentos são finitos: uma única busca de 100 anos pega qualquer data futura.
+    // com recorrência, amplia por etapas e para assim que a meta é atingida.
+    var steps = hasRecurring ? SAVINGS_SCHEDULE_YEARS_STEPS : [SAVINGS_SCHEDULE_YEARS_STEPS[SAVINGS_SCHEDULE_YEARS_STEPS.length - 1]];
+    var sim = null;
+    var s;
+    for (s = 0; s < steps.length; s += 1) {
+      var horizon = new Date(t.getFullYear() + steps[s], t.getMonth() + 1, 0, 12, 0, 0);
+      var horizonStr = getMonthDateStr(horizon.getFullYear(), horizon.getMonth(), horizon.getDate());
+      var events = getSavingsScheduledEvents(today(), horizonStr);
+      if (!events.length) return result;
+      sim = simulateSavingsSchedule(reserve, goal, events);
+      if (sim.etaDate) break;
+    }
+    if (!sim) return result;
+    result.endless = hasRecurring && !sim.etaDate;
+
+    result.finalBalance = sim.running;
+    result.plannedTotal = sim.plannedTotal;
+    result.plannedCount = sim.plannedCount;
+    result.lastEventDate = sim.lastEventDate;
+
+    // série mensal para o gráfico: saldo ao fim de cada mês, de hoje até o mês da meta (ou do último lançamento)
+    var lastKey = sim.lastEventDate.slice(0, 7);
+    var y = t.getFullYear();
+    var m = t.getMonth();
+    var carry = reserve;
+    var months = [];
+    var guard = 0;
+    while (guard < 1300) {
+      guard += 1;
+      var key = y + "-" + String(m + 1).padStart(2, "0");
+      if (key in sim.monthEnd) carry = sim.monthEnd[key];
+      months.push({
+        label: MONTHS_PT[m].slice(0, 3) + "/" + String(y).slice(-2),
+        value: Math.min(carry, goal)
+      });
+      if (key >= lastKey) break;
+      m += 1;
+      if (m > 11) { m = 0; y += 1; }
+    }
+    // sem meta à vista, mostra só os primeiros meses; com muitos meses, amostra para manter o gráfico legível
+    if (!sim.etaDate && months.length > 60) months = months.slice(0, 60);
+    if (months.length > SAVINGS_CHART_MAX_POINTS) {
+      var sampled = [];
+      var k;
+      for (k = 0; k < SAVINGS_CHART_MAX_POINTS; k += 1) {
+        sampled.push(months[Math.round(k * (months.length - 1) / (SAVINGS_CHART_MAX_POINTS - 1))]);
+      }
+      months = sampled;
+    }
+    result.series = [{ label: "Hoje", value: reserve, current: true }].concat(months);
+
+    if (sim.etaDate) {
+      var monthSteps = (Number(sim.etaDate.slice(0, 4)) - t.getFullYear()) * 12 + (Number(sim.etaDate.slice(5, 7)) - 1 - t.getMonth());
+      result.mode = "scheduled";
+      result.etaDate = sim.etaDate;
+      result.daysToGoal = Math.max(1, diffDays(today(), sim.etaDate));
+      result.monthsToGoal = Math.max(0, monthSteps);
+      result.monthlyRate = sim.plannedTotal / Math.max(1, monthSteps || 1);
+    } else {
+      result.mode = "insufficient";
     }
     return result;
   }
@@ -586,13 +627,24 @@
     }
     var p = getSavingsProjection(reserve, goal);
     if (p.mode === "none") {
-      return { summary: "Adicione aportes na poupança para estimar o tempo até a meta.", metaLeft: "Meta atual" };
+      return { summary: "Não há aportes futuros lançados na poupança. Lance aportes para ver quando a meta será atingida.", metaLeft: "Meta atual" };
     }
-    var origem = p.mode === "history" ? "pelo seu histórico de aportes" : "em média mensal";
-    var meses = p.monthsToGoal === 1 ? "1 mês" : p.monthsToGoal + " meses";
+    if (p.mode === "insufficient" && p.endless) {
+      return {
+        summary: "Mesmo repetindo os lançamentos recorrentes por décadas, a poupança não alcança a meta. Aumente os aportes ou reduza as retiradas.",
+        metaLeft: "Sem data prevista"
+      };
+    }
+    if (p.mode === "insufficient") {
+      return {
+        summary: "Os lançamentos até " + fmtD(p.lastEventDate) + " levam a poupança a " + fmtR(p.finalBalance) + ". Ainda faltam " + fmtR(Math.max(0, goal - p.finalBalance)) + " — lance mais aportes para ver a data.",
+        metaLeft: "Sem data prevista"
+      };
+    }
+    var qtd = p.plannedCount === 1 ? "1 lançamento" : p.plannedCount + " lançamentos";
     return {
-      summary: "Guardando cerca de " + fmtR(p.monthlyRate) + " por mês (" + origem + "), a meta chega em ~" + meses + ".",
-      metaLeft: "Estimativa " + fmtD(p.etaDate)
+      summary: "Com os " + qtd + " já programados na poupança, a meta é atingida em " + fmtD(p.etaDate) + ".",
+      metaLeft: "Previsto " + fmtD(p.etaDate)
     };
   }
 
@@ -702,34 +754,9 @@
     });
     var savingsProjection = getSavingsProjection(reserve, savingsGoal);
     var reserveAverage = savingsProjection.monthlyRate;
-    var projectedDate = null;
-    var projectedDays = null;
-    var projectionSeries = [];
-    if (savingsGoal > 0) {
-      if (reserve >= savingsGoal) {
-        projectedDate = today();
-        projectedDays = 0;
-        projectionSeries.push({ label: "Hoje", value: reserve, current: true });
-      } else if (reserveAverage > 0) {
-        var runningReserve = reserve;
-        var todayDate = new Date(today() + "T12:00:00");
-        projectionSeries.push({ label: "Hoje", value: reserve, current: true });
-        var stepMonth = 0;
-        while (runningReserve < savingsGoal && stepMonth < 60) {
-          stepMonth += 1;
-          var future = new Date(todayDate.getFullYear(), todayDate.getMonth() + stepMonth, 1, 12, 0, 0);
-          runningReserve += reserveAverage;
-          projectionSeries.push({
-            label: MONTHS_PT[future.getMonth()].slice(0, 3) + "/" + String(future.getFullYear()).slice(-2),
-            value: Math.min(runningReserve, savingsGoal)
-          });
-        }
-        if (runningReserve >= savingsGoal) {
-          projectedDate = savingsProjection.etaDate;
-          projectedDays = savingsProjection.daysToGoal;
-        }
-      }
-    }
+    var projectedDate = savingsProjection.etaDate;
+    var projectedDays = savingsProjection.daysToGoal;
+    var projectionSeries = savingsProjection.series;
     var reserveAmount = document.getElementById("fin-savings-amount");
     var reserveBadge = document.getElementById("fin-savings-badge");
     var reserveFill = document.getElementById("fin-savings-fill");
@@ -764,7 +791,7 @@
     if (analyticsSaveMonth) analyticsSaveMonth.textContent = fmtR(reserveMonth);
     if (analyticsSaveAverage) analyticsSaveAverage.textContent = fmtR(reserveAverage);
     if (analyticsSaveMissing) analyticsSaveMissing.textContent = fmtR(reserveMissing);
-    if (analyticsSaveDays) analyticsSaveDays.textContent = projectedDays === null ? "Sem média suficiente" : (projectedDays === 0 ? "0 dias" : projectedDays + " dias");
+    if (analyticsSaveDays) analyticsSaveDays.textContent = projectedDays === null ? "Sem aportes futuros suficientes" : (projectedDays === 0 ? "0 dias" : projectedDays + " dias");
     if (analyticsSaveDate) analyticsSaveDate.textContent = projectedDate ? fmtD(projectedDate) : "Sem projeção";
     if (reserveSub) {
       reserveSub.textContent = reserve > 0 ? "Movido entre saldo e poupança, sem tratar como gasto." : "Use guardar e retirar para mover valores entre saldo e poupança.";
@@ -2102,7 +2129,7 @@
     renderAll();
 
     // Quando os dados da nuvem são aplicados (login/sincronização), recarrega e redesenha,
-    // refazendo a projeção da poupança com o histórico atualizado.
+    // refazendo a projeção da poupança com os lançamentos atualizados.
     window.addEventListener("soter:remote-state-applied", function () {
       loadData();
       renderAll();
