@@ -1149,6 +1149,10 @@ body[data-page="financas"] .app-content {
 .fin-cal-bal.neg { color: var(--fin-rose); }
 .fin-cal-bal.future { opacity: 0.5; }
 
+/* total da poupança: mesmo design do saldo, uma linha acima */
+.fin-cal-bal.fin-cal-sav { bottom: 16px; }
+.fin-cal-cell.has-sav .fin-cal-events { margin-bottom: 26px; }
+
 .fin-cat-list {
   padding: 12px 20px 20px;
   display: flex;
