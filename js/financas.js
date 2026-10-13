@@ -1262,10 +1262,10 @@
           var daySave = daySavings[ds] || 0;
           if (daySave > 0) {
             var savEl = document.createElement("div");
-            savEl.className = "fin-cal-sav" + (ds > todayStr ? " future" : "");
-            savEl.style.cssText = "color:#c8a96e;font-size:.85em;line-height:1.2;white-space:nowrap;" + (ds > todayStr ? "opacity:.7;" : "");
+            savEl.className = "fin-cal-bal fin-cal-sav pos future";
             savEl.textContent = "\uD83C\uDFE6 " + fmtR(daySave).replace("R$ ", "");
             savEl.title = "Poupança em " + fmtD(ds) + ": " + fmtR(daySave) + (ds > todayStr ? " (projetado)" : "");
+            cell.classList.add("has-sav");
             cell.appendChild(savEl);
           }
         }
