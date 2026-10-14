@@ -20,6 +20,17 @@ body[data-page="sonhos"] [data-app-footer] {
   margin-top: auto;
 }
 
+/* Hub de sonho (tela cheia): o #sn-hub vive dentro de .sonhos-content, que cria
+   um contexto de empilhamento (z-index:1). Por isso o z-index:500 do hub nao
+   vale contra o footer (tambem z-index:1, e depois no DOM) e ele aparecia por
+   cima do hub quando estava visivel na viewport. visibility mantem o layout
+   (sem salto de scroll ao fechar) e esconde o footer enquanto o hub esta aberto. */
+body.sn-hub-open .site-footer,
+body.sn-hub-open [data-app-footer] {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
 body.sn-modal-open .site-header,
 body.sn-modal-open .site-footer,
 body.sn-modal-open [data-app-header],
