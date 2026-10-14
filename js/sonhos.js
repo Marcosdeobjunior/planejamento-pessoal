@@ -285,6 +285,7 @@ function snOpenHub(id) {
   hub.scrollTop = 0;
   hub.classList.add('open');
   document.body.style.overflow = 'hidden';
+  document.body.classList.add('sn-hub-open');
   const header = document.querySelector('.site-header');
   if (header) header.style.zIndex = '1';
   hubRender(s);
@@ -293,6 +294,7 @@ function snOpenHub(id) {
 function snHubClose() {
   document.getElementById('sn-hub').classList.remove('open');
   document.body.style.overflow = '';
+  document.body.classList.remove('sn-hub-open');
   const header = document.querySelector('.site-header');
   if (header) header.style.zIndex = '';
   hubSonhoId = null;
