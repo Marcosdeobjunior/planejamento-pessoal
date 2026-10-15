@@ -2087,3 +2087,136 @@ body.tk-analytics-open .site-header {
     width: 100%;
   }
 }
+
+
+/* Datas de início/término */
+.tk-end-date-option {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.tk-end-date-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  width: fit-content;
+  color: var(--text);
+  font: 600 12px var(--font-ui);
+  cursor: pointer;
+  user-select: none;
+}
+.tk-end-date-toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent1, #c8a96e);
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.tk-end-date-wrap {
+  width: 100%;
+  min-width: 0;
+}
+.tk-end-date-wrap[hidden] { display: none !important; }
+.tk-end-date-wrap .tk-modal-lbl,
+.tk-end-date-wrap .hd-field-lbl { margin-bottom: 6px; }
+
+/* Calendário semanal com barras horizontais para tarefas com duração */
+.tk-cal-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  align-items: stretch;
+}
+.tk-cal-week {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  column-gap: 4px;
+  position: relative;
+  align-items: stretch;
+  min-width: 0;
+}
+.tk-cal-week .tk-day {
+  grid-row: 1;
+  min-width: 0;
+  min-height: calc(110px + var(--tk-span-lanes, 0) * 20px);
+  overflow: hidden;
+}
+.tk-cal-week .tk-day-tasks {
+  margin-top: calc(24px + var(--tk-span-lanes, 0) * 20px);
+  position: relative;
+  z-index: 1;
+}
+.tk-cal-week-spans {
+  position: absolute;
+  z-index: 5;
+  top: 28px;
+  left: 0;
+  right: 0;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-auto-rows: 18px;
+  gap: 3px 4px;
+  align-content: start;
+  pointer-events: none;
+  min-width: 0;
+}
+.tk-cal-span-task {
+  width: auto;
+  min-width: 0;
+  height: 18px;
+  min-height: 18px;
+  align-self: start;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 7px;
+  margin: 0;
+  border-radius: 4px;
+  border-color: color-mix(in srgb, var(--tk-color, #c8a96e) 48%, transparent);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--tk-color, #c8a96e) 42%, #171526), color-mix(in srgb, var(--tk-color, #c8a96e) 20%, #090816));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .24);
+  font-size: 10px;
+  line-height: 1.2;
+  cursor: grab;
+  pointer-events: auto;
+  z-index: 6;
+}
+.tk-cal-span-task.span-start { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
+.tk-cal-span-task.span-continuation-left { border-top-left-radius: 2px; border-bottom-left-radius: 2px; }
+.tk-cal-span-task.span-end { border-top-right-radius: 8px; border-bottom-right-radius: 8px; }
+.tk-cal-span-task.span-continuation-right { border-top-right-radius: 2px; border-bottom-right-radius: 2px; }
+.tk-cal-span-task::before {
+  width: 3px;
+  border-radius: inherit;
+  opacity: .9;
+}
+.tk-cal-span-task:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.14);
+  z-index: 10;
+}
+.tk-cal-span-time {
+  opacity: .72;
+  flex: 0 0 auto;
+  font-size: 9px;
+}
+.tk-cal-span-task.selected {
+  outline: 1px solid rgba(200, 169, 110, .72);
+  outline-offset: 1px;
+}
+.tk-cal-drag-ghost.copy-mode {
+  border-color: rgba(94, 196, 168, .5);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, .45), 0 0 0 1px rgba(94, 196, 168, .12);
+}
+.tk-cal-drag-ghost.copy-mode .tk-cal-drag-ghost-count {
+  background: rgba(94, 196, 168, .18);
+  border-color: rgba(94, 196, 168, .38);
+  color: #a9f0da;
+}
+@media (max-width: 960px) {
+  .tk-cal-week .tk-day { min-height: calc(80px + var(--tk-span-lanes, 0) * 20px); }
+  .tk-cal-week .tk-day-tasks { margin-top: calc(24px + var(--tk-span-lanes, 0) * 20px); }
+  .tk-cal-span-task { font-size: 9px; padding-left: 4px; padding-right: 4px; }
+}
