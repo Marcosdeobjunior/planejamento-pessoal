@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -191,12 +191,22 @@
         <div class="hd-section-lbl">Cronograma</div>
         <div class="hd-row">
           <div class="hd-field">
-            <div class="hd-field-lbl">Data</div>
-            <input class="hd-inp" id="tkd-data" type="date">
-            </div>
-            <div class="hd-field">
-              <div class="hd-field-lbl">Hora</div>
+            <div class="hd-field-lbl">Data de início</div>
+            <input class="hd-inp" id="tkd-data" type="date" onchange="tkUpdateEndDateMin('tkd')">
+          </div>
+          <div class="hd-field">
+            <div class="hd-field-lbl">Hora</div>
               <input class="hd-inp" id="tkd-hora" type="time">
+            </div>
+          </div>
+          <div class="hd-field tk-end-date-option">
+            <label class="tk-end-date-toggle" for="tkd-tem-data-fim">
+              <input id="tkd-tem-data-fim" type="checkbox" onchange="tkToggleEndDateFields('tkd')">
+              <span>Data de Término</span>
+            </label>
+            <div id="tkd-data-fim-wrap" class="tk-end-date-wrap" hidden>
+              <div class="hd-field-lbl">Data de Término</div>
+              <input class="hd-inp" id="tkd-data-fim" type="date" aria-label="Data de Término">
             </div>
           </div>
           <div class="hd-field">
@@ -392,8 +402,18 @@
         <input class="tk-modal-inp" id="tkm-hora" type="time">
       </div>
       <div>
-        <div class="tk-modal-lbl">Data</div>
+        <div class="tk-modal-lbl">Data de início</div>
         <input class="tk-modal-inp" id="tkm-data" type="date" onchange="tkModalSetDate(this.value)">
+      </div>
+      <div class="tk-end-date-option">
+        <label class="tk-end-date-toggle" for="tkm-tem-data-fim">
+          <input id="tkm-tem-data-fim" type="checkbox" onchange="tkToggleEndDateFields('tkm')">
+          <span>Data de Término</span>
+        </label>
+        <div id="tkm-data-fim-wrap" class="tk-end-date-wrap" hidden>
+          <div class="tk-modal-lbl">Data de Término</div>
+          <input class="tk-modal-inp" id="tkm-data-fim" type="date" aria-label="Data de Término">
+        </div>
       </div>
       <div>
         <div class="tk-modal-lbl">Recorrência</div>
