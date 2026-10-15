@@ -30,6 +30,13 @@
   var firebaseLastError = "";
   var firebaseIsApplyingRemote = false;
   var firebaseIsHydrated = false;
+  var firebaseDirty = false;
+  var firebaseUserChangeDepth = 0;
+  var firebaseRetryTimer = null;
+  var firebaseRetryCount = 0;
+  var firebaseLifecycleBound = false;
+  var FIREBASE_DIRTY_STORAGE_PREFIX = "soter_sync_dirty_v1_";
+  var FIREBASE_MAX_DOC_BYTES = 900000;
   var firebaseAuthInstance = null;
   var firebaseCurrentUser = null;
   var firebasePendingDeletedUid = '';
@@ -540,6 +547,10 @@
     clearFirebaseRealtimeListeners();
     firebaseDocRef = null;
     firebaseIsHydrated = false;
+    firebasePendingState = null;
+    firebaseDirty = false;
+    if (firebaseSyncTimer) { clearTimeout(firebaseSyncTimer); firebaseSyncTimer = null; }
+    if (firebaseRetryTimer) { clearTimeout(firebaseRetryTimer); firebaseRetryTimer = null; }
   }
 
   function hasRemoteCollectionData(remoteCollections) {
@@ -547,10 +558,46 @@
     return hasMeaningfulState(state);
   }
 
-  function isRemoteStateOlderThanLocal(remoteUpdatedAt, localState) {
-    var remoteTime = Date.parse(String(remoteUpdatedAt || ""));
-    var localTime = Date.parse(String(localState && localState.data && localState.data.lastVisitedAt || ""));
-    return Number.isFinite(remoteTime) && Number.isFinite(localTime) && remoteTime < localTime;
+  function getDirtyStorageKey() {
+    var uid = firebaseCurrentUser && firebaseCurrentUser.uid ? String(firebaseCurrentUser.uid) : "";
+    return uid ? (FIREBASE_DIRTY_STORAGE_PREFIX + uid) : "";
+  }
+
+  function readPersistedDirty() {
+    var key = getDirtyStorageKey();
+    if (!key) return false;
+    try { return localStorage.getItem(key) === "1"; } catch (err) { return false; }
+  }
+
+  function setFirebaseDirty(value) {
+    var key;
+    firebaseDirty = !!value;
+    key = getDirtyStorageKey();
+    if (!key) return;
+    try {
+      if (firebaseDirty) localStorage.setItem(key, "1");
+      else localStorage.removeItem(key);
+    } catch (err) { }
+  }
+
+  function hasUnsyncedLocalChanges() {
+    return !!(firebaseDirty || firebasePendingState || firebaseSyncInFlight || readPersistedDirty());
+  }
+
+  function showSyncProblem(message) {
+    try {
+      var el = document.getElementById("soter-sync-toast");
+      if (!el) {
+        el = document.createElement("div");
+        el.id = "soter-sync-toast";
+        el.style.cssText = "position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:99999;max-width:90vw;padding:10px 16px;border-radius:10px;background:#7a1f1f;color:#fff;font:600 13px/1.4 sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.4)";
+        document.body.appendChild(el);
+      }
+      el.textContent = message;
+      el.style.display = "block";
+      clearTimeout(el._t);
+      el._t = setTimeout(function () { el.style.display = "none"; }, 9000);
+    } catch (err) { }
   }
 
   function summarizeStateForSync(state) {
@@ -1238,7 +1285,8 @@
       window.SoterStorage.registerWithEmail(creds.email, creds.password, { remember: creds.remember, name: creds.name }).then(function () {
         var state = ensureStateShape(loadState());
         state.profile.name = creds.name;
-        saveState(state);
+        firebaseUserChangeDepth += 1;
+        try { saveState(state); } finally { firebaseUserChangeDepth -= 1; }
         showFeedback('Conta criada com sucesso.', false);
         finishAuthFlow('Conta criada com sucesso.', feedbackOk);
       }).catch(function (err) { showFeedback(formatAuthMessage(err, 'signup'), true); });
@@ -1417,20 +1465,17 @@
     if (firebaseUnsubscribe) return;
     firebaseUnsubscribe = firebaseDocRef.onSnapshot(function (docSnap) {
       var remote = docSnap && docSnap.exists ? docSnap.data() : null;
+      if (docSnap && docSnap.metadata && (docSnap.metadata.hasPendingWrites || docSnap.metadata.fromCache)) return;
+      if (!firebaseIsHydrated) return;
       if (!remote || !remote.state) {
-        firebaseIsHydrated = true;
         updateFirebaseMeta({ enabled: true, hydrated: true, lastError: '' });
         return;
       }
+      if (hasUnsyncedLocalChanges()) return;
       var localState = loadState();
-      if (isRemoteStateOlderThanLocal(remote.updatedAt, localState)) {
-        queueFirebaseSync(localState);
-        return;
-      }
       var incoming = mergeAuthProfileIntoState(ensureStateShape(remote.state), firebaseCurrentUser);
       var serializedIncoming = JSON.stringify(compactStateForStorage(incoming));
       var serializedLocal = JSON.stringify(compactStateForStorage(localState));
-      firebaseIsHydrated = true;
       updateFirebaseMeta({
         enabled: true,
         hydrated: true,
@@ -1454,40 +1499,45 @@
 
   function hydrateFirebaseDocument() {
     if (!firebaseDocRef) return Promise.resolve(true);
+    if (!firebaseDirty) firebaseDirty = readPersistedDirty();
     return firebaseDocRef.get().then(function (docSnap) {
-      if (!docSnap.exists || !docSnap.data() || !docSnap.data().state) {
+      var hasRemote = !!(docSnap && docSnap.exists && docSnap.data() && docSnap.data().state);
+      if (!hasRemote) {
         var initialState = mergeAuthProfileIntoState(loadState(), firebaseCurrentUser);
         return firebaseDocRef.set({
           state: compactStateForStorage(initialState),
           updatedAt: new Date().toISOString(),
           source: location.pathname || 'site'
-        }, { merge: true });
+        }).then(function () { setFirebaseDirty(false); return true; });
       }
-      return docSnap;
-    }).then(function (docSnap) {
-      if (docSnap && docSnap.exists && docSnap.data() && docSnap.data().state) {
-        if (isRemoteStateOlderThanLocal(docSnap.data().updatedAt, loadState())) {
-          queueFirebaseSync(loadState());
-          firebaseIsHydrated = true;
-          updateFirebaseMeta({ hydrated: true, lastError: '' });
-          return true;
-        }
-        firebaseIsApplyingRemote = true;
-        try {
-          applySiteState(mergeAuthProfileIntoState(ensureStateShape(docSnap.data().state), firebaseCurrentUser), loadState());
-        } finally {
-          firebaseIsApplyingRemote = false;
-        }
-        dispatchRemoteStateApplied();
+      if (firebaseDirty || firebasePendingState) {
+        if (!firebasePendingState) firebasePendingState = compactStateForStorage(ensureStateShape(loadState()));
+        return true;
       }
+      firebaseIsApplyingRemote = true;
+      try {
+        applySiteState(mergeAuthProfileIntoState(ensureStateShape(docSnap.data().state), firebaseCurrentUser), loadState());
+      } finally {
+        firebaseIsApplyingRemote = false;
+      }
+      dispatchRemoteStateApplied();
+      return true;
+    }).then(function () {
       firebaseIsHydrated = true;
       updateFirebaseMeta({ hydrated: true, lastError: '' });
+      if (firebasePendingState) flushFirebaseSync().catch(function () { });
       return true;
     }).catch(function (err) {
       var msg = String((err && err.message) || err || 'hydrate_failed');
+      var uidAtFailure = firebaseCurrentUser && firebaseCurrentUser.uid;
       firebaseLastError = msg;
       updateFirebaseMeta({ enabled: true, hydrated: false, lastError: msg });
       console.error('[SoterStorage] Falha ao carregar dados do Firebase:', err);
+      setTimeout(function () {
+        if (firebaseCurrentUser && firebaseCurrentUser.uid === uidAtFailure && !firebaseIsHydrated) {
+          hydrateFirebaseDocument().catch(function () { });
+        }
+      }, 4000);
       throw err;
     });
   }
@@ -1519,6 +1569,8 @@
       userEmail: firebaseCurrentUser.email || '',
       lastError: ''
     });
+    if (firebaseDirty) setFirebaseDirty(true);
+    else firebaseDirty = readPersistedDirty();
     connectFirebaseRealtime();
     return hydrateFirebaseDocument();
   }
@@ -1619,7 +1671,11 @@
           }, appName);
         }
         firebaseDbInstance = firebaseAppInstance.firestore();
+        try {
+          firebaseDbInstance.enablePersistence({ synchronizeTabs: true }).catch(function () { });
+        } catch (err) { }
         firebaseAuthInstance = firebaseAppInstance.auth();
+        bindFirebaseLifecycleFlush();
         ensureFirebaseAuthListener();
         updateFirebaseMeta({
           enabled: true,
@@ -1638,44 +1694,101 @@
     return firebaseReadyPromise;
   }
 
+  function scheduleFirebaseRetry() {
+    var delays = [1000, 3000, 8000, 20000, 60000];
+    var delay = delays[Math.min(firebaseRetryCount, delays.length - 1)];
+    firebaseRetryCount += 1;
+    if (firebaseRetryTimer) clearTimeout(firebaseRetryTimer);
+    firebaseRetryTimer = setTimeout(function () {
+      firebaseRetryTimer = null;
+      if (!firebasePendingState && firebaseDirty) {
+        firebasePendingState = compactStateForStorage(ensureStateShape(loadState()));
+      }
+      flushFirebaseSync().catch(function () { });
+    }, delay);
+  }
+
   function flushFirebaseSync() {
     if (!firebasePendingState) return Promise.resolve(null);
     return initFirebaseSync().then(function () {
-      if (!firebaseDocRef) return null;
+      if (!firebaseDocRef || !firebaseIsHydrated) return null;
+      if (!firebasePendingState) return null;
       if (firebaseSyncInFlight) return firebaseSyncInFlight;
-      var payloadState = compactStateForStorage(firebasePendingState);
+      var payloadState = firebasePendingState;
+      var approxBytes = 0;
+      try { approxBytes = JSON.stringify(payloadState).length; } catch (err) { }
+      if (approxBytes > FIREBASE_MAX_DOC_BYTES) {
+        showSyncProblem('Seus dados est\u00e3o grandes demais para sincronizar (' + Math.round(approxBytes / 1024) + ' KB). Remova imagens/capas pesadas.');
+      }
       firebasePendingState = null;
       firebaseSyncInFlight = firebaseDocRef.set({
         state: payloadState,
         updatedAt: new Date().toISOString(),
         source: location.pathname || 'site'
-      }, { merge: true }).then(function () {
+      }).then(function () {
         firebaseLastSyncedAt = new Date().toISOString();
         firebaseLastError = '';
+        firebaseRetryCount = 0;
+        if (!firebasePendingState) setFirebaseDirty(false);
         updateFirebaseMeta({ enabled: true, hydrated: firebaseIsHydrated, lastSyncAt: firebaseLastSyncedAt, lastError: '' });
         return true;
       }).catch(function (err) {
         firebaseLastError = String((err && err.message) || err || 'firebase_sync_failed');
+        if (!firebasePendingState) firebasePendingState = payloadState;
         updateFirebaseMeta({ enabled: true, hydrated: firebaseIsHydrated, lastError: firebaseLastError });
         console.error('[SoterStorage] Falha ao sincronizar com Firebase:', err);
+        if (firebaseRetryCount === 2) showSyncProblem('N\u00e3o foi poss\u00edvel salvar na nuvem. Vou tentar novamente.');
+        scheduleFirebaseRetry();
         throw err;
       }).finally(function () {
         firebaseSyncInFlight = null;
-        if (firebasePendingState) flushFirebaseSync();
+        if (firebasePendingState && !firebaseRetryTimer) flushFirebaseSync().catch(function () { });
       });
       return firebaseSyncInFlight;
     });
   }
 
-  function queueFirebaseSync(state) {
+  function queueFirebaseSync(state, options) {
+    var force = !!(options && options.force);
     if (firebaseIsApplyingRemote) return;
     if (!getFirebaseRuntimeConfig()) return;
+    if (force || firebaseUserChangeDepth > 0) {
+      setFirebaseDirty(true);
+    } else if (!firebaseDirty) {
+      return;
+    }
     firebasePendingState = compactStateForStorage(ensureStateShape(state));
     if (firebaseSyncTimer) clearTimeout(firebaseSyncTimer);
     firebaseSyncTimer = setTimeout(function () {
       firebaseSyncTimer = null;
       flushFirebaseSync().catch(function () { });
-    }, 700);
+    }, 0);
+  }
+
+  function flushFirebaseNowOnLeave() {
+    if (!firebaseCurrentUser) return;
+    if (firebaseDirty && !firebasePendingState && !firebaseSyncInFlight) {
+      firebasePendingState = compactStateForStorage(ensureStateShape(loadState()));
+    }
+    if (firebasePendingState) flushFirebaseSync().catch(function () { });
+  }
+
+  function bindFirebaseLifecycleFlush() {
+    if (firebaseLifecycleBound) return;
+    firebaseLifecycleBound = true;
+    window.addEventListener('pagehide', flushFirebaseNowOnLeave);
+    window.addEventListener('beforeunload', flushFirebaseNowOnLeave);
+    window.addEventListener('online', function () {
+      firebaseRetryCount = 0;
+      flushFirebaseNowOnLeave();
+    });
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'hidden') {
+        flushFirebaseNowOnLeave();
+      } else if (firebaseIsHydrated && firebaseDirty) {
+        flushFirebaseNowOnLeave();
+      }
+    });
   }
 
   function saveState(state) {
@@ -4968,7 +5081,12 @@
   function exposeStorageApi(state) {
     function commit(nextState) {
       var previousState = loadState();
-      state = applySiteState(nextState, previousState);
+      firebaseUserChangeDepth += 1;
+      try {
+        state = applySiteState(nextState, previousState);
+      } finally {
+        firebaseUserChangeDepth -= 1;
+      }
       return state;
     }
 
@@ -5054,7 +5172,7 @@
                 var state = ensureStateShape(loadState());
                 state.profile.name = desiredName;
                 replaceLocalStateSnapshot(state, state);
-                queueFirebaseSync(state);
+                queueFirebaseSync(state, { force: true });
                 return credential;
               }).catch(function () {
                 return credential;
@@ -5133,7 +5251,7 @@
         });
       },
       syncFirebaseNow: function () {
-        queueFirebaseSync(loadState());
+        queueFirebaseSync(loadState(), { force: true });
         return flushFirebaseSync();
       },
       openAuthModal: function (options) {
