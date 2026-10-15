@@ -1,4 +1,4 @@
-﻿"use strict";
+"use strict";
 
 var appState = null;
 var S = {};
@@ -238,7 +238,8 @@ const tkCalendarSelection = {
   pointerStartX: 0,
   pointerStartY: 0,
   pointerDragging: false,
-  hoverDate: null
+  hoverDate: null,
+  copyOnDrag: false
 };
 var tkCalDragGhost = null;
 const taskLinkBoardState = { x: 18, y: 18, scale: 1, dragging: false, startX: 0, startY: 0 };
@@ -584,6 +585,7 @@ function tkSyncRecurringSeries(masterId) {
       cat: master.cat,
       hora: master.hora,
       data: tkAdvanceRecurrence(seedDate, master.recurrence, occurrenceIndex),
+      dataFim: master.dataFim ? tkAddDays(tkAdvanceRecurrence(seedDate, master.recurrence, occurrenceIndex), tkDiffDays(seedDate, master.dataFim)) : '',
       cor: master.cor,
       done: existing ? existing.done : false,
       subtarefas: existing ? existing.subtarefas || [] : tkCloneSubtasks(master.subtarefas),
@@ -620,9 +622,15 @@ function tkApplyRecurringEdits(taskId, updates) {
   if (task.recurrenceIndex) {
     nextMasterDate = tkRewindRecurrence(nextDate, nextRecurrence, task.recurrenceIndex);
   }
+  var nextEndDate = Object.prototype.hasOwnProperty.call(updates, 'dataFim') ? updates.dataFim : (task.dataFim || master.dataFim || '');
+  var nextMasterEndDate = nextEndDate;
+  if (task.recurrenceIndex && nextEndDate && nextDate) {
+    nextMasterEndDate = tkAddDays(nextMasterDate, tkDiffDays(nextDate, nextEndDate));
+  }
 
   Object.assign(master, updates, {
     data: nextMasterDate,
+    dataFim: nextMasterEndDate,
     recurrenceSeedDate: nextMasterDate
   });
   master.isRecurringClone = false;
@@ -638,6 +646,7 @@ function tkMoveTaskSeries(ids, dayDelta) {
   S.tasks.forEach(function (task) {
     if (normalizedIds.indexOf(Number(task.id)) >= 0 && task.data) {
       task.data = tkAddDays(task.data, dayDelta);
+      if (task.dataFim) task.dataFim = tkAddDays(task.dataFim, dayDelta);
     }
   });
 }
@@ -648,6 +657,7 @@ function tkMigrate() {
   S.tasks = (S.tasks || []).map(t => {
     if (!t.subtarefas) t.subtarefas = [];
     if (typeof t.data === 'undefined' || t.data === null) t.data = tkToday();
+    if (typeof t.dataFim === 'undefined' || t.dataFim === null) t.dataFim = '';
     if (!t.cor)  t.cor  = TK_COLORS[0];
     if (!t.nota) t.nota = '';
     if (!t.hora) t.hora = '';
@@ -1527,6 +1537,85 @@ function tkHandleCustomColorPick(onPickFn, value) {
   if (typeof window[onPickFn] === 'function') window[onPickFn](normalizedColor);
 }
 
+function tkUpdateEndDateMin(prefix) {
+  var startInput = document.getElementById(prefix + '-data');
+  var endInput = document.getElementById(prefix + '-data-fim');
+  var checkbox = document.getElementById(prefix + '-tem-data-fim');
+  if (!startInput || !endInput || !checkbox) return;
+  endInput.min = startInput.value || '';
+  if (checkbox.checked && startInput.value && (!endInput.value || endInput.value < startInput.value)) {
+    endInput.value = startInput.value;
+  }
+}
+
+function tkToggleEndDateFields(prefix) {
+  var checkbox = document.getElementById(prefix + '-tem-data-fim');
+  var wrap = document.getElementById(prefix + '-data-fim-wrap');
+  var endInput = document.getElementById(prefix + '-data-fim');
+  if (!checkbox || !wrap || !endInput) return;
+  wrap.hidden = !checkbox.checked;
+  endInput.required = checkbox.checked;
+  if (!checkbox.checked) {
+    endInput.value = '';
+    endInput.min = '';
+    return;
+  }
+  tkUpdateEndDateMin(prefix);
+}
+
+function tkReadEndDate(prefix, startDate) {
+  var checkbox = document.getElementById(prefix + '-tem-data-fim');
+  var endInput = document.getElementById(prefix + '-data-fim');
+  if (!checkbox || !checkbox.checked) return '';
+  if (!startDate) {
+    alert('Defina a Data de início antes de informar a Data de Término.');
+    var startInput = document.getElementById(prefix + '-data');
+    if (startInput) startInput.focus();
+    return null;
+  }
+  if (!endInput || !endInput.value) {
+    alert('Informe a Data de Término.');
+    if (endInput) endInput.focus();
+    return null;
+  }
+  if (endInput.value < startDate) {
+    alert('A Data de Término não pode ser anterior à Data de início.');
+    endInput.focus();
+    return null;
+  }
+  return endInput.value;
+}
+
+function tkTaskHasDateRange(task) {
+  return !!(task && task.data && task.dataFim && String(task.dataFim).slice(0, 10) > String(task.data).slice(0, 10));
+}
+
+function tkDuplicateTaskAtDate(taskId, targetDate) {
+  var original = S.tasks.find(function (item) { return Number(item.id) === Number(taskId); });
+  if (!original || !targetDate) return false;
+  var newId = Date.now() + Math.floor(Math.random() * 1000000) + 1;
+  var duration = tkTaskHasDateRange(original) ? tkDiffDays(original.data, original.dataFim) : 0;
+  var copy = Object.assign({}, original, {
+    id: newId,
+    nome: original.nome || '',
+    data: targetDate,
+    dataFim: original.dataFim ? tkAddDays(targetDate, duration) : '',
+    done: false,
+    subtarefas: tkCloneSubtasks(original.subtarefas),
+    recurrence: 'none',
+    parentId: null,
+    isRecurringClone: false,
+    recurrenceMasterId: newId,
+    recurrenceIndex: 0,
+    recurrenceSeedDate: targetDate,
+    recurrenceExceptions: []
+  });
+  S.tasks.push(copy);
+  save();
+  renderTasks();
+  return true;
+}
+
 function tkModalOpenForDate(ds) {
   tkModalDate = ds || tkToday();
   tkModalColor = TK_COLORS[0];
@@ -1534,6 +1623,9 @@ function tkModalOpenForDate(ds) {
   document.getElementById('tkm-nota').value  = '';
   document.getElementById('tkm-hora').value  = '';
   document.getElementById('tkm-data').value  = tkModalDate;
+  document.getElementById('tkm-tem-data-fim').checked = false;
+  document.getElementById('tkm-data-fim').value = '';
+  tkToggleEndDateFields('tkm');
   document.getElementById('tkm-recorrencia').value = 'none';
   document.getElementById('tkm-prior').value = 'media';
   document.getElementById('tkm-cat').value   = 'Pessoal';
@@ -1551,6 +1643,7 @@ function tkModalPickColor(col) {
 function tkModalSetDate(value) {
   tkModalDate = value || '';
   document.getElementById('tk-modal-date-label').textContent = tkModalDate ? tkFmtDateLong(tkModalDate) : 'Sem data';
+  tkUpdateEndDateMin('tkm');
 }
 
 function tkModalClose() {
@@ -1964,7 +2057,7 @@ function taskHubRender(t) {
     const diff = tkDaysFromNow(t.data);
     const cls = diff < 0 && !t.done ? 'warning' : diff === 0 ? 'success' : '';
     const lbl = diff === 0 ? 'Hoje' : diff === 1 ? 'Amanhã' : diff < 0 ? `${Math.abs(diff)}d atrasada` : `em ${diff}d`;
-    chips.push(`<div class="hub-hero-chip ${cls}">📅 ${tkFmtDate(t.data)} · ${lbl}</div>`);
+    chips.push(`<div class="hub-hero-chip ${cls}">📅 ${tkFmtDate(t.data)}${t.dataFim ? ' – ' + tkFmtDate(t.dataFim) : ''} · ${lbl}</div>`);
   }
   if (t.hora) chips.push(`<div class="hub-hero-chip">🕒 ${t.hora}</div>`);
   const subTotal = (t.subtarefas || []).length;
@@ -1989,9 +2082,10 @@ function taskHubRender(t) {
   schedEl.innerHTML = `
     <div style="display:flex;flex-direction:column;gap:10px">
       <div style="display:flex;justify-content:space-between">
-        <span style="font-size:11px;font-family:var(--font-mono);color:var(--muted)">Data</span>
+        <span style="font-size:11px;font-family:var(--font-mono);color:var(--muted)">Data de início</span>
         <span style="font-size:13px;font-weight:700;color:var(--text)">${t.data ? tkFmtDate(t.data) : '—'}</span>
       </div>
+      ${t.dataFim ? `<div style="display:flex;justify-content:space-between"><span style="font-size:11px;font-family:var(--font-mono);color:var(--muted)">Data de Término</span><span style="font-size:13px;font-weight:700;color:var(--text)">${tkFmtDate(t.dataFim)}</span></div>` : ''}
       ${t.hora ? `<div style="display:flex;justify-content:space-between">
         <span style="font-size:11px;font-family:var(--font-mono);color:var(--muted)">Hora</span>
         <span style="font-size:13px;font-weight:700;color:var(--text)">${t.hora}</span>
@@ -2167,6 +2261,9 @@ function taskHubDrawerOpen() {
   document.getElementById('tkd-prior').value = t.prior || 'media';
   document.getElementById('tkd-cat').value   = t.cat   || 'Pessoal';
   document.getElementById('tkd-data').value  = t.data  || '';
+  document.getElementById('tkd-tem-data-fim').checked = !!t.dataFim;
+  document.getElementById('tkd-data-fim').value = t.dataFim || '';
+  tkToggleEndDateFields('tkd');
   document.getElementById('tkd-hora').value  = t.hora  || '';
   document.getElementById('tkd-recorrencia').value = t.recurrence || 'none';
   document.getElementById('taskh-drawer-icon').textContent  = TK_PRIOR_COLOR[t.prior] ? ({alta:'\u25c6', media:'\u25c8', baixa:'\u2726'}[t.prior]) : '\u2726';
@@ -2320,7 +2417,21 @@ function tkCalEndSelection() {
 function tkCalFindDayAtPoint(clientX, clientY) {
   var target = document.elementFromPoint(clientX, clientY);
   var day = target ? target.closest('.tk-day[data-date]') : null;
-  return day ? day.dataset.date : null;
+  if (day) return day.dataset.date;
+  var week = target ? target.closest('.tk-cal-week') : null;
+  if (!week) {
+    var underPointer = document.elementFromPoint(clientX, clientY);
+    week = underPointer ? underPointer.closest('.tk-cal-week') : null;
+  }
+  if (!week) return null;
+  var days = week.querySelectorAll('.tk-day');
+  for (var i = 0; i < days.length; i++) {
+    var rect = days[i].getBoundingClientRect();
+    if (clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) {
+      return days[i].dataset.date || null;
+    }
+  }
+  return null;
 }
 
 function tkCalResetPointerDrag() {
@@ -2331,6 +2442,7 @@ function tkCalResetPointerDrag() {
   tkCalendarSelection.dragTaskId = null;
   tkCalendarSelection.dragDate = null;
   tkCalendarSelection.dragIds = [];
+  tkCalendarSelection.copyOnDrag = false;
   tkCalSetHoverDate(null);
   document.body.classList.remove('tk-cal-dragging');
   if (tkCalDragGhost && tkCalDragGhost.parentNode) tkCalDragGhost.parentNode.removeChild(tkCalDragGhost);
@@ -2353,9 +2465,12 @@ function tkCalUpdateDragGhost(clientX, clientY) {
     return S.tasks.find(function (item) { return item.id === Number(id); });
   }).filter(Boolean);
   if (!tasks.length) return;
-  ghost.innerHTML = ids.length === 1
-    ? `<span class="tk-cal-drag-ghost-count">1</span><span>${tasks[0].nome}</span>`
-    : `<span class="tk-cal-drag-ghost-count">${ids.length}</span><span>${tasks[0].nome}</span>`;
+  ghost.classList.toggle('copy-mode', !!tkCalendarSelection.copyOnDrag);
+  ghost.innerHTML = tkCalendarSelection.copyOnDrag
+    ? `<span class="tk-cal-drag-ghost-count">＋</span><span>Duplicar · ${tasks[0].nome}</span>`
+    : ids.length === 1
+      ? `<span class="tk-cal-drag-ghost-count">1</span><span>${tasks[0].nome}</span>`
+      : `<span class="tk-cal-drag-ghost-count">${ids.length}</span><span>${tasks[0].nome}</span>`;
   ghost.style.left = (clientX + 16) + 'px';
   ghost.style.top = (clientY + 16) + 'px';
   ghost.classList.add('show');
@@ -2382,7 +2497,10 @@ function tkCalCardPointerDown(event, id) {
     tkCalendarSelection.justDragged = false;
     return;
   }
-  if (event.ctrlKey || event.metaKey) {
+  if (event.altKey) {
+    tkClearSelection();
+    tkCalendarSelection.ids.add(id);
+  } else if (event.ctrlKey || event.metaKey) {
     if (tkSelectionHas(id)) tkCalendarSelection.ids.delete(id);
     else tkCalendarSelection.ids.add(id);
   } else if (!tkSelectionHas(id)) {
@@ -2396,7 +2514,8 @@ function tkCalCardPointerDown(event, id) {
   tkCalendarSelection.pointerDragging = false;
   tkCalendarSelection.dragTaskId = id;
   tkCalendarSelection.dragDate = (S.tasks.find(function (item) { return item.id === id; }) || {}).data || null;
-  tkCalendarSelection.dragIds = tkSelectionHas(id) ? Array.from(tkCalendarSelection.ids) : [id];
+  tkCalendarSelection.copyOnDrag = !!event.altKey;
+  tkCalendarSelection.dragIds = event.altKey ? [id] : (tkSelectionHas(id) ? Array.from(tkCalendarSelection.ids) : [id]);
 }
 
 function tkCalCardActivate(event, id) {
@@ -2410,6 +2529,7 @@ function tkCalHandlePointerDragMove(event) {
   if (!tkCalendarSelection.pointerCardId || tkCalendarSelection.boxActive) return;
   var dx = Math.abs(event.clientX - tkCalendarSelection.pointerStartX);
   var dy = Math.abs(event.clientY - tkCalendarSelection.pointerStartY);
+  if (event.altKey) tkCalendarSelection.copyOnDrag = true;
   if (!tkCalendarSelection.pointerDragging && (dx > 6 || dy > 6)) {
     tkCalendarSelection.pointerDragging = true;
     document.body.classList.add('tk-cal-dragging');
@@ -2423,10 +2543,19 @@ function tkCalHandlePointerDragEnd(event) {
   if (!tkCalendarSelection.pointerCardId) return;
   var wasDragging = tkCalendarSelection.pointerDragging;
   var sourceDate = tkCalendarSelection.dragDate;
+  var sourceTaskId = tkCalendarSelection.dragTaskId;
   var ids = tkCalendarSelection.dragIds.slice();
+  var copyOnDrag = !!tkCalendarSelection.copyOnDrag;
   var targetDate = tkCalFindDayAtPoint(event.clientX, event.clientY);
   tkCalResetPointerDrag();
   if (!wasDragging || !sourceDate || !targetDate || !ids.length) return;
+  if (copyOnDrag) {
+    tkDuplicateTaskAtDate(sourceTaskId, targetDate);
+    tkClearSelection();
+    tkCalendarSelection.justDragged = true;
+    setTimeout(function () { tkCalendarSelection.justDragged = false; }, 100);
+    return;
+  }
   var delta = tkDiffDays(sourceDate, targetDate);
   if (!delta) {
     tkCalendarSelection.justDragged = true;
@@ -2461,16 +2590,32 @@ tkCalRender = function () {
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMo = new Date(year, month + 1, 0).getDate();
   const daysInPrev = new Date(year, month, 0).getDate();
+  const weeksCount = Math.ceil((firstDay + daysInMo) / 7);
+  const totalCells = weeksCount * 7;
+  const firstVisibleDate = tkDateLocalString(new Date(year, month, 1 - firstDay));
+  const lastVisibleDate = tkAddDays(firstVisibleDate, totalCells - 1);
   const byDay = {};
   const holidayMap = {};
+  const weekSpans = Array.from({ length: weeksCount }, function () { return []; });
+  const weekLaneOccupancy = Array.from({ length: weeksCount }, function () { return []; });
+
+  // Tarefas que terminam depois da data de início viram barras contínuas por semana.
+  const rangedTasks = S.tasks.filter(function (task) {
+    return tkTaskHasDateRange(task) && task.data <= lastVisibleDate && task.dataFim >= firstVisibleDate;
+  }).sort(function (a, b) {
+    return a.data.localeCompare(b.data) || a.dataFim.localeCompare(b.dataFim) || String(a.nome || '').localeCompare(String(b.nome || ''));
+  });
+
+  // Tarefas de um único dia permanecem dentro da respectiva célula.
   S.tasks.forEach(function (task) {
-    if (!task.data) return;
+    if (!task.data || tkTaskHasDateRange(task)) return;
     const parts = task.data.split('-').map(Number);
     if (parts[0] === year && parts[1] === month + 1) {
       if (!byDay[parts[2]]) byDay[parts[2]] = [];
       byDay[parts[2]].push(task);
     }
   });
+
   tkGetNationalHolidayEntries(year, month).forEach(function (holiday) {
     const day = Number(holiday.data.slice(-2));
     holidayMap[day] = holiday;
@@ -2492,77 +2637,122 @@ tkCalRender = function () {
     if (!byDay[day]) byDay[day] = [];
     byDay[day].push(task);
   });
+
+  // Aloca cada barra em uma faixa livre da semana para que durações sobrepostas não se sobreponham.
+  rangedTasks.forEach(function (task) {
+    const startOffset = tkDiffDays(firstVisibleDate, task.data);
+    const endOffset = tkDiffDays(firstVisibleDate, task.dataFim);
+    if (endOffset < 0 || startOffset >= totalCells) return;
+    const firstWeek = Math.max(0, Math.floor(startOffset / 7));
+    const lastWeek = Math.min(weeksCount - 1, Math.floor(endOffset / 7));
+    for (let weekIndex = firstWeek; weekIndex <= lastWeek; weekIndex++) {
+      const segmentStartOffset = Math.max(startOffset, weekIndex * 7);
+      const segmentEndOffset = Math.min(endOffset, weekIndex * 7 + 6);
+      const startCol = segmentStartOffset - weekIndex * 7;
+      const endCol = segmentEndOffset - weekIndex * 7;
+      const lanes = weekLaneOccupancy[weekIndex];
+      let lane = 0;
+      while (lanes[lane] && lanes[lane].some(function (range) {
+        return !(endCol < range.start || startCol > range.end);
+      })) lane++;
+      if (!lanes[lane]) lanes[lane] = [];
+      lanes[lane].push({ start: startCol, end: endCol });
+      weekSpans[weekIndex].push({
+        task: task,
+        lane: lane,
+        startCol: startCol,
+        endCol: endCol,
+        segmentStartDate: tkAddDays(firstVisibleDate, segmentStartOffset),
+        segmentEndDate: tkAddDays(firstVisibleDate, segmentEndOffset),
+        isStart: task.data >= tkAddDays(firstVisibleDate, segmentStartOffset) && task.data <= tkAddDays(firstVisibleDate, segmentEndOffset),
+        isEnd: task.dataFim >= tkAddDays(firstVisibleDate, segmentStartOffset) && task.dataFim <= tkAddDays(firstVisibleDate, segmentEndOffset)
+      });
+    }
+  });
+
   const grid = document.getElementById('tk-cal-days');
   if (!grid) return;
-  const cells = [];
-  for (let i = firstDay - 1; i >= 0; i--) {
-    cells.push(`<div class="tk-day other-month"><span class="tk-day-num">${daysInPrev - i}</span></div>`);
-  }
-  for (let d = 1; d <= daysInMo; d++) {
-    const ds = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    const holiday = holidayMap[d] || null;
-    const cls = ['tk-day', ds === today ? 'today' : '', ds === selected ? 'selected' : '', holiday ? 'holiday' : ''].filter(Boolean).join(' ');
-    const miniCards = (byDay[d] || []).slice().sort(function (a, b) {
-      if (!!a.isHoliday !== !!b.isHoliday) return a.isHoliday ? -1 : 1;
-      if (!!a.isDream !== !!b.isDream) return a.isDream ? -1 : 1;
-      if (!!a.isReview !== !!b.isReview) return a.isReview ? -1 : 1;
-      if (a.done !== b.done) return a.done ? 1 : -1;
-      return (a.hora || '99:99').localeCompare(b.hora || '99:99');
-    }).map(function (task) {
-      if (task.isHoliday) {
-        return `<div class="tk-cal-task-card tk-cal-holiday-card"
-          onclick="event.stopPropagation()"
-          title="${task.holidayType}: ${task.nome}">
-        <span class="tk-cal-holiday-icon">${task.icon}</span>${task.nome}
-      </div>`;
+  const weekMarkup = [];
+  for (let weekIndex = 0; weekIndex < weeksCount; weekIndex++) {
+    const weekCells = [];
+    const weekStartOffset = weekIndex * 7;
+    const laneCount = weekLaneOccupancy[weekIndex].length;
+    for (let colIndex = 0; colIndex < 7; colIndex++) {
+      const visibleDate = tkAddDays(firstVisibleDate, weekStartOffset + colIndex);
+      const dateObj = tkParseDate(visibleDate);
+      const dayNumber = dateObj.getDate();
+      const isCurrentMonth = dateObj.getFullYear() === year && dateObj.getMonth() === month;
+      if (!isCurrentMonth) {
+        weekCells.push(`<div class="tk-day other-month" style="grid-column:${colIndex + 1}"><span class="tk-day-num">${dayNumber}</span></div>`);
+        continue;
       }
-      if (task.isDream) {
-        return `<div class="tk-cal-task-card tk-cal-dream-card"
-          style="--tk-color:#7c6fcd"
-          onclick="event.stopPropagation();tkOpenDreamDeadline('${String(task.id)}')"
-          title="Prazo do sonho: ${task.nome}">
-        <span class="tk-cal-dream-icon">${task.icon}</span>${task.nome}
-      </div>`;
-      }
-      if (task.isReview) {
-        return `<div class="tk-cal-task-card tk-cal-review-card"
-          onclick="event.stopPropagation();tkOpenReviewPlanner()"
-          title="Revisão agendada: ${task.nome}">
-        <span class="tk-cal-review-icon">${task.icon}</span>${task.nome}
-      </div>`;
-      }
+
+      const ds = visibleDate;
+      const holiday = holidayMap[dayNumber] || null;
+      const cls = ['tk-day', ds === today ? 'today' : '', ds === selected ? 'selected' : '', holiday ? 'holiday' : ''].filter(Boolean).join(' ');
+      const miniCards = (byDay[dayNumber] || []).slice().sort(function (a, b) {
+        if (!!a.isHoliday !== !!b.isHoliday) return a.isHoliday ? -1 : 1;
+        if (!!a.isDream !== !!b.isDream) return a.isDream ? -1 : 1;
+        if (!!a.isReview !== !!b.isReview) return a.isReview ? -1 : 1;
+        if (a.done !== b.done) return a.done ? 1 : -1;
+        return (a.hora || '99:99').localeCompare(b.hora || '99:99');
+      }).map(function (task) {
+        if (task.isHoliday) {
+          return `<div class="tk-cal-task-card tk-cal-holiday-card" onclick="event.stopPropagation()" title="${task.holidayType}: ${task.nome}"><span class="tk-cal-holiday-icon">${task.icon}</span>${task.nome}</div>`;
+        }
+        if (task.isDream) {
+          return `<div class="tk-cal-task-card tk-cal-dream-card" style="--tk-color:#7c6fcd" onclick="event.stopPropagation();tkOpenDreamDeadline('${String(task.id)}')" title="Prazo do sonho: ${task.nome}"><span class="tk-cal-dream-icon">${task.icon}</span>${task.nome}</div>`;
+        }
+        if (task.isReview) {
+          return `<div class="tk-cal-task-card tk-cal-review-card" onclick="event.stopPropagation();tkOpenReviewPlanner()" title="Revisão agendada: ${task.nome}"><span class="tk-cal-review-icon">${task.icon}</span>${task.nome}</div>`;
+        }
+        const col = task.cor || TK_PRIOR_COLOR[task.prior] || '#c8a96e';
+        if (task.isGym) {
+          return `<div class="tk-cal-task-card ${task.done ? 'done-mini' : ''}" style="--tk-color:${col}" onclick="event.stopPropagation();tkOpenGymDay('${task.data}')" title="Treino programado">🏋️ ${task.nome}</div>`;
+        }
+        return `<div class="tk-cal-task-card ${task.done ? 'done-mini' : ''} ${tkSelectionHas(task.id) ? 'selected' : ''}"
+            data-task-id="${task.id}" data-date="${task.data}" style="--tk-color:${col}"
+            oncontextmenu="return tkQuickActionsOpen(event, ${task.id})"
+            onclick="tkCalCardActivate(event, ${task.id})"
+            onpointerdown="tkCalCardPointerDown(event, ${task.id})" title="${task.nome}">
+          ${task.hora ? `<span style="opacity:.6;margin-right:3px">${task.hora}</span>` : ''}${task.nome}
+        </div>`;
+      }).join('');
+      weekCells.push(`<div class="${cls}" data-date="${ds}" style="grid-column:${colIndex + 1}"
+          onclick="tkCalSelectDay('${ds}')" ondblclick="tkModalOpenForDate('${ds}')"
+          title="${holiday ? holiday.holidayType + ': ' + holiday.nome + ' · ' : ''}Clique para selecionar · Duplo clique para adicionar tarefa">
+        <span class="tk-day-num">${dayNumber}</span>
+        <div class="tk-day-tasks">${miniCards}</div>
+      </div>`);
+    }
+
+    const spanMarkup = weekSpans[weekIndex].slice().sort(function (a, b) { return a.lane - b.lane || a.startCol - b.startCol; }).map(function (segment) {
+      const task = segment.task;
       const col = task.cor || TK_PRIOR_COLOR[task.prior] || '#c8a96e';
-      if (task.isGym) {
-        return `<div class="tk-cal-task-card ${task.done ? 'done-mini' : ''}"
-          style="--tk-color:${col}"
-          onclick="event.stopPropagation();tkOpenGymDay('${task.data}')"
-          title="Treino programado">
-        🏋️ ${task.nome}
-      </div>`;
-      }
-      return `<div class="tk-cal-task-card ${task.done ? 'done-mini' : ''} ${tkSelectionHas(task.id) ? 'selected' : ''}"
-          data-task-id="${task.id}"
-          data-date="${task.data}"
-          style="--tk-color:${col}"
+      const classes = [
+        'tk-cal-task-card', 'tk-cal-span-task',
+        task.done ? 'done-mini' : '',
+        tkSelectionHas(task.id) ? 'selected' : '',
+        segment.isStart ? 'span-start' : 'span-continuation-left',
+        segment.isEnd ? 'span-end' : 'span-continuation-right'
+      ].filter(Boolean).join(' ');
+      const titleText = task.nome || 'Tarefa';
+      const shownName = segment.isStart ? titleText : '↤ ' + titleText;
+      const timeLabel = segment.isStart && task.hora ? `<span class="tk-cal-span-time">${task.hora}</span>` : '';
+      return `<div class="${classes}" data-task-id="${task.id}" data-span-start="${segment.segmentStartDate}"
+          style="--tk-color:${col};grid-column:${segment.startCol + 1}/span ${segment.endCol - segment.startCol + 1};grid-row:${segment.lane + 1}"
           oncontextmenu="return tkQuickActionsOpen(event, ${task.id})"
           onclick="tkCalCardActivate(event, ${task.id})"
           onpointerdown="tkCalCardPointerDown(event, ${task.id})"
-          title="${task.nome}">
-        ${task.hora ? `<span style="opacity:.6;margin-right:3px">${task.hora}</span>` : ''}${task.nome}
-      </div>`;
+          title="${titleText} · ${tkFmtDate(task.data)} – ${tkFmtDate(task.dataFim)}">${timeLabel}${shownName}</div>`;
     }).join('');
-    cells.push(`<div class="${cls}"
-        data-date="${ds}"
-        onclick="tkCalSelectDay('${ds}')"
-        ondblclick="tkModalOpenForDate('${ds}')"
-        title="${holiday ? holiday.holidayType + ': ' + holiday.nome + ' · ' : ''}Clique para selecionar · Duplo clique para adicionar tarefa">
-      <span class="tk-day-num">${d}</span>
-      <div class="tk-day-tasks">${miniCards}</div>
+
+    weekMarkup.push(`<div class="tk-cal-week" style="--tk-span-lanes:${laneCount}">
+      ${weekCells.join('')}
+      <div class="tk-cal-week-spans" style="--tk-span-lanes:${laneCount}" aria-label="Tarefas com duração de vários dias">${spanMarkup}</div>
     </div>`);
   }
-  const rem = cells.length % 7 === 0 ? 0 : 7 - (cells.length % 7);
-  for (let d = 1; d <= rem; d++) cells.push(`<div class="tk-day other-month"><span class="tk-day-num">${d}</span></div>`);
-  grid.innerHTML = cells.join('');
+  grid.innerHTML = weekMarkup.join('');
   tkCalEnsureSelectionBox();
   tkCalApplySelection(tkCalendarSelection.ids);
 };
@@ -2890,6 +3080,8 @@ tkModalSave = function () {
   if (!nome) { document.getElementById('tkm-nome').focus(); return; }
   const selectedDate = document.getElementById('tkm-data').value;
   tkModalSetDate(selectedDate);
+  const endDate = tkReadEndDate('tkm', selectedDate);
+  if (endDate === null) return;
   const task = {
     id: Date.now(),
     nome: nome,
@@ -2899,6 +3091,7 @@ tkModalSave = function () {
     hora: document.getElementById('tkm-hora').value,
     recurrence: document.getElementById('tkm-recorrencia').value,
     data: selectedDate,
+    dataFim: endDate,
     cor: tkModalColor,
     done: false,
     subtarefas: [],
@@ -2928,12 +3121,16 @@ taskHubDrawerSalvar = function () {
   if (!nome) { document.getElementById('tkd-nome').focus(); return; }
   const idx = S.tasks.findIndex(function (item) { return item.id === taskHubState.id; });
   if (idx < 0) return;
+  const startDate = document.getElementById('tkd-data').value;
+  const endDate = tkReadEndDate('tkd', startDate);
+  if (endDate === null) return;
   const savedTask = tkApplyRecurringEdits(taskHubState.id, {
     nome: nome,
     nota: document.getElementById('tkd-nota').value.trim(),
     prior: document.getElementById('tkd-prior').value,
     cat: document.getElementById('tkd-cat').value,
-    data: document.getElementById('tkd-data').value,
+    data: startDate,
+    dataFim: endDate,
     hora: document.getElementById('tkd-hora').value,
     cor: taskHubDrawerColor,
     recurrence: document.getElementById('tkd-recorrencia').value
