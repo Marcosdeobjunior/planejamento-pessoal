@@ -688,17 +688,11 @@ function syncReviewPlannerState(){
 }
 
 function saveAll(){
-  try{
-    doneByDate[todayStr()] = todaySessionDone;
-    localStorage.setItem('srs-decks', JSON.stringify(decks));
-    localStorage.setItem('srs-cards', JSON.stringify(cards));
-    localStorage.setItem('srs-log',   JSON.stringify(log));
-    localStorage.setItem('srs-ratinglog', JSON.stringify(ratingLog));
-    localStorage.setItem('srs-done-'+todayStr(), String(todaySessionDone));
-  }catch(e){}
+  doneByDate[todayStr()] = todaySessionDone;
   syncReviewPlannerState();
 }
 function loadAll(){
+  decks=[]; cards=[]; log={}; ratingLog={}; doneByDate={}; todaySessionDone=0;
   try{
     if(window.SoterStorage && typeof window.SoterStorage.getState === 'function'){
       var appState = window.SoterStorage.getState();
@@ -716,19 +710,60 @@ function loadAll(){
         return;
       }
     }
-    var d=localStorage.getItem('srs-decks'); if(d)decks=JSON.parse(d);
-    var c=localStorage.getItem('srs-cards'); if(c)cards=JSON.parse(c);
-    var l=localStorage.getItem('srs-log');   if(l)log=JSON.parse(l);
-    var rl=localStorage.getItem('srs-ratinglog'); if(rl)ratingLog=JSON.parse(rl);
-    for(var i=0;i<localStorage.length;i++){
-      var key=localStorage.key(i);
-      if(String(key).indexOf('srs-done-')===0){
-        doneByDate[key.slice(9)] = parseInt(localStorage.getItem(key),10)||0;
-      }
-    }
-    var t=localStorage.getItem('srs-done-'+todayStr()); if(t)todaySessionDone=parseInt(t)||0;
-    normalizeDecks();
   }catch(e){}
+}
+
+// As chaves srs-* antigas eram globais do navegador (sem dono): uma conta nova herdava os
+// flashcards de outra. Migração única: só importa se a conta atual ainda não tem revisaoPlanner
+// e não há outra conta conhecida neste navegador; depois apaga todas as srs-*.
+function hasOtherKnownAccount(currentUid){
+  var prefix='soter_state_cache_v2_';
+  try{
+    for(var i=0;i<localStorage.length;i++){
+      var key=String(localStorage.key(i)||'');
+      if(key.indexOf(prefix)!==0 || key===prefix+'guest') continue;
+      if(!currentUid || key!==prefix+currentUid) return true;
+    }
+  }catch(e){ return true; }
+  return false;
+}
+function migrateLegacyReviewKeys(currentUid){
+  var keys=[], imported=false, i;
+  try{
+    for(i=0;i<localStorage.length;i++){
+      var key=String(localStorage.key(i)||'');
+      if(key.indexOf('srs-')===0) keys.push(key);
+    }
+  }catch(e){ return false; }
+  if(!keys.length) return false;
+  try{
+    var appState=window.SoterStorage.getState();
+    var hasPlanner=!!(appState && appState.data && appState.data.revisaoPlanner && typeof appState.data.revisaoPlanner==='object');
+    if(!hasPlanner && !hasOtherKnownAccount(currentUid)){
+      var d=localStorage.getItem('srs-decks'); if(d)decks=JSON.parse(d);
+      var c=localStorage.getItem('srs-cards'); if(c)cards=JSON.parse(c);
+      var l=localStorage.getItem('srs-log');   if(l)log=JSON.parse(l);
+      var rl=localStorage.getItem('srs-ratinglog'); if(rl)ratingLog=JSON.parse(rl);
+      for(i=0;i<keys.length;i++){
+        if(keys[i].indexOf('srs-done-')===0) doneByDate[keys[i].slice(9)]=parseInt(localStorage.getItem(keys[i]),10)||0;
+      }
+      todaySessionDone=parseInt(doneByDate[todayStr()],10)||0;
+      normalizeDecks();
+      syncReviewPlannerState();
+      imported=true;
+    }
+  }catch(e){ return false; }
+  for(i=0;i<keys.length;i++){
+    try{ localStorage.removeItem(keys[i]); }catch(e){}
+  }
+  return imported;
+}
+// Espera o login ser confirmado (o estado anterior pode não ser desta conta) antes de migrar.
+function afterReviewOwnerKnown(cb){
+  if(!window.SoterStorage || typeof window.SoterStorage.getFirebaseAuthStatus!=='function') return;
+  window.SoterStorage.getFirebaseAuthStatus().then(function(status){
+    cb(status && status.signedIn ? String(status.uid||'') : '');
+  }).catch(function(){});
 }
 
 // ══════════════════════════════════════════════
@@ -1808,8 +1843,14 @@ window.addEventListener('resize',function(){
 // INIT
 // ══════════════════════════════════════════════
 loadAll();
-syncReviewPlannerState();
 showView('dash');
+afterReviewOwnerKnown(function(currentUid){
+  if(currentView==='review') return; // não troca os arrays no meio de uma sessão
+  var before=JSON.stringify([decks,cards,log,ratingLog,doneByDate]);
+  loadAll();
+  migrateLegacyReviewKeys(currentUid);
+  if(JSON.stringify([decks,cards,log,ratingLog,doneByDate])!==before) showView(currentView);
+});
 </script>
 
 <!-- STARFIELD -->

@@ -938,6 +938,7 @@
     if (message.indexOf("auth/wrong-password") >= 0 || message.indexOf("INVALID_LOGIN_CREDENTIALS") >= 0) return "A senha informada não confere.";
     if (message.indexOf("auth/popup-closed-by-user") >= 0) return "A confirmação de identidade foi cancelada.";
     if (message.indexOf("auth/requires-recent-login") >= 0) return "Confirme novamente sua identidade para concluir a exclusão.";
+    if (message.indexOf("logout_cancelled_unsynced") >= 0) return "Saída cancelada: ainda há alterações não enviadas para a nuvem.";
     if (message.indexOf("not_authenticated") >= 0) return "Nenhuma conta conectada para executar esta ação.";
     if (message.indexOf("unsupported_provider") >= 0) return "O método atual de login não suporta exclusão automática por esta interface.";
     return message;
