@@ -23,6 +23,78 @@
 
   --radius: 16px;
   --site-content-width: 1785px;
+
+  /* ===== Design system (--ds-*) =====
+     Valores medidos na página Revisão (revisao.html), que é a referência visual.
+     As variáveis acima continuam valendo: várias páginas dependem delas. */
+
+  /* Fontes */
+  --ds-font-display: "Playfair Display", Georgia, serif;
+  --ds-font-ui: "Syne", system-ui, sans-serif;
+  --ds-font-mono: "DM Mono", monospace;
+
+  /* Tamanhos de texto (e espaçamento entre letras dos rótulos) */
+  --ds-fs-h1: 40px;
+  --ds-fs-stat: 30px;
+  --ds-fs-h2: 24px;
+  --ds-fs-h3: 17px;
+  --ds-fs-lg: 14px;
+  --ds-fs-base: 13px;
+  --ds-fs-sm: 12px;
+  --ds-fs-xs: 11px;
+  --ds-fs-label: 10px;
+  --ds-ls-label: 2px;
+
+  /* Espaços */
+  --ds-sp-1: 4px;
+  --ds-sp-2: 8px;
+  --ds-sp-3: 12px;
+  --ds-sp-4: 14px;
+  --ds-sp-5: 20px;
+  --ds-sp-6: 28px;
+  --ds-sp-7: 40px;
+  --ds-sp-8: 50px;
+
+  /* Layout: header fixo, subnavegação, largura máxima, margem lateral e respiro da página */
+  --ds-header-h: 58px;
+  --ds-subnav-h: 44px;
+  --ds-content-max: 1785px;
+  --ds-gutter: 20px;
+  --ds-page-pad-top: 28px;
+  --ds-page-pad-bottom: 50px;
+
+  /* Superfícies: raios, fundo de card, bordas e fundo de campo */
+  --ds-radius: 14px;
+  --ds-radius-btn: 9px;
+  --ds-radius-btn-sm: 7px;
+  --ds-radius-btn-lg: 12px;
+  --ds-radius-input: 9px;
+  --ds-radius-modal: 20px;
+  --ds-card: rgba(16, 16, 28, 0.80);
+  --ds-border: rgba(255, 255, 255, 0.07);
+  --ds-border-hover: rgba(255, 255, 255, 0.14);
+  --ds-input-bg: rgba(6, 6, 16, 0.8);
+
+  /* Cores. --ds-muted é mais claro que o #6b6882 da Revisão para dar contraste
+     de pelo menos 4.5:1 com texto pequeno sobre o fundo e os cards. */
+  --ds-bg: #04040c;
+  --ds-text: #e8e4f0;
+  --ds-muted: #8a87a0;
+  --ds-muted-2: #9693aa;
+  --ds-gold: #c8a96e;
+  --ds-gold-2: #e8c987;
+  --ds-teal: #5ec4a8;
+  --ds-rose: #e06b8b;
+  --ds-violet: #7c6fcd;
+  --ds-sky: #4ab0e8;
+  --ds-amber: #e8864a;
+}
+
+/* Margem lateral menor no celular */
+@media (max-width: 640px) {
+  :root {
+    --ds-gutter: 16px;
+  }
 }
 
 html {

@@ -29,12 +29,6 @@ body {
   z-index: 0;
 }
 
-.app-content {
-  width: min(var(--site-content-width), calc(100% - 40px));
-  max-width: var(--site-content-width);
-  margin: 0 auto;
-}
-
 :root {
   --rpg-gold: #d4af6a;
   --rpg-gold2: #f0d080;
@@ -1716,10 +1710,6 @@ body.rpg-reading-open [data-app-header] {
 }
 
 @media (max-width: 560px) {
-  .app-content {
-    width: calc(100% - 20px);
-  }
-
   .rpg-page-header {
     margin-bottom: 20px;
   }
