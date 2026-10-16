@@ -2175,6 +2175,11 @@
 <script src="js/firebase-config.js"></script>
   <script src="js/app-shell.js"></script>
 <script>
+// Dados do usuário escapados antes de entrar em innerHTML/atributos (SoterUtils vem do js/app-shell.js).
+const esc = value => window.SoterUtils.esc(value);
+const escUrl = url => window.SoterUtils.esc(window.SoterUtils.safeUrl(url));
+// Valor para dentro de onclick="...": vira literal JS (JSON) e depois é escapado para o atributo.
+const escJs = value => window.SoterUtils.esc(JSON.stringify(value));
 // ─── STATE — dados da biblioteca por conta ────────────────────────────────
 const S = { livros: [], cinema: [], mangas: [] };
 const HUB_STATE = {
@@ -2626,11 +2631,11 @@ function buildAdaptationEditorItem(link, sourceTracker, scope) {
   const trackerLabel = TRACKER_CFG[link.tracker].key === 'cinema' ? 'Cinema' : TRACKER_CFG[link.tracker].key === 'mangas' ? 'Mangá' : 'Livraria';
   const label = getAdaptationLabel(sourceTracker, link.tracker);
   const action = scope === 'modal'
-    ? `removeModalAdaptationLink('${link.tracker}',${JSON.stringify(link.id)})`
-    : `removeDrawerAdaptationLink('${link.tracker}',${JSON.stringify(link.id)})`;
+    ? `removeModalAdaptationLink('${link.tracker}',${escJs(link.id)})`
+    : `removeDrawerAdaptationLink('${link.tracker}',${escJs(link.id)})`;
   return `<div class="adapt-editor-item">
     <div>
-      <div style="font-size:12px;font-weight:700">${item.titulo}</div>
+      <div style="font-size:12px;font-weight:700">${esc(item.titulo)}</div>
       <div class="adapt-editor-meta">${trackerLabel} • ${label}</div>
     </div>
     <button class="adapt-editor-remove" type="button" onclick="${action}">Remover</button>
@@ -2649,7 +2654,7 @@ function renderAdaptationItemOptions(sourceTracker, trackerSelectId, itemSelectI
   if (!select) return;
   const items = (S[tracker] || []).filter(item => item.id !== excludeId);
   select.innerHTML = items.length
-    ? items.map(item => `<option value="${encodeTrackerPayload(item.id)}">${item.titulo}</option>`).join('')
+    ? items.map(item => `<option value="${encodeTrackerPayload(item.id)}">${esc(item.titulo)}</option>`).join('')
     : '<option value="">Nenhum item disponível</option>';
 }
 function renderModalAdaptationItemOptions() {
@@ -2726,9 +2731,9 @@ function renderQuoteModalList() {
   const list = document.getElementById('quote-list');
   if (!list) return;
   list.innerHTML = HUB_STATE.quotes.map(q => `
-    <button type="button" class="quote-item ${q.id===currentQuoteId?'active':''}" onclick="selectQuote('${q.id}')">
-      <div class="quote-item-text">"${(q.text||'').replace(/"/g, '&quot;')}"</div>
-      <div class="quote-item-author">- ${(q.author||'Autor desconhecido').replace(/</g,'&lt;')}</div>
+    <button type="button" class="quote-item ${q.id===currentQuoteId?'active':''}" onclick="selectQuote(${escJs(q.id)})">
+      <div class="quote-item-text">"${esc(q.text||'')}"</div>
+      <div class="quote-item-author">- ${esc(q.author||'Autor desconhecido')}</div>
     </button>
   `).join('');
 }
@@ -2798,7 +2803,7 @@ function getYearDailyCounts(items, year) {
     if (!ts) return;
     const dt = new Date(ts);
     if (dt.getFullYear() !== year) return;
-    const key = dt.toISOString().slice(0, 10);
+    const key = SoterUtils.localDateKey(dt);
     out[key] = (out[key] || 0) + 1;
   });
   return out;
@@ -2812,7 +2817,7 @@ function renderHeatmap(containerId, dailyCounts, year) {
   const cells = [];
   for (let i = 0; i < totalDays; i += 1) {
     const d = new Date(year, 0, 1 + i);
-    const key = d.toISOString().slice(0, 10);
+    const key = SoterUtils.localDateKey(d);
     const v = dailyCounts[key] || 0;
     const cls = v >= 5 ? 'lv4' : v >= 3 ? 'lv3' : v >= 2 ? 'lv2' : v >= 1 ? 'lv1' : '';
     cells.push(`<div class="hub-day ${cls}" title="${key}: ${v}"></div>`);
@@ -2834,18 +2839,18 @@ function getStreakInfoFromDays(days) {
   if (!ordered.length) return { streak: 0, lastActiveDay: '', todayDone: false };
   const active = {};
   const now = new Date();
-  const todayKey = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString().slice(0, 10);
+  const todayKey = SoterUtils.localDateKey(now);
   let cursor = new Date(todayKey + 'T00:00:00');
   let streak = 0;
   ordered.forEach(day => { active[day] = true; });
-  while (active[cursor.toISOString().slice(0, 10)]) {
+  while (active[SoterUtils.localDateKey(cursor)]) {
     streak += 1;
     cursor.setDate(cursor.getDate() - 1);
   }
   if (!streak) {
     cursor = new Date(todayKey + 'T00:00:00');
     cursor.setDate(cursor.getDate() - 1);
-    while (active[cursor.toISOString().slice(0, 10)]) {
+    while (active[SoterUtils.localDateKey(cursor)]) {
       streak += 1;
       cursor.setDate(cursor.getDate() - 1);
     }
@@ -2859,16 +2864,16 @@ function getTrackerEngagementDays(items, tracker) {
       item.progressHistory.forEach(row => {
         const stamp = +new Date(row && row.at || 0);
         if (!stamp) return;
-        days[new Date(stamp).toISOString().slice(0, 10)] = true;
+        days[SoterUtils.localDateKey(stamp)] = true;
       });
     }
     if (tracker === 'cinema' && item && item.tipo !== 'Série' && item.status === 'concluido') {
       const stamp = +item.finishedAt || +item.updatedAt || +item.createdAt || 0;
-      if (stamp) days[new Date(stamp).toISOString().slice(0, 10)] = true;
+      if (stamp) days[SoterUtils.localDateKey(stamp)] = true;
     }
     if ((tracker === 'livros' || tracker === 'mangas') && item && item.status === 'concluido') {
       const stamp = +item.finishedAt || +item.updatedAt || 0;
-      if (stamp) days[new Date(stamp).toISOString().slice(0, 10)] = true;
+      if (stamp) days[SoterUtils.localDateKey(stamp)] = true;
     }
   });
   return Object.keys(days);
@@ -2930,7 +2935,7 @@ function renderHubBars(containerId, rows) {
   const max = rows[0].count || 1;
   wrap.innerHTML = rows.slice(0, 5).map(row => {
     const pct = Math.max(8, Math.round((row.count / max) * 100));
-    return `<div class="hub-bar"><div>${row.label}</div><div class="hub-bar-track"><div class="hub-bar-fill" style="width:${pct}%"></div></div><div>${row.count}</div></div>`;
+    return `<div class="hub-bar"><div>${esc(row.label)}</div><div class="hub-bar-track"><div class="hub-bar-fill" style="width:${pct}%"></div></div><div>${row.count}</div></div>`;
   }).join('');
 }
 function renderGoalRecommendation(tracker) {
@@ -2943,7 +2948,7 @@ function renderGoalRecommendation(tracker) {
     return;
   }
   const meta = [rec.autor, rec.genero, TRACKER_CFG[tracker].statusLabels[rec.status] || rec.status].filter(Boolean).join(' • ');
-  el.innerHTML = `<div style="display:grid;gap:8px"><div style="font-size:16px;font-weight:700">${rec.titulo}</div><div class="tracker-count">${meta || 'Sem metadados'}</div><div style="font-size:12px;color:var(--text)">Maior potencial agora por progresso e prioridade atual.</div><button class="btn btn-primary" type="button" onclick="openModal('${tracker}',${rec.id})">Abrir item</button></div>`;
+  el.innerHTML = `<div style="display:grid;gap:8px"><div style="font-size:16px;font-weight:700">${esc(rec.titulo)}</div><div class="tracker-count">${esc(meta || 'Sem metadados')}</div><div style="font-size:12px;color:var(--text)">Maior potencial agora por progresso e prioridade atual.</div><button class="btn btn-primary" type="button" onclick="openModal('${tracker}',${escJs(rec.id)})">Abrir item</button></div>`;
 }
 function renderGoalHub(tracker) {
   const year = new Date().getFullYear();
@@ -3029,8 +3034,9 @@ function updateModalHero() {
 function updateModalHeroImage(src) {
   const el = document.getElementById('modal-hero-blur');
   if (!el) return;
-  el.style.backgroundImage = src ? `url(${src})` : '';
-  el.style.opacity = src ? '1' : '0';
+  const safeSrc = window.SoterUtils.safeUrl(src);
+  el.style.backgroundImage = safeSrc ? `url(${JSON.stringify(safeSrc)})` : '';
+  el.style.opacity = safeSrc ? '1' : '0';
 }
 function updateModalStatusPill() {
   if (!modalTracker) return;
@@ -3287,7 +3293,7 @@ function openModal(tracker, editId = null) {
       modalAdaptationDraft = normalizeAdaptationLinks(item.adaptationLinks, tracker, editId);
       renderModalAdaptationItemOptions();
       renderModalAdaptationList();
-      if (item.img) { modalImgData=item.img; document.getElementById('modal-preview').src=item.img; zone.classList.add('has-img'); updateModalHeroImage(item.img); }
+      if (item.img) { modalImgData=item.img; document.getElementById('modal-preview').src=window.SoterUtils.safeUrl(item.img); zone.classList.add('has-img'); updateModalHeroImage(item.img); }
       if (imgUrlInput && /^https?:\/\//i.test(item.img || '')) imgUrlInput.value = item.img;
       updateModalHero(); updateModalStatusPill(); updateModalProgress(); updateCinemaTypeFields();
       renderModalRelated(tracker, item);
@@ -3330,8 +3336,10 @@ function handleImgUpload(e) {
 function applyImgUrl() {
   const input = document.getElementById('m-img-url');
   if (!input) return;
-  const url = input.value.trim();
-  if (!url) return;
+  const raw = input.value.trim();
+  if (!raw) return;
+  const url = window.SoterUtils.safeUrl(raw);
+  if (!url) { alert('URL de imagem inválida. Use um endereço http:// ou https://.'); return; }
   modalImgData = url;
   document.getElementById('modal-preview').src = url;
   document.getElementById('img-zone').classList.add('has-img');
@@ -3454,7 +3462,7 @@ function renderHubTimeline(item) {
   if (!el) return;
   const rows = getTimelineRows(item);
   el.innerHTML = rows.length
-    ? rows.map(row => `<div class="hub-timeline-row"><div class="hub-timeline-dot"></div><div class="hub-timeline-label">${row.label}</div><div class="hub-timeline-date">${fmtDate(row.at)}</div></div>`).join('')
+    ? rows.map(row => `<div class="hub-timeline-row"><div class="hub-timeline-dot"></div><div class="hub-timeline-label">${esc(row.label)}</div><div class="hub-timeline-date">${fmtDate(row.at)}</div></div>`).join('')
     : '<div class="th-obs-empty">Sem eventos registrados.</div>';
 }
 function renderHubHistory(tracker, item) {
@@ -3462,7 +3470,7 @@ function renderHubHistory(tracker, item) {
   if (!el) return;
   const rows = Array.isArray(item.progressHistory) ? item.progressHistory.slice(0, 6) : [];
   el.innerHTML = rows.length
-    ? rows.map(row => `<div class="hub-history-row"><div class="hub-history-dot"></div><div class="hub-history-label">${row.label}</div><div class="hub-history-value">${row.pct ?? 0}%</div><div class="hub-history-date">${fmtDate(row.at)}</div></div>`).join('')
+    ? rows.map(row => `<div class="hub-history-row"><div class="hub-history-dot"></div><div class="hub-history-label">${esc(row.label)}</div><div class="hub-history-value">${row.pct ?? 0}%</div><div class="hub-history-date">${fmtDate(row.at)}</div></div>`).join('')
     : '<div class="th-obs-empty">Sem histórico suficiente ainda.</div>';
 }
 function renderHubAdaptations(tracker, item) {
@@ -3478,7 +3486,7 @@ function renderHubAdaptations(tracker, item) {
     const kind = row.direction === 'incoming'
       ? (tracker === 'cinema' || tracker === 'mangas' ? 'Obra de origem relacionada' : 'Adaptação relacionada')
       : getAdaptationLabel(tracker, row.tracker);
-    return `<div class="adapt-card" data-card-tracker="${row.tracker}" data-card-id="${encodeTrackerPayload(row.item.id)}"><div class="adapt-thumb">${row.item.img ? `<img src="${row.item.img}" alt="${row.item.titulo}">` : cfg.icon}</div><div><div class="adapt-title">${row.item.titulo}</div><div class="adapt-meta">${kind}</div></div></div>`;
+    return `<div class="adapt-card" data-card-tracker="${row.tracker}" data-card-id="${encodeTrackerPayload(row.item.id)}"><div class="adapt-thumb">${row.item.img ? `<img src="${escUrl(row.item.img)}" alt="${esc(row.item.titulo)}">` : cfg.icon}</div><div><div class="adapt-title">${esc(row.item.titulo)}</div><div class="adapt-meta">${kind}</div></div></div>`;
   }).join('');
 }
 function renderHubCrossAuthor(tracker, item) {
@@ -3492,10 +3500,10 @@ function renderHubCrossAuthor(tracker, item) {
     const cfg = TRACKER_CFG[row.tracker];
     const statusColor = cfg.statusColors[row.item.status] || '#7a7590';
     const stars = row.item.nota ? '★'.repeat(row.item.nota) : '';
-    return `<div class="rel-card" data-rel-tracker="${row.tracker}" data-rel-id="${encodeTrackerPayload(row.item.id)}" title="${row.item.titulo}">
-      <div class="rel-thumb">${row.item.img ? `<img src="${row.item.img}" alt="${row.item.titulo}">` : `<span style="font-size:24px;opacity:.5">${cfg.icon}</span>`}<div class="rel-status-bar" style="background:${statusColor}88"></div></div>
-      <div class="rel-name">${row.item.titulo}</div>
-      <div class="rel-meta">${row.item.autor || ''}</div>
+    return `<div class="rel-card" data-rel-tracker="${row.tracker}" data-rel-id="${encodeTrackerPayload(row.item.id)}" title="${esc(row.item.titulo)}">
+      <div class="rel-thumb">${row.item.img ? `<img src="${escUrl(row.item.img)}" alt="${esc(row.item.titulo)}">` : `<span style="font-size:24px;opacity:.5">${cfg.icon}</span>`}<div class="rel-status-bar" style="background:${statusColor}88"></div></div>
+      <div class="rel-name">${esc(row.item.titulo)}</div>
+      <div class="rel-meta">${esc(row.item.autor || '')}</div>
       ${stars ? `<div class="rel-stars">${stars}</div>` : ''}
     </div>`;
   }).join('');
@@ -3511,7 +3519,7 @@ function thRender(item, cfg) {
   const statusLabel = cfg.statusLabels[item.status] || item.status;
   const heroImg = document.getElementById('th-hero-img');
   const hero    = document.getElementById('th-hero');
-  if (item.img) { heroImg.src = item.img; hero.classList.add('has-img'); }
+  if (window.SoterUtils.safeUrl(item.img)) { heroImg.src = window.SoterUtils.safeUrl(item.img); hero.classList.add('has-img'); }
   else { heroImg.src = ''; hero.classList.remove('has-img'); }
 
   const badgeEl = document.getElementById('th-badge');
@@ -3524,12 +3532,12 @@ function thRender(item, cfg) {
   document.getElementById('th-title').textContent = item.titulo;
 
   const chips = [];
-  if (item.autor) chips.push(`<div class="hub-hero-chip">${item.autor}</div>`);
-  if (item.genero) chips.push(`<div class="hub-hero-chip">${item.genero}</div>`);
-  if (item.sagaNome) chips.push(`<div class="hub-hero-chip">${item.sagaNome}${item.sagaVolume ? ' · Vol. ' + item.sagaVolume : ''}</div>`);
-  if (item.tipo) chips.push(`<div class="hub-hero-chip">${item.tipo}</div>`);
-  chips.push(`<div class="hub-hero-chip" style="color:${statusColor}">${statusLabel}</div>`);
-  if (item.nota) chips.push(`<div class="hub-hero-chip">★ ${item.nota}/5</div>`);
+  if (item.autor) chips.push(`<div class="hub-hero-chip">${esc(item.autor)}</div>`);
+  if (item.genero) chips.push(`<div class="hub-hero-chip">${esc(item.genero)}</div>`);
+  if (item.sagaNome) chips.push(`<div class="hub-hero-chip">${esc(item.sagaNome)}${item.sagaVolume ? ' · Vol. ' + esc(item.sagaVolume) : ''}</div>`);
+  if (item.tipo) chips.push(`<div class="hub-hero-chip">${esc(item.tipo)}</div>`);
+  chips.push(`<div class="hub-hero-chip" style="color:${statusColor}">${esc(statusLabel)}</div>`);
+  if (item.nota) chips.push(`<div class="hub-hero-chip">★ ${esc(item.nota)}/5</div>`);
   document.getElementById('th-meta').innerHTML = chips.join('');
 
   const obsEl = document.getElementById('th-obs-display');
@@ -3548,7 +3556,7 @@ function thRender(item, cfg) {
   starLabel.textContent = item.nota ? TH_STAR_LABELS[item.nota] : 'Sem avaliação';
 
   const statusEl = document.getElementById('th-status-display');
-  statusEl.innerHTML = `<div style="display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:20px;font-size:12px;font-family:var(--font-mono);font-weight:700;letter-spacing:.8px;color:${statusColor};border:1px solid ${statusColor}44;background:${statusColor}14"><span style="width:7px;height:7px;border-radius:50%;background:${statusColor};display:inline-block"></span>${statusLabel}</div>`;
+  statusEl.innerHTML = `<div style="display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:20px;font-size:12px;font-family:var(--font-mono);font-weight:700;letter-spacing:.8px;color:${statusColor};border:1px solid ${statusColor}44;background:${statusColor}14"><span style="width:7px;height:7px;border-radius:50%;background:${statusColor};display:inline-block"></span>${esc(statusLabel)}</div>`;
 
   const isFav = !!item.fav;
   const favBtn = document.getElementById('th-fav-btn');
@@ -3624,7 +3632,7 @@ function thRenderRelated(tracker, item) {
   scroll.innerHTML = related.map(({ item: r }) => {
     const stars = r.nota ? '★'.repeat(r.nota) : '';
     const statusColor = cfg.statusColors[r.status] || '#7a7590';
-    return `<div class="rel-card" data-rel-tracker="${tracker}" data-rel-id="${encodeTrackerPayload(r.id)}" title="${r.titulo}"><div class="rel-thumb">${r.img ? `<img src="${r.img}" alt="${r.titulo}">` : `<span style="font-size:24px;opacity:.5">${cfg.icon}</span>`}<div class="rel-status-bar" style="background:${statusColor}88"></div></div><div class="rel-name">${r.titulo}</div>${r.autor ? `<div class="rel-meta">${r.autor}</div>` : ''}${stars ? `<div class="rel-stars">${stars}</div>` : ''}</div>`;
+    return `<div class="rel-card" data-rel-tracker="${tracker}" data-rel-id="${encodeTrackerPayload(r.id)}" title="${esc(r.titulo)}"><div class="rel-thumb">${r.img ? `<img src="${escUrl(r.img)}" alt="${esc(r.titulo)}">` : `<span style="font-size:24px;opacity:.5">${cfg.icon}</span>`}<div class="rel-status-bar" style="background:${statusColor}88"></div></div><div class="rel-name">${esc(r.titulo)}</div>${r.autor ? `<div class="rel-meta">${esc(r.autor)}</div>` : ''}${stars ? `<div class="rel-stars">${stars}</div>` : ''}</div>`;
   }).join('');
 }
 
@@ -3691,7 +3699,7 @@ function thDrawerOpen() {
   }
   thStarVal = item.nota || 0;
   thUpdateStars(thStarVal);
-  thImgData = item.img || '';
+  thImgData = window.SoterUtils.safeUrl(item.img);
   const zone = document.getElementById('th-cover-zone');
   const img  = document.getElementById('th-cover-img');
   img.src = thImgData;
@@ -3974,8 +3982,8 @@ function getCollectionHubCopy(tracker, group) {
     return {
       badge: group.type === 'Autor' ? 'Coleção de Filmografia' : 'Hub de Saga Audiovisual',
       intro: group.type === 'Autor'
-        ? `Este hub reúne os filmes e séries de ${group.title} que você registrou no cinema.`
-        : `Este hub organiza a saga ${group.title} dentro do seu cinema, com ordem e progresso do que já foi assistido.`,
+        ? `Este hub reúne os filmes e séries de ${esc(group.title)} que você registrou no cinema.`
+        : `Este hub organiza a saga ${esc(group.title)} dentro do seu cinema, com ordem e progresso do que já foi assistido.`,
       noun: 'títulos audiovisuais',
       progressSub: 'média do acompanhamento',
       itemsSub: 'obras no cinema'
@@ -3985,8 +3993,8 @@ function getCollectionHubCopy(tracker, group) {
     return {
       badge: group.type === 'Autor' ? 'Coleção de Mangaka' : 'Hub de Saga em Mangá',
       intro: group.type === 'Autor'
-        ? `Este hub reúne os mangás de ${group.title} cadastrados na sua coleção.`
-        : `Este hub organiza a saga ${group.title} dentro dos mangás, com foco em volume e leitura.`,
+        ? `Este hub reúne os mangás de ${esc(group.title)} cadastrados na sua coleção.`
+        : `Este hub organiza a saga ${esc(group.title)} dentro dos mangás, com foco em volume e leitura.`,
       noun: 'mangás cadastrados',
       progressSub: 'média de leitura',
       itemsSub: 'itens em mangá'
@@ -3995,8 +4003,8 @@ function getCollectionHubCopy(tracker, group) {
   return {
     badge: group.type === 'Autor' ? 'Coleção por Autor' : 'Coleção por Saga',
     intro: group.type === 'Autor'
-      ? `Aqui você acompanha tudo o que já cadastrou de ${group.title}.`
-      : `Aqui você acompanha os volumes, partes ou continuações ligados à saga ${group.title}.`,
+      ? `Aqui você acompanha tudo o que já cadastrou de ${esc(group.title)}.`
+      : `Aqui você acompanha os volumes, partes ou continuações ligados à saga ${esc(group.title)}.`,
     noun: 'obras cadastradas',
     progressSub: 'média da coleção',
     itemsSub: 'obras na livraria'
@@ -4012,8 +4020,8 @@ function getCollectionRelatedGroups(tracker, currentGroup, allGroups) {
 function buildCollectionRelatedCard(tracker, group) {
   const favs = (group.items || []).filter(item => item.fav).length;
   return `<div class="collection-link-card" data-collection-tracker="${tracker}" data-collection-group="${encodeTrackerPayload(group.id)}">
-    <div class="collection-link-type">${group.type}</div>
-    <div class="collection-link-title">${group.title}</div>
+    <div class="collection-link-type">${esc(group.type)}</div>
+    <div class="collection-link-title">${esc(group.title)}</div>
     <div class="collection-link-meta">${group.items.length} itens • ${favs} favoritos</div>
   </div>`;
 }
@@ -4044,8 +4052,9 @@ function openCollectionHub(tracker, groupId) {
   const counterpartLabel = group.type === 'Autor' ? 'sagas' : 'autores';
   const trackerTitle = tracker === 'cinema' ? 'cinema' : tracker === 'mangas' ? 'mangás' : 'livros';
 
-  document.getElementById('ch-hero-img').src = heroItem && heroItem.img ? heroItem.img : '';
-  document.getElementById('ch-hero-img').style.display = heroItem && heroItem.img ? 'block' : 'none';
+  const heroSrc = heroItem ? window.SoterUtils.safeUrl(heroItem.img) : '';
+  document.getElementById('ch-hero-img').src = heroSrc;
+  document.getElementById('ch-hero-img').style.display = heroSrc ? 'block' : 'none';
   document.getElementById('ch-icon').textContent = cfg.icon || '📚';
   document.getElementById('ch-badge').textContent = copy.badge || typeLabel;
   document.getElementById('ch-title').textContent = group.title;
@@ -4055,10 +4064,10 @@ function openCollectionHub(tracker, groupId) {
     `<div class="hub-hero-chip">${favorites} favoritos</div>`
   ].join('');
   document.getElementById('ch-summary').innerHTML = `
-    <p>Este hub reúne ${group.items.length} ${group.items.length === 1 ? 'item' : 'itens'} da sua biblioteca em uma coleção do tipo <strong>${group.type}</strong>.</p>
+    <p>Este hub reúne ${group.items.length} ${group.items.length === 1 ? 'item' : 'itens'} da sua biblioteca em uma coleção do tipo <strong>${esc(group.type)}</strong>.</p>
     <p>${copy.intro}</p>
     <div class="collection-hub-tags">
-      <div class="collection-hub-tag">Tipo <strong>${group.type}</strong></div>
+      <div class="collection-hub-tag">Tipo <strong>${esc(group.type)}</strong></div>
       <div class="collection-hub-tag">Concluídos <strong>${completed}</strong></div>
       <div class="collection-hub-tag">Relacionadas <strong>${relatedGroups.length}</strong> ${counterpartLabel}</div>
     </div>
@@ -4087,7 +4096,7 @@ function openCollectionHub(tracker, groupId) {
       const pct = Math.round((count / group.items.length) * 100);
       return `<div class="collection-hub-status-row">
         <div class="collection-hub-status-main">
-          <div class="collection-hub-status-head"><span>${label}</span><span>${count}</span></div>
+          <div class="collection-hub-status-head"><span>${esc(label)}</span><span>${count}</span></div>
           <div class="collection-hub-status-track"><div class="collection-hub-status-fill" style="width:${pct}%;background:${color}"></div></div>
         </div>
         <div class="collection-hub-status-value">${pct}%</div>
@@ -4229,7 +4238,7 @@ function renderQuickControls(key) {
   const allActive = state.genre === 'all';
   chipsEl.innerHTML = [
     `<button type="button" class="filter-chip genre-chip ${allActive?'active':''}" onclick="setQuickGenre('${key}','all')">Todos</button>`,
-    ...genres.map(g => `<button type="button" class="filter-chip genre-chip ${state.genre===g?'active':''}" onclick="setQuickGenre('${key}','${g.replace(/'/g, "\\'")}')">${g}</button>`)
+    ...genres.map(g => `<button type="button" class="filter-chip genre-chip ${state.genre===g?'active':''}" onclick="setQuickGenre('${key}',${escJs(g)})">${esc(g)}</button>`)
   ].join('');
 }
 function applyQuickView(key, items) {
@@ -4439,7 +4448,7 @@ function renderTracker(key) {
   }).join('');
   const pageItems = items.slice((curPage-1)*PER_PAGE, curPage*PER_PAGE);
   gridEl.className = 'tracker-grid';
-  if (!items.length) { gridEl.innerHTML=`<div class="empty" style="grid-column:span 5"><div class="empty-icon">${cfg.icon}</div>${sq?'Nenhum resultado para "'+sq+'"':cfg.emptyMsg}</div>`; return; }
+  if (!items.length) { gridEl.innerHTML=`<div class="empty" style="grid-column:span 5"><div class="empty-icon">${cfg.icon}</div>${sq?'Nenhum resultado para "'+esc(sq)+'"':cfg.emptyMsg}</div>`; return; }
   gridEl.innerHTML = pageItems.map(item => buildCard(item, cfg)).join('');
 }
 
@@ -4453,22 +4462,23 @@ function buildCard(item, cfg) {
   const ribbonColor = cfg.ribbonColors[item.status]||'rgba(122,117,144,.6)';
   const statusLabel = cfg.statusLabels[item.status]||item.status;
   const stars = item.nota ? '★'.repeat(item.nota)+'☆'.repeat(5-item.nota) : '';
-  const imgSection = item.img
-    ? `<img class="mc-img" src="${item.img}" alt="${item.titulo}" loading="lazy">`
-    : `<div class="mc-img-placeholder"><div class="ph-icon">${cfg.icon}</div><div class="ph-title">${item.titulo}</div></div>`;
+  const imgSrc = window.SoterUtils.safeUrl(item.img);
+  const imgSection = imgSrc
+    ? `<img class="mc-img" src="${esc(imgSrc)}" alt="${esc(item.titulo)}" loading="lazy">`
+    : `<div class="mc-img-placeholder"><div class="ph-icon">${cfg.icon}</div><div class="ph-title">${esc(item.titulo)}</div></div>`;
   const progressSection = pct!==null ? `<div class="mc-progress-bar"><div class="mc-progress-fill" style="width:${pct}%"></div></div>` : '';
-  return `<div class="mc ${item.fav?'fav':''}" data-card-tracker="${cfg.key}" data-card-id="${encodeTrackerPayload(item.id)}" oncontextmenu="return openTrackerQuickActions(event,'${cfg.key}',${JSON.stringify(item.id)})">
+  return `<div class="mc ${item.fav?'fav':''}" data-card-tracker="${cfg.key}" data-card-id="${encodeTrackerPayload(item.id)}" oncontextmenu="return openTrackerQuickActions(event,'${cfg.key}',${escJs(item.id)})">
     ${imgSection}
-    <div class="mc-ribbon" style="background:${ribbonColor};color:#fff">${statusLabel}</div>
+    <div class="mc-ribbon" style="background:${ribbonColor};color:#fff">${esc(statusLabel)}</div>
     ${item.fav?'<div class="mc-fav-badge">⭐</div>':''}
     <div class="mc-body">
-      <div class="mc-title">${item.titulo}</div>
-      ${item.autor?`<div class="mc-author">${item.autor}</div>`:''}
+      <div class="mc-title">${esc(item.titulo)}</div>
+      ${item.autor?`<div class="mc-author">${esc(item.autor)}</div>`:''}
       ${stars?`<div class="mc-stars">${stars}</div>`:''}
       ${progressSection}
       <div class="mc-bottom">
-        <span class="mc-status-pill" style="color:${statusColor};border-color:${statusColor}40;background:${statusColor}18">${statusLabel}</span>
-        ${progressLabel?`<span class="mc-pct">${progressLabel}</span>`:''}
+        <span class="mc-status-pill" style="color:${statusColor};border-color:${statusColor}40;background:${statusColor}18">${esc(statusLabel)}</span>
+        ${progressLabel?`<span class="mc-pct">${esc(progressLabel)}</span>`:''}
       </div>
     </div>
   </div>`;
@@ -4487,13 +4497,13 @@ function buildCollectionCard(tracker, group) {
     return volumeA - volumeB || a.titulo.localeCompare(b.titulo, 'pt-BR');
   });
   return `<div class="collection-card${cycleClass}" data-collection-tracker="${tracker}" data-collection-group="${encodeTrackerPayload(group.id)}">
-    <div class="collection-stack" onwheel="wheelCollection(event,'${tracker}','${group.id.replace(/'/g, "\\'")}')">
-      ${covers.map((item, idx) => `<div class="collection-cover c${idx+1} ${toneClasses[idx] || ''} ${item.img ? 'has-img' : ''}">${item.img ? `<img src="${item.img}" alt="${item.titulo}">` : `<div class="collection-fallback">${cfg.icon}</div>`}</div>`).join('')}
+    <div class="collection-stack" onwheel="wheelCollection(event,'${tracker}',${escJs(group.id)})">
+      ${covers.map((item, idx) => `<div class="collection-cover c${idx+1} ${toneClasses[idx] || ''} ${item.img ? 'has-img' : ''}">${item.img ? `<img src="${escUrl(item.img)}" alt="${esc(item.titulo)}">` : `<div class="collection-fallback">${cfg.icon}</div>`}</div>`).join('')}
     </div>
-    <div class="collection-type">${group.type}</div>
-    <div class="collection-name">${group.title}</div>
+    <div class="collection-type">${esc(group.type)}</div>
+    <div class="collection-name">${esc(group.title)}</div>
     <div class="collection-meta"><span>${group.items.length} itens</span><span>${group.items.filter(i=>i.fav).length} favs</span></div>
-    <div class="collection-items-preview">${previewItems.slice(0,3).map(item => `<div>• ${item.titulo}${item.sagaVolume ? ` <span style="color:var(--muted)">· vol. ${item.sagaVolume}</span>` : ''}</div>`).join('')}</div>
+    <div class="collection-items-preview">${previewItems.slice(0,3).map(item => `<div>• ${esc(item.titulo)}${item.sagaVolume ? ` <span style="color:var(--muted)">· vol. ${esc(item.sagaVolume)}</span>` : ''}</div>`).join('')}</div>
   </div>`;
 }
 
@@ -4626,11 +4636,11 @@ function renderModalRelated(tracker, currentItem) {
   scroll.innerHTML=related.map(({item})=>{
     const stars=item.nota?'★'.repeat(item.nota):'';
     const statusColor=cfg.statusColors[item.status]||'#7a7590';
-    const thumb=item.img?`<img src="${item.img}" alt="${item.titulo}">`:`<span style="font-size:24px;opacity:.5">${cfg.icon}</span>`;
-    return `<div class="rel-card" onclick="openModal('${tracker}',${item.id})" title="${item.titulo}">
+    const thumb=item.img?`<img src="${escUrl(item.img)}" alt="${esc(item.titulo)}">`:`<span style="font-size:24px;opacity:.5">${cfg.icon}</span>`;
+    return `<div class="rel-card" onclick="openModal('${tracker}',${escJs(item.id)})" title="${esc(item.titulo)}">
       <div class="rel-thumb">${thumb}<div class="rel-status-bar" style="background:${statusColor}88"></div></div>
-      <div class="rel-name">${item.titulo}</div>
-      ${item.autor?`<div class="rel-meta">${item.autor}</div>`:''}
+      <div class="rel-name">${esc(item.titulo)}</div>
+      ${item.autor?`<div class="rel-meta">${esc(item.autor)}</div>`:''}
       ${stars?`<div class="rel-stars">${stars}</div>`:''}
     </div>`;
   }).join('');

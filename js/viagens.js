@@ -586,7 +586,7 @@
     document.getElementById("btn-done").addEventListener("click", function () {
       var today;
       if (!edit || editIdx === -1 || !T[editIdx]) return;
-      today = new Date().toISOString().slice(0, 10);
+      today = window.SoterUtils.localDateKey(new Date());
       T[editIdx].status = "concluida";
       if (!T[editIdx].endDate) T[editIdx].endDate = today;
       T[editIdx].updatedAt = new Date().toISOString();
@@ -648,7 +648,7 @@
       var b = new Blob([JSON.stringify({ travels: T, exportDate: new Date().toISOString(), version: "1.0" }, null, 2)], { type: "application/json" });
       var a = document.createElement("a");
       a.href = URL.createObjectURL(b);
-      a.download = "viagens_" + new Date().toISOString().split("T")[0] + ".json";
+      a.download = "viagens_" + window.SoterUtils.localDateKey(new Date()) + ".json";
       a.click();
       toast("Exportado!", "s");
       close("mo-data");

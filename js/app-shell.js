@@ -1,3 +1,48 @@
+// Utilitários compartilhados com as páginas. Fica fora da IIFE principal e no topo do arquivo
+// para já existir quando qualquer script de página rodar.
+window.SoterUtils = window.SoterUtils || (function () {
+  "use strict";
+
+  // Escapa texto para HTML; serve também para atributos entre aspas simples ou duplas.
+  function esc(value) {
+    return String(value == null ? "" : value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  // Só aceita http:, https:, data:image/ ou caminho relativo; qualquer outro esquema vira "".
+  function safeUrl(url) {
+    var text = String(url == null ? "" : url).trim();
+    var probe = text.replace(/[\u0000-\u0020\u007f]+/g, "").toLowerCase();
+    var scheme = probe.match(/^([a-z][a-z0-9+.\-]*):/);
+    if (!text) return "";
+    if (!scheme) return text;
+    if (scheme[1] === "http" || scheme[1] === "https") return text;
+    if (probe.indexOf("data:image/") === 0) return text;
+    return "";
+  }
+
+  function pad2(n) {
+    return (n < 10 ? "0" : "") + n;
+  }
+
+  // "AAAA-MM-DD" no fuso local. Datas puras ("AAAA-MM-DD") voltam como estão, porque
+  // new Date("AAAA-MM-DD") é lido como meia-noite UTC e cairia no dia anterior no Brasil.
+  function localDateKey(value) {
+    var d;
+    if (value == null || value === "") value = new Date();
+    if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+    d = value instanceof Date ? value : new Date(value);
+    if (isNaN(d.getTime())) return "";
+    return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
+  }
+
+  return { esc: esc, safeUrl: safeUrl, localDateKey: localDateKey };
+}());
+
 (function () {
   "use strict";
 

@@ -731,7 +731,7 @@
     if (window.SoterRPG && window.SoterRPG.syncState) {
       state = window.SoterRPG.syncState(state, getState());
     }
-    var today = new Date().toISOString().slice(0, 10);
+    var today = window.SoterUtils.localDateKey(new Date());
     if (state.data.rpg.missionsDate !== today) {
       state.data.rpg.missions = {};
       state.data.rpg.missionsDate = today;
@@ -839,13 +839,21 @@
     if (sub) sub.textContent = unlockCount + "/" + ACHIEVEMENTS.length + " desbloqueadas";
     if (!container) return;
     achievementGroupsCache = groups;
+    if (!container.getAttribute("data-ach-bound")) {
+      // Grupo vem de data-ach-group (texto escapado), não de JS montado dentro do onclick.
+      container.setAttribute("data-ach-bound", "1");
+      container.addEventListener("click", function (event) {
+        var btn = event.target && event.target.closest ? event.target.closest("[data-ach-group]") : null;
+        if (btn && container.contains(btn)) openAchievementGroup(btn.getAttribute("data-ach-group"));
+      });
+    }
 
     function buildBadge(item) {
       var unlocked = !!achievementStatusCache[item.id];
       return '<div class="rpg-badge ' + (unlocked ? "" : "locked") + '" style="--badge-color:' + item.col + '">' +
         '<div class="rpg-badge-icon-wrap">' + item.icon + '</div>' +
-        '<div style="flex:1;min-width:0"><div class="rpg-badge-name">' + item.name + '</div><div class="rpg-badge-desc">' + item.desc + '</div></div>' +
-        '<div class="rpg-badge-status">' + (unlocked ? "\u2713 Obtida" : "\uD83D\uDD12 " + item.req) + '</div></div>';
+        '<div style="flex:1;min-width:0"><div class="rpg-badge-name">' + escapeHtml(item.name) + '</div><div class="rpg-badge-desc">' + escapeHtml(item.desc) + '</div></div>' +
+        '<div class="rpg-badge-status">' + (unlocked ? "\u2713 Obtida" : "\uD83D\uDD12 " + escapeHtml(item.req)) + '</div></div>';
     }
 
     var groupsHtml = Object.keys(groups).map(function (groupName) {
@@ -854,16 +862,16 @@
       var imagePath = ACHIEVEMENT_GROUP_IMAGES[groupName];
       var progress = items.length ? Math.round((unlockedInGroup / items.length) * 100) : 0;
       if (imagePath) {
-        return '<button class="rpg-ach-group" type="button" onclick="openAchievementGroup(\'' + groupName + '\')">' +
-          '<img class="rpg-ach-group-cover" src="' + imagePath + '" loading="lazy" decoding="async" alt="Conquistas de ' + groupName + '">' +
+        return '<button class="rpg-ach-group" type="button" data-ach-group="' + escapeHtml(groupName) + '">' +
+          '<img class="rpg-ach-group-cover" src="' + imagePath + '" loading="lazy" decoding="async" alt="Conquistas de ' + escapeHtml(groupName) + '">' +
           '<div class="rpg-ach-group-body">' +
-          '<div class="rpg-ach-group-title">' + groupName + '</div>' +
+          '<div class="rpg-ach-group-title">' + escapeHtml(groupName) + '</div>' +
           '<div class="rpg-ach-group-progress"><div class="rpg-ach-group-progress-fill" style="width:' + progress + '%"></div></div>' +
           '<div class="rpg-ach-group-meta">' + unlockedInGroup + "/" + items.length + " conquistas</div>" +
           "</div></button>";
       }
       return '<section class="rpg-ach-group">' +
-        '<div class="rpg-ach-group-head"><div class="rpg-ach-group-title">' + groupName + '</div><div class="rpg-ach-group-meta">' + unlockedInGroup + "/" + items.length + '</div></div>' +
+        '<div class="rpg-ach-group-head"><div class="rpg-ach-group-title">' + escapeHtml(groupName) + '</div><div class="rpg-ach-group-meta">' + unlockedInGroup + "/" + items.length + '</div></div>' +
         '<div class="rpg-ach-group-grid">' + items.map(buildBadge).join("") + "</div></section>";
     }).join("");
     // Só redesenha se mudou: trocar o innerHTML a cada render cancela e baixa de novo as capas.
@@ -882,8 +890,8 @@
         var unlocked = achievementStatusCache[item.id] != null ? achievementStatusCache[item.id] : item.check();
         return '<div class="rpg-badge ' + (unlocked ? "" : "locked") + '" style="--badge-color:' + item.col + '">' +
           '<div class="rpg-badge-icon-wrap">' + item.icon + '</div>' +
-          '<div style="flex:1;min-width:0"><div class="rpg-badge-name">' + item.name + '</div><div class="rpg-badge-desc">' + item.desc + '</div></div>' +
-          '<div class="rpg-badge-status">' + (unlocked ? "\u2713 Obtida" : "\uD83D\uDD12 " + item.req) + '</div></div>';
+          '<div style="flex:1;min-width:0"><div class="rpg-badge-name">' + escapeHtml(item.name) + '</div><div class="rpg-badge-desc">' + escapeHtml(item.desc) + '</div></div>' +
+          '<div class="rpg-badge-status">' + (unlocked ? "\u2713 Obtida" : "\uD83D\uDD12 " + escapeHtml(item.req)) + '</div></div>';
       }).join("");
     }
     overlay.scrollTop = 0;
@@ -1310,7 +1318,7 @@
     if (logEl) {
       var log = rpgBuildLog();
       logEl.innerHTML = log.length ? log.map(function (entry) {
-        return '<div class="rpg-log-item"><div class="rpg-log-icon">' + entry.icon + '</div><div class="rpg-log-text">' + entry.text + '</div><div class="rpg-log-xp">+' + entry.xp + "</div></div>";
+        return '<div class="rpg-log-item"><div class="rpg-log-icon">' + entry.icon + '</div><div class="rpg-log-text">' + escapeHtml(entry.text) + '</div><div class="rpg-log-xp">+' + entry.xp + "</div></div>";
       }).join("") : '<div class="rpg-log-empty">\u2726 Nenhuma atividade ainda. Comece a explorar o universo! \u2726</div>';
     }
   }

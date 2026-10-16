@@ -459,7 +459,7 @@ function hubRender(s) {
                  : '🏁 ' + diff + 'd restantes';
       chips.push(`<div class="hub-hero-chip ${cls}">${txt}</div>`);
     }
-    if (s.horizonte) chips.push(`<div class="hub-hero-chip">⏳ ${s.horizonte}</div>`);
+    if (s.horizonte) chips.push(`<div class="hub-hero-chip">⏳ ${snEsc(s.horizonte)}</div>`);
     metaRow.innerHTML = chips.join('');
   }
 
