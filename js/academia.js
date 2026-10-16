@@ -1,6 +1,10 @@
 (function () {
   "use strict";
 
+  // Dados do usuário escapados antes de entrar em innerHTML (SoterUtils vem do js/app-shell.js).
+  var esc = window.SoterUtils.esc;
+  var safeUrl = window.SoterUtils.safeUrl;
+
   var DATA_KEY = "academiaTracker";
   var profile = { name: "Marcos", age: 25, height: 1.75, goalWeight: 80, kcalGoal: 2000, trainDays: [1, 2, 3, 4, 5], photo: "" };
   var weightLog = [];
@@ -291,7 +295,7 @@
     });
   }
   function setExerciseImagePreview(src) {
-    exImageData = String(src || "").trim();
+    exImageData = safeUrl(src);
     var previewImg = document.getElementById("ex-img-preview-img");
     var previewLbl = document.getElementById("ex-img-preview-label");
     if (exImageData) {
@@ -330,7 +334,7 @@
     for (var i = 0; i < list.length; i += 1) {
       var item = list[i];
       if (!item || typeof item.date !== "string" || typeof item.weight !== "number") return false;
-      var expectedDate = new Date(base.getFullYear(), base.getMonth() - (list.length - 1 - i), 12, 12, 0, 0).toISOString().slice(0, 10);
+      var expectedDate = window.SoterUtils.localDateKey(new Date(base.getFullYear(), base.getMonth() - (list.length - 1 - i), 12, 12, 0, 0));
       if (item.date !== expectedDate) return false;
     }
     for (var j = 1; j < list.length; j += 1) {
@@ -398,7 +402,7 @@
   }
 
   function renderProfile() {
-    document.getElementById("profile-name-display").innerHTML = profile.name || "Atleta";
+    document.getElementById("profile-name-display").innerHTML = esc(profile.name || "Atleta");
     document.getElementById("disp-age").textContent = (profile.age || "—") + " anos";
     document.getElementById("disp-height").textContent = profile.height ? profile.height.toFixed(2).replace(".", ",") + " m" : "—";
 
@@ -703,19 +707,20 @@
     document.getElementById("gym-hub-best-load").textContent = isCardio ? paceLabel : bestLoad > -Infinity ? String(bestLoad).replace(".", ",") + " kg" : "—";
     document.getElementById("gym-hub-last-date").textContent = lastEntry ? fmtShortDate(lastEntry.date) : "—";
     document.getElementById("gym-hub-info-list").innerHTML = infoRows.map(function (row) {
-      return '<div class="gym-hub-info-row"><div class="gym-hub-info-label">' + row[0] + '</div><div class="gym-hub-info-value">' + row[1] + '</div></div>';
+      return '<div class="gym-hub-info-row"><div class="gym-hub-info-label">' + esc(row[0]) + '</div><div class="gym-hub-info-value">' + esc(row[1]) + '</div></div>';
     }).join("");
     document.getElementById("gym-hub-history").innerHTML = history.length
       ? history.slice().reverse().map(function (entry) {
           var histValue = isCardio
             ? formatKm(entry.distance) + " · " + (entry.duration || calorieEstimate.minutes) + " min" + (entry.calories ? " · " + entry.calories + " kcal" : "")
             : (entry.loadLabel || "—") + (entry.calories ? " · " + entry.calories + " kcal" : "");
-          return '<div class="gym-hub-history-row"><div class="gym-hub-history-dot"></div><div class="gym-hub-history-label">Treino concluído</div><div class="gym-hub-history-value">' + histValue + '</div><div class="gym-hub-history-date">' + fmtShortDate(entry.date) + '</div></div>';
+          return '<div class="gym-hub-history-row"><div class="gym-hub-history-dot"></div><div class="gym-hub-history-label">Treino concluído</div><div class="gym-hub-history-value">' + esc(histValue) + '</div><div class="gym-hub-history-date">' + fmtShortDate(entry.date) + '</div></div>';
         }).join("")
       : '<div class="ex-empty" style="padding:18px 8px;text-align:left"><p>Nenhuma sessão registrada ainda.</p></div>';
     var heroBg = document.getElementById("gym-hub-hero-bg");
-    heroBg.style.backgroundImage = ex.image ? 'url("' + ex.image + '")' : "none";
-    heroBg.style.backgroundColor = ex.image ? "transparent" : "rgba(124,111,205,.18)";
+    var heroImage = safeUrl(ex.image);
+    heroBg.style.backgroundImage = heroImage ? "url(" + JSON.stringify(heroImage) + ")" : "none";
+    heroBg.style.backgroundColor = heroImage ? "transparent" : "rgba(124,111,205,.18)";
     openModal("exercise-hub");
     setTimeout(function () { drawExerciseHubChart(exerciseId); }, 40);
   }
@@ -737,7 +742,7 @@
       (diet[m] || []).forEach(function (item, idx) {
         var el = document.createElement("div");
         el.className = "meal-item";
-        el.innerHTML = '<div class="meal-item-left"><span class="meal-item-name">' + item.name + '</span><span style="font-size:10px;color:var(--muted);margin-left:4px">' + (item.qty || "") + '</span></div>' + (item.kcal ? '<span class="meal-item-kcal">' + item.kcal + ' kcal</span>' : "") + ' <button class="meal-item-del" data-meal="' + m + '" data-idx="' + idx + '"><i class="fas fa-times"></i></button>';
+        el.innerHTML = '<div class="meal-item-left"><span class="meal-item-name">' + esc(item.name) + '</span><span style="font-size:10px;color:var(--muted);margin-left:4px">' + esc(item.qty || "") + '</span></div>' + (item.kcal ? '<span class="meal-item-kcal">' + esc(item.kcal) + ' kcal</span>' : "") + ' <button class="meal-item-del" data-meal="' + m + '" data-idx="' + idx + '"><i class="fas fa-times"></i></button>';
         itemsDiv.appendChild(el);
       });
       var addBtn = document.createElement("button");
@@ -815,14 +820,14 @@
       if (isDone) done += 1;
       var item = document.createElement("div");
       item.className = "day-ex-item";
-      var thumbHtml = ex.image ? '<div class="day-ex-thumb"><img src="' + ex.image + '" alt=""></div>' : '<div class="day-ex-thumb">' + getExEmoji(ex.tag) + "</div>";
+      var thumbHtml = safeUrl(ex.image) ? '<div class="day-ex-thumb"><img src="' + esc(safeUrl(ex.image)) + '" alt=""></div>' : '<div class="day-ex-thumb">' + getExEmoji(ex.tag) + "</div>";
       item.innerHTML = thumbHtml +
         '<div class="day-ex-body">' +
-        '<div class="day-ex-name"' + (isDone ? ' style="text-decoration:line-through;opacity:.5"' : "") + ">" + ex.name + "</div>" +
-        '<div class="day-ex-meta">' + getExerciseSummary(ex) + "</div>" +
+        '<div class="day-ex-name"' + (isDone ? ' style="text-decoration:line-through;opacity:.5"' : "") + ">" + esc(ex.name) + "</div>" +
+        '<div class="day-ex-meta">' + esc(getExerciseSummary(ex)) + "</div>" +
         "</div>" +
-        '<span class="day-ex-tag tag-' + ex.tag + '">' + TAG_LABELS[ex.tag] + "</span>" +
-        '<div class="done-check' + (isDone ? " done" : "") + '" data-id="' + ex.id + '">' +
+        '<span class="day-ex-tag tag-' + esc(ex.tag) + '">' + esc(TAG_LABELS[ex.tag]) + "</span>" +
+        '<div class="done-check' + (isDone ? " done" : "") + '" data-id="' + esc(ex.id) + '">' +
         '<i class="fas fa-check"></i>' +
         "</div>";
       list.appendChild(item);
@@ -877,15 +882,15 @@
     filtered.forEach(function (ex) {
       var card = document.createElement("div");
       card.className = "ex-card";
-      var imgHtml = ex.image ? '<div class="ex-card-img"><img src="' + ex.image + '" alt="' + ex.name + '"></div>' : '<div class="ex-card-img placeholder">' + getExEmoji(ex.tag) + "</div>";
+      var imgHtml = safeUrl(ex.image) ? '<div class="ex-card-img"><img src="' + esc(safeUrl(ex.image)) + '" alt="' + esc(ex.name) + '"></div>' : '<div class="ex-card-img placeholder">' + getExEmoji(ex.tag) + "</div>";
       var daysLabel = (ex.days || []).map(function (d) { return DAYS_PT[d]; }).join(", ") || "—";
       card.innerHTML = imgHtml +
         '<div class="ex-card-body">' +
-        '<div class="ex-card-name">' + ex.name + "</div>" +
-        '<span class="ex-card-tag tag-' + ex.tag + '">' + TAG_LABELS[ex.tag] + "</span>" +
-        '<div class="ex-card-sets">' + getExerciseSummary(ex) + ' <span style="color:var(--muted)">' + daysLabel + "</span></div>" +
+        '<div class="ex-card-name">' + esc(ex.name) + "</div>" +
+        '<span class="ex-card-tag tag-' + esc(ex.tag) + '">' + esc(TAG_LABELS[ex.tag]) + "</span>" +
+        '<div class="ex-card-sets">' + esc(getExerciseSummary(ex)) + ' <span style="color:var(--muted)">' + daysLabel + "</span></div>" +
         "</div>" +
-        '<button class="ex-card-del" data-id="' + ex.id + '"><i class="fas fa-times"></i></button>';
+        '<button class="ex-card-del" data-id="' + esc(ex.id) + '"><i class="fas fa-times"></i></button>';
       card.addEventListener("click", function (e) { if (e.target.closest(".ex-card-del")) return; renderExerciseHub(ex.id); });
       grid.appendChild(card);
     });

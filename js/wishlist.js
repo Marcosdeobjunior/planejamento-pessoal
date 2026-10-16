@@ -1159,7 +1159,7 @@
         }, null, 2)], { type: "application/json" });
         var link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
-        link.download = "wishlist_" + new Date().toISOString().split("T")[0] + ".json";
+        link.download = "wishlist_" + window.SoterUtils.localDateKey(new Date()) + ".json";
         link.click();
         window.setTimeout(function () {
           URL.revokeObjectURL(link.href);
