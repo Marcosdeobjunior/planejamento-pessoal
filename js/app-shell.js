@@ -64,6 +64,18 @@
   var LAST_AUTH_UID_STORAGE_KEY = "soter_last_auth_uid_v1";
   var USER_STATE_STORAGE_PREFIX = "soter_state_cache_v2_";
   var GUEST_STATE_STORAGE_KEY = "soter_state_cache_v2_guest";
+  var AUTH_LOCAL_UID_STORAGE_KEY = "soter_auth_local_uid_v1";
+  var SESSION_AUTH_UID_STORAGE_KEY = "soter_session_auth_uid_v1";
+  var GUEST_LEAK_CLEANUP_STORAGE_KEY = "soter_guest_leak_cleanup_v1";
+  var RUBRICA_STORAGE_PREFIX = "rubrica:v3:";
+  var LEGACY_REVIEW_STORAGE_PREFIX = "srs-";
+  var RUNTIME_OWNER_PENDING = "__pending__";
+  // dono do estado em memória: "" = visitante, uid = conta, pendente = aguardando o auth (nada é
+  // gravado no navegador enquanto pendente)
+  var runtimeStateOwner = "";
+  var runtimeHiddenUid = "";
+  var firebaseAuthFirstEventSeen = false;
+  var firebaseLogoutPurgeUid = "";
 
   function currentPage() {
     var explicit = document.body.getAttribute("data-page");
@@ -248,16 +260,106 @@
     writePersistedStateToKey("__guest__", state);
   }
 
+  function persistOwnedStateSnapshot(state) {
+    if (firebaseCurrentUser && firebaseCurrentUser.uid) {
+      saveScopedStateForUser(firebaseCurrentUser.uid, state);
+    } else if (runtimeStateOwner === RUNTIME_OWNER_PENDING) {
+      return;
+    } else if (runtimeStateOwner) {
+      saveScopedStateForUser(runtimeStateOwner, state);
+    } else {
+      saveGuestStateSnapshot(state);
+    }
+  }
+
+  // o cache de uma conta só aparece antes do auth confirmar quando o login foi feito com "manter
+  // conectado" (persistência LOCAL) ou nesta mesma aba
+  function canShowCachedStateBeforeAuth(uid) {
+    var localUid = "";
+    var sessionUid = "";
+    if (!uid) return false;
+    try { localUid = String(localStorage.getItem(AUTH_LOCAL_UID_STORAGE_KEY) || ""); } catch (err) { }
+    try { sessionUid = String(sessionStorage.getItem(SESSION_AUTH_UID_STORAGE_KEY) || ""); } catch (err) { }
+    return localUid === uid || sessionUid === uid;
+  }
+
+  function isFirebaseAuthSessionPersisted() {
+    try {
+      for (var i = 0; i < sessionStorage.length; i++) {
+        if (String(sessionStorage.key(i) || "").indexOf("firebase:authUser:") === 0) return true;
+      }
+    } catch (err) { }
+    return false;
+  }
+
+  function rememberAuthPersistence(user) {
+    var uid = user && user.uid ? String(user.uid) : "";
+    try {
+      if (uid) sessionStorage.setItem(SESSION_AUTH_UID_STORAGE_KEY, uid);
+      else sessionStorage.removeItem(SESSION_AUTH_UID_STORAGE_KEY);
+    } catch (err) { }
+    try {
+      if (uid && !isFirebaseAuthSessionPersisted()) localStorage.setItem(AUTH_LOCAL_UID_STORAGE_KEY, uid);
+      else localStorage.removeItem(AUTH_LOCAL_UID_STORAGE_KEY);
+    } catch (err) { }
+  }
+
+  // limpeza única: versões antigas copiavam o cache da conta para o snapshot de visitante
+  function cleanupLeakedGuestSnapshot() {
+    var guestRaw;
+    var guestNormalized = "";
+    var keys = [];
+    var i;
+    try {
+      if (localStorage.getItem(GUEST_LEAK_CLEANUP_STORAGE_KEY) === "1") return;
+      guestRaw = localStorage.getItem(GUEST_STATE_STORAGE_KEY);
+      if (guestRaw) {
+        try { guestNormalized = JSON.stringify(ensureStateShape(JSON.parse(guestRaw))); } catch (err) { guestNormalized = ""; }
+        for (i = 0; i < localStorage.length; i++) keys.push(String(localStorage.key(i) || ""));
+        for (i = 0; i < keys.length; i++) {
+          var key = keys[i];
+          var raw;
+          var normalized = "";
+          if (key.indexOf(USER_STATE_STORAGE_PREFIX) !== 0 || key === GUEST_STATE_STORAGE_KEY) continue;
+          raw = localStorage.getItem(key);
+          if (!raw) continue;
+          if (raw !== guestRaw) {
+            try { normalized = JSON.stringify(ensureStateShape(JSON.parse(raw))); } catch (err) { normalized = ""; }
+          }
+          if (raw === guestRaw || (normalized && normalized === guestNormalized)) {
+            localStorage.removeItem(GUEST_STATE_STORAGE_KEY);
+            guestScopedSnapshot = null;
+            break;
+          }
+        }
+      }
+      localStorage.setItem(GUEST_LEAK_CLEANUP_STORAGE_KEY, "1");
+    } catch (err) { }
+  }
+
   function hydrateRuntimeStateFromCache() {
     var lastUid = "";
     var cached = null;
+    cleanupLeakedGuestSnapshot();
     try {
       lastUid = String(localStorage.getItem(LAST_AUTH_UID_STORAGE_KEY) || "").trim();
     } catch (err) {
       lastUid = "";
     }
-    if (lastUid) cached = loadScopedStateForUser(lastUid);
-    if (!cached) cached = loadGuestStateSnapshot();
+    runtimeStateOwner = "";
+    runtimeHiddenUid = "";
+    if (lastUid && getFirebaseRuntimeConfig()) {
+      if (canShowCachedStateBeforeAuth(lastUid)) cached = loadScopedStateForUser(lastUid);
+      else if (loadScopedStateForUser(lastUid)) runtimeHiddenUid = lastUid;
+      if (cached) {
+        runtimeState = ensureStateShape(deepClone(cached));
+        runtimeStateOwner = lastUid;
+      } else {
+        runtimeStateOwner = RUNTIME_OWNER_PENDING;
+      }
+      return;
+    }
+    cached = loadGuestStateSnapshot();
     if (cached) runtimeState = ensureStateShape(deepClone(cached));
   }
 
@@ -850,11 +952,7 @@
   function replaceLocalStateSnapshot(nextState, previousState) {
     var prepared = prepareStateForApp(nextState, previousState || nextState);
     persistStateSnapshot(prepared, { dispatchStatus: true });
-    if (firebaseCurrentUser && firebaseCurrentUser.uid) {
-      saveScopedStateForUser(firebaseCurrentUser.uid, prepared);
-    } else {
-      saveGuestStateSnapshot(prepared);
-    }
+    persistOwnedStateSnapshot(prepared);
     applyProfileToUI(prepared);
     renderNotifications(prepared);
     renderRpgHeader(prepared);
@@ -1575,6 +1673,107 @@
     return hydrateFirebaseDocument();
   }
 
+  function reloadOnceAfterAuth(uid) {
+    // só recarrega se o próximo carregamento já vai mostrar o estado certo (evita loop)
+    try {
+      if (String(localStorage.getItem(LAST_AUTH_UID_STORAGE_KEY) || "") !== String(uid || "")) return false;
+      if (uid && (!canShowCachedStateBeforeAuth(uid) || !localStorage.getItem(USER_STATE_STORAGE_PREFIX + uid))) return false;
+      window.location.reload();
+      return true;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function promiseWithTimeout(promise, ms) {
+    return new Promise(function (resolve, reject) {
+      var timer = setTimeout(function () { reject(new Error('timeout')); }, ms);
+      Promise.resolve(promise).then(function (value) {
+        clearTimeout(timer);
+        resolve(value);
+      }, function (err) {
+        clearTimeout(timer);
+        reject(err);
+      });
+    });
+  }
+
+  // antes do logout: tenta enviar o que falta. Resolve true se tudo foi enviado, false se o usuário
+  // aceitou sair mantendo a cópia local, e rejeita se ele preferiu continuar logado
+  function settleFirebaseBeforeLogout() {
+    var flushPromise;
+    if (hasUnsyncedLocalChanges()) {
+      if (firebaseDirty && !firebasePendingState && !firebaseSyncInFlight) {
+        firebasePendingState = compactStateForStorage(ensureStateShape(loadState()));
+      }
+      flushPromise = Promise.resolve(firebaseSyncInFlight).catch(function () { return null; }).then(function () {
+        return flushFirebaseSync();
+      });
+    } else {
+      flushPromise = Promise.resolve(null);
+    }
+    return promiseWithTimeout(flushPromise, 4000).catch(function () { return null; }).then(function () {
+      if (!firebaseDbInstance || typeof firebaseDbInstance.waitForPendingWrites !== 'function') return true;
+      return promiseWithTimeout(firebaseDbInstance.waitForPendingWrites(), 3000).then(function () {
+        return true;
+      }, function () {
+        return false;
+      });
+    }).then(function (writesSettled) {
+      if (writesSettled && !hasUnsyncedLocalChanges()) return true;
+      var leave = window.confirm(
+        'Algumas altera\u00e7\u00f5es ainda n\u00e3o foram enviadas para a nuvem.\n\n' +
+        'OK: sair mesmo assim, mantendo uma c\u00f3pia local neste navegador (ser\u00e1 enviada no pr\u00f3ximo login).\n' +
+        'Cancelar: continuar conectado e tentar sincronizar de novo.'
+      );
+      if (!leave) throw new Error('logout_cancelled_unsynced');
+      showSyncProblem('Uma c\u00f3pia local das altera\u00e7\u00f5es n\u00e3o enviadas ficou neste navegador.');
+      return false;
+    });
+  }
+
+  function removeLocalAccountData(uid, keepUnsyncedCopy) {
+    var keys = [LAST_AUTH_UID_STORAGE_KEY, AUTH_LOCAL_UID_STORAGE_KEY];
+    var legacyKeys = [];
+    var i;
+    uid = String(uid || '');
+    if (uid) {
+      keys.push(NOTIFICATION_DISMISSALS_STORAGE_PREFIX + uid);
+      keys.push(TASK_TIME_ALERTS_STORAGE_PREFIX + uid);
+      if (!keepUnsyncedCopy) {
+        keys.push(FIREBASE_DIRTY_STORAGE_PREFIX + uid);
+        keys.push(RUBRICA_STORAGE_PREFIX + uid);
+        removeScopedStateForUser(uid);
+      }
+    }
+    try {
+      // chaves globais antigas da Revisão: não têm dono, então não podem sobrar para a próxima conta
+      for (i = 0; i < localStorage.length; i++) {
+        var key = String(localStorage.key(i) || '');
+        if (key.indexOf(LEGACY_REVIEW_STORAGE_PREFIX) === 0) legacyKeys.push(key);
+      }
+    } catch (err) { }
+    keys = keys.concat(legacyKeys);
+    for (i = 0; i < keys.length; i++) {
+      try { localStorage.removeItem(keys[i]); } catch (err) { }
+    }
+    try { sessionStorage.removeItem(SESSION_AUTH_UID_STORAGE_KEY); } catch (err) { }
+  }
+
+  function clearFirestoreLocalCache() {
+    if (!firebaseDbInstance || typeof firebaseDbInstance.terminate !== 'function') return Promise.resolve(false);
+    var db = firebaseDbInstance;
+    return promiseWithTimeout(db.terminate().then(function () {
+      return typeof db.clearPersistence === 'function' ? db.clearPersistence() : null;
+    }), 3000).then(function () {
+      return true;
+    }).catch(function (err) {
+      // outra aba aberta impede o clearPersistence; o logout segue mesmo assim
+      console.warn('[SoterStorage] N\u00e3o foi poss\u00edvel limpar o cache local do Firestore:', err);
+      return false;
+    });
+  }
+
   function ensureFirebaseAuthListener() {
     if (firebaseAuthListenerReady || !firebaseAuthInstance) return;
     firebaseAuthListenerReady = true;
@@ -1585,14 +1784,37 @@
     }
     firebaseAuthInstance.onAuthStateChanged(function (user) {
       var previousUser = firebaseCurrentUser;
+      var previousOwner = runtimeStateOwner;
+      var isFirstAuthEvent = !firebaseAuthFirstEventSeen;
+      var reloadAfterAuth = false;
       var currentLocalState = ensureStateShape(loadState());
-      if (previousUser && previousUser.uid && previousUser.uid !== firebasePendingDeletedUid) {
-        saveScopedStateForUser(previousUser.uid, currentLocalState);
-      } else if (!previousUser || !previousUser.uid) {
+      firebaseAuthFirstEventSeen = true;
+      if (previousUser && previousUser.uid) {
+        if (previousUser.uid !== firebasePendingDeletedUid && previousUser.uid !== firebaseLogoutPurgeUid) {
+          saveScopedStateForUser(previousUser.uid, currentLocalState);
+        }
+      } else if (previousOwner && previousOwner !== RUNTIME_OWNER_PENDING) {
+        // cache da conta mostrado antes da confirmação: volta para a própria conta, nunca para o
+        // visitante
+        saveScopedStateForUser(previousOwner, currentLocalState);
+      } else if (!previousOwner) {
         saveGuestStateSnapshot(currentLocalState);
       }
       firebaseCurrentUser = user || null;
+      runtimeStateOwner = firebaseCurrentUser ? String(firebaseCurrentUser.uid || '') : '';
       rememberLastAuthUid(firebaseCurrentUser ? firebaseCurrentUser.uid : '');
+      rememberAuthPersistence(firebaseCurrentUser);
+      // as páginas guardam o estado lido no carregamento; se o que foi mostrado antes do auth não era
+      // desta conta, recarrega uma vez para ninguém gravar estado alheio
+      if (isFirstAuthEvent && previousOwner !== runtimeStateOwner) {
+        // o que foi editado antes do auth não era desta conta: não vai para a nuvem dela
+        firebasePendingState = null;
+        firebaseDirty = false;
+        if (firebaseSyncTimer) { clearTimeout(firebaseSyncTimer); firebaseSyncTimer = null; }
+        if (previousOwner) {
+          reloadAfterAuth = previousOwner !== RUNTIME_OWNER_PENDING || !firebaseCurrentUser || runtimeHiddenUid === runtimeStateOwner;
+        }
+      }
       try {
         if (firebaseCurrentUser) {
           sessionStorage.setItem("soter_allow_index", "1");
@@ -1620,6 +1842,7 @@
           userEmail: '',
           lastError: ''
         });
+        if (reloadAfterAuth) reloadOnceAfterAuth('');
         return;
       }
       if (previousUser && previousUser.uid && previousUser.uid !== firebaseCurrentUser.uid) {
@@ -1640,6 +1863,7 @@
       }
       replaceLocalStateSnapshot(nextState, currentLocalState);
       if (pendingSignupName) firebasePendingSignupProfileName = '';
+      if (reloadAfterAuth && reloadOnceAfterAuth(firebaseCurrentUser.uid)) return;
       activateFirebaseForCurrentUser().catch(function (err) {
         firebaseLastError = String((err && err.message) || err || 'firebase_user_sync_failed');
         updateFirebaseMeta({ enabled: true, hydrated: false, lastError: firebaseLastError });
@@ -1752,6 +1976,8 @@
     var force = !!(options && options.force);
     if (firebaseIsApplyingRemote) return;
     if (!getFirebaseRuntimeConfig()) return;
+    // estado provisório antes do auth confirmar: não pode ser enviado para conta nenhuma
+    if (!firebaseCurrentUser && runtimeStateOwner === RUNTIME_OWNER_PENDING) return;
     if (force || firebaseUserChangeDepth > 0) {
       setFirebaseDirty(true);
     } else if (!firebaseDirty) {
@@ -1794,11 +2020,7 @@
   function saveState(state) {
     var shaped = compactStateForStorage(ensureStateShape(state));
     persistStateSnapshot(shaped, { dispatchStatus: false });
-    if (firebaseCurrentUser && firebaseCurrentUser.uid) {
-      saveScopedStateForUser(firebaseCurrentUser.uid, shaped);
-    } else {
-      saveGuestStateSnapshot(shaped);
-    }
+    persistOwnedStateSnapshot(shaped);
     queueFirebaseSync(shaped);
   }
 
@@ -5200,12 +5422,25 @@
         });
       },
       logoutFirebase: function () {
+        var uid = '';
+        var keepUnsyncedCopy = false;
         return initFirebaseSync().then(function () {
-          return firebaseAuthInstance.signOut().then(function () {
-            try { sessionStorage.removeItem("soter_allow_index"); } catch (err) { }
-            window.location.href = 'apresentacao.html';
-            return true;
-          });
+          uid = firebaseCurrentUser && firebaseCurrentUser.uid ? String(firebaseCurrentUser.uid) : '';
+          return uid ? settleFirebaseBeforeLogout() : true;
+        }).then(function (allSynced) {
+          keepUnsyncedCopy = !allSynced;
+          firebaseLogoutPurgeUid = keepUnsyncedCopy ? '' : uid;
+          return firebaseAuthInstance.signOut();
+        }).then(function () {
+          removeLocalAccountData(uid, keepUnsyncedCopy);
+          return keepUnsyncedCopy ? false : clearFirestoreLocalCache();
+        }).then(function () {
+          try { sessionStorage.removeItem("soter_allow_index"); } catch (err) { }
+          window.location.href = 'apresentacao.html';
+          return true;
+        }, function (err) {
+          firebaseLogoutPurgeUid = '';
+          throw err;
         });
       },
       deleteFirebaseAccount: function (options) {
