@@ -2220,3 +2220,71 @@ body.fin-analytics-open [data-app-header] {
     overflow-x: auto;
   }
 }
+
+/* Interações do calendário: seleção múltipla e arraste sem alterar a estrutura financeira. */
+.fin-cal-grid { position: relative; }
+.fin-cal-cell.drop-target {
+  background: rgba(94,196,168,.13);
+  border-color: rgba(94,196,168,.48) !important;
+  box-shadow: inset 0 0 0 1px rgba(94,196,168,.16), 0 0 0 1px rgba(94,196,168,.08);
+}
+.fin-cal-ev.selected {
+  border-color: rgba(200,169,110,.78) !important;
+  background: linear-gradient(135deg, rgba(65,52,31,.96), rgba(26,22,34,.98));
+  box-shadow: 0 0 0 2px rgba(200,169,110,.24), inset 0 1px 0 rgba(255,255,255,.08);
+  transform: none;
+}
+.fin-cal-select-box {
+  position: absolute;
+  display: none;
+  z-index: 30;
+  border: 1px solid rgba(200,169,110,.9);
+  background: rgba(200,169,110,.14);
+  box-shadow: 0 0 0 1px rgba(200,169,110,.12);
+  border-radius: 5px;
+  pointer-events: none;
+}
+.fin-cal-drag-ghost {
+  position: fixed;
+  z-index: 9999;
+  display: none;
+  align-items: center;
+  gap: 9px;
+  max-width: 280px;
+  padding: 10px 13px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.16);
+  background: rgba(8,7,20,.96);
+  color: var(--fin-text);
+  box-shadow: 0 16px 40px rgba(0,0,0,.42);
+  font: 600 11px var(--fin-font-ui);
+  pointer-events: none;
+  backdrop-filter: blur(12px);
+}
+.fin-cal-drag-ghost.show { display: inline-flex; }
+.fin-cal-drag-ghost-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 23px;
+  height: 23px;
+  padding: 0 5px;
+  border-radius: 7px;
+  background: rgba(200,169,110,.16);
+  color: var(--fin-gold2);
+  font: 700 11px var(--fin-font-mono);
+  flex-shrink: 0;
+}
+.fin-cal-drag-ghost.copy-mode {
+  border-color: rgba(94,196,168,.4);
+  box-shadow: 0 16px 40px rgba(0,0,0,.42), 0 0 0 1px rgba(94,196,168,.1);
+}
+.fin-cal-drag-ghost.copy-mode .fin-cal-drag-ghost-count {
+  color: var(--fin-teal);
+  background: rgba(94,196,168,.14);
+}
+body.fin-cal-dragging,
+body.fin-cal-dragging * {
+  cursor: grabbing !important;
+  user-select: none !important;
+}
