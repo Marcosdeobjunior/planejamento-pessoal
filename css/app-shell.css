@@ -3,14 +3,19 @@ body {
   min-height: 100%;
 }
 
-/* body em coluna com altura mínima da tela: a área de conteúdo cresce (flex) e o
-   rodapé (margin-top:auto) fica no fim da tela quando há pouco conteúdo */
 body {
   display: flex;
   flex-direction: column;
+  margin: 0;
+}
+
+/* body em coluna com altura mínima da tela: a área de conteúdo cresce (flex) e o
+   rodapé (margin-top:auto) fica no fim da tela quando há pouco conteúdo.
+   "html > body" porque os CSS das páginas repetem "html, body { min-height: 100% }",
+   que não vale nada sem altura definida no html. */
+html > body {
   min-height: 100vh;
   min-height: 100dvh;
-  margin: 0;
 }
 
 [data-app-footer] {
