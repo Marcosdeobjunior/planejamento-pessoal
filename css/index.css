@@ -28,10 +28,7 @@ body {
 }
 
 .app-content {
-  width: min(var(--site-content-width), calc(100% - 40px));
-  max-width: var(--site-content-width);
-  margin: 0 auto;
-  padding: 80px 40px 24px;
+  /* largura, margens e padding vêm de .app-content em app-shell.css */
   position: relative;
   z-index: 1;
 }
@@ -632,19 +629,7 @@ body {
   }
 }
 
-@media (max-width: 1024px) {
-  .app-content {
-    width: min(var(--site-content-width), calc(100% - 32px));
-    padding: 110px 16px 20px;
-  }
-}
-
 @media (max-width: 768px) {
-  .app-content {
-    width: min(var(--site-content-width), calc(100% - 32px));
-    padding: 110px 16px 20px;
-  }
-
   .integrated-home .integrated-hero {
     min-height: calc(100svh - 82px);
   }
@@ -699,12 +684,6 @@ body {
   }
 }
 
-@media (max-width: 640px) {
-  .app-content {
-    width: calc(100% - 20px);
-    padding: 110px 10px 18px;
-  }
-}
 
 @media (max-width: 400px) {
   .integrated-home .hero-sub {

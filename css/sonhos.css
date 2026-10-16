@@ -51,11 +51,11 @@ body.sn-modal-open [data-app-footer] {
 .sonhos-content {
   position: relative;
   z-index: 1;
-  width: auto;
-  max-width: none;
-  min-height: calc(100vh - 58px);
-  margin: 0;
-  padding: 80px 40px 40px;
+  /* mesma largura, margens e padding de .app-content (app-shell.css) */
+  width: min(var(--ds-content-max), calc(100% - 2 * var(--ds-gutter)));
+  max-width: var(--ds-content-max);
+  margin: 0 auto;
+  padding: calc(var(--ds-header-h) + var(--ds-page-pad-top)) 0 var(--ds-page-pad-bottom);
   left: auto;
   flex: 1 0 auto;
 }
@@ -913,7 +913,6 @@ textarea.inp { resize: vertical; min-height: 70px; }
   .sn-modal-close:hover { background: rgba(224,107,139,.22); border-color: var(--accent4); color: var(--accent4); transform: rotate(90deg); }
 
   @media (max-width: 900px) {
-    .sonhos-content { width: auto; max-width: none; min-height: unset; padding: 74px 20px 30px; left: auto; }
     .sonhos-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     .sonhos-grid  { grid-template-columns: 1fr; }
   }

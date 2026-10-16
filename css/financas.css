@@ -91,15 +91,10 @@ body[data-page="financas"] .site-header .pm-name-input {
 body[data-page="financas"] main {
   position: relative;
   z-index: 1;
-  min-height: 100vh;
-  padding: 0 36px 56px;
 }
 
 body[data-page="financas"] .app-content {
-  width: min(var(--site-content-width), calc(100% - 40px));
-  max-width: var(--site-content-width);
-  margin: 0 auto;
-  padding: 78px 0 0;
+  /* largura, margens e padding vêm de .app-content em app-shell.css */
   position: relative;
   z-index: 1;
 }
@@ -2158,14 +2153,6 @@ body.fin-analytics-open [data-app-header] {
 }
 
 @media (max-width: 560px) {
-  body[data-page="financas"] main {
-    padding: 0 12px 40px;
-  }
-
-  body[data-page="financas"] .app-content {
-    width: calc(100% - 20px);
-  }
-
   .fin-ph {
     padding: 20px 0 22px;
   }

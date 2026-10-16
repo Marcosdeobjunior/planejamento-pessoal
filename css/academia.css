@@ -69,15 +69,10 @@ body[data-page="academia"] .site-header .pm-name-input {
 body[data-page="academia"] main {
   position: relative;
   z-index: 1;
-  min-height: 100vh;
-  padding: 74px 0 60px;
 }
 
 body[data-page="academia"] .app-content {
-  width: min(var(--site-content-width), calc(100% - 40px));
-  max-width: var(--site-content-width);
-  margin: 0 auto;
-  padding: 0;
+  /* largura, margens e padding vêm de .app-content em app-shell.css */
   position: relative;
   z-index: 1;
 }
@@ -854,8 +849,6 @@ body[data-page="academia"] .modal.cardio-mode .ex-strength-fields {
 }
 
 @media (max-width: 700px) {
-  body[data-page="academia"] main { padding: 0 16px 40px; }
-  body[data-page="academia"] .app-content { width: min(var(--site-content-width), calc(100% - 32px)); max-width: var(--site-content-width); padding-top: 72px; }
   .ph h1 { font-size: 28px; }
   .meal-grid { grid-template-columns: 1fr; }
   body[data-page="academia"] .frow { grid-template-columns: 1fr; }
@@ -864,15 +857,6 @@ body[data-page="academia"] .modal.cardio-mode .ex-strength-fields {
 }
 
 @media (max-width: 560px) {
-  body[data-page="academia"] main {
-    padding: 0 10px 32px;
-  }
-
-  body[data-page="academia"] .app-content {
-    width: calc(100% - 20px);
-    padding-top: 102px;
-  }
-
   .gym-page .ph,
   .gym-page .card-hd,
   .gym-page .card-act,

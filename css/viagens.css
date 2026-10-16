@@ -14,8 +14,8 @@ body{background:#04040c;color:var(--text);font-family:var(--fu);min-height:100vh
 #bg-canvas{position:fixed;inset:0;z-index:0;pointer-events:none;}
 main{position:relative;z-index:1;}
 
-.app-content{width:min(1785px,calc(100% - 40px));max-width:1785px;margin:0 auto;padding:78px 0 0;}
-main{padding:0 24px 56px;min-height:100vh;}
+/* largura, margens e padding de .app-content vêm de app-shell.css */
+main{padding:0 24px 56px;}
 
 .ph{margin-bottom:28px;display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:14px;padding-top:25px;}
 .pt{font-family:var(--fd);font-size:42px;font-weight:700;line-height:1.05;}
@@ -174,12 +174,11 @@ select.inp option{background:#0d0c1e;}
 .filter-actions{display:flex;gap:7px;margin-top:14px;}
 .filter-actions .btn{flex:1;font-size:11.5px;padding:8px 10px;}
 
-@media(max-width:960px){.lay{grid-template-columns:1fr}.cp,.mp{height:auto;min-height:0}.cl{height:auto;max-height:none}.mp{position:static}.stats{grid-template-columns:repeat(2,1fr)}.app-content{width:min(1785px,calc(100% - 32px));max-width:1785px;padding:74px 0 0}main{padding:0 16px 38px}}
+@media(max-width:960px){.lay{grid-template-columns:1fr}.cp,.mp{height:auto;min-height:0}.cl{height:auto;max-height:none}.mp{position:static}.stats{grid-template-columns:repeat(2,1fr)}main{padding:0 16px 38px}}
 @media(max-width:560px){.stats{grid-template-columns:1fr 1fr}.pt{font-size:27px}.fr{grid-template-columns:1fr}.do{grid-template-columns:1fr}.list-tools{flex-wrap:wrap}.filter-wrap{width:100%}.btn-filter{width:100%;justify-content:center}.filter-panel{width:100%;}}
 
 @media(max-width:560px){
   main{padding:0 10px 28px}
-  .app-content{width:calc(100% - 20px);padding-top:102px}
   .ph,.cph,.mdh,.ma,.ml,.vcm,.pg{flex-direction:column;align-items:stretch}
   .cp,.mp,.md,.vc{border-radius:18px}
   .list-tools{padding:10px}

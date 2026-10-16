@@ -6,6 +6,16 @@ body {
 body {
   display: flex;
   flex-direction: column;
+  margin: 0;
+}
+
+/* body em coluna com altura mínima da tela: a área de conteúdo cresce (flex) e o
+   rodapé (margin-top:auto) fica no fim da tela quando há pouco conteúdo.
+   "html > body" porque os CSS das páginas repetem "html, body { min-height: 100% }",
+   que não vale nada sem altura definida no html. */
+html > body {
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 [data-app-footer] {
@@ -1334,11 +1344,15 @@ body.mobile-drawer-open {
 .app-content {
   position: relative;
   z-index: 1;
-  min-height: calc(100vh - 58px);
-  width: min(var(--site-content-width), calc(100% - 40px));
-  max-width: var(--site-content-width);
+  /* cresce para ocupar a tela em vez de min-height com 100vh (que somava o padding
+     e deixava a página mais alta que a tela mesmo vazia) */
+  flex: 1 0 auto;
+  /* margem lateral = --ds-gutter (20px; 16px até 640px), sem padding lateral extra */
+  width: min(var(--ds-content-max), calc(100% - 2 * var(--ds-gutter)));
+  max-width: var(--ds-content-max);
   margin: 0 auto;
-  padding: 80px 40px 24px;
+  /* topo = header fixo + respiro da página; base = respiro da página */
+  padding: calc(var(--ds-header-h) + var(--ds-page-pad-top)) 0 var(--ds-page-pad-bottom);
 }
 
 @media (max-width: 900px) {
@@ -1402,11 +1416,6 @@ body.mobile-drawer-open {
     align-items: flex-start;
   }
 
-  .app-content {
-    width: min(var(--site-content-width), calc(100% - 32px));
-    max-width: var(--site-content-width);
-    padding: 110px 16px 20px;
-  }
 }
 
 @media (max-width: 640px) {
@@ -1452,10 +1461,6 @@ body.mobile-drawer-open {
     justify-content: center;
   }
 
-  .app-content {
-    width: calc(100% - 20px);
-    padding: 110px 10px 18px;
-  }
 }
 
 .soter-auth-modal[hidden] {

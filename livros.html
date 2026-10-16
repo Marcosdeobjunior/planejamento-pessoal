@@ -10,6 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/app-shell.css">
   <link rel="stylesheet" href="css/livros.css">
   <link rel="stylesheet" href="css/sonhos.css">
@@ -143,7 +144,8 @@
   /* ══════════════════════════════════════════
      LAYOUT
   ══════════════════════════════════════════ */
-.main { position: relative; z-index: 1; padding: 80px 40px 40px; flex: 1 0 auto; }
+/* mesma largura, margens e padding de .app-content (app-shell.css) */
+.main { position: relative; z-index: 1; width: min(var(--ds-content-max), calc(100% - 2 * var(--ds-gutter))); max-width: var(--ds-content-max); margin: 0 auto; padding: calc(var(--ds-header-h) + var(--ds-page-pad-top)) 0 var(--ds-page-pad-bottom); flex: 1 0 auto; }
   [data-app-footer] { margin-top: auto; }
   .page { display: none; animation: fadeIn .35s ease; }
   .page.active { display: block; }
@@ -1201,7 +1203,6 @@
     .site-header { padding: 0 20px; }
     .header-nav { display: none; }
     .hamburger { display: block; }
-    .main { padding: 74px 20px 30px; }
     .grid-4 { grid-template-columns: repeat(2,1fr); }
     .modal-body { grid-template-columns: 140px 1fr; }
     .modal-hero-content { left: 168px; }

@@ -1,0 +1,359 @@
+/* =====================================================================
+   Componentes do design system (prefixo ds-)
+   Copiam a aparência da página Revisão (revisao.html) usando os tokens
+   --ds-* de css/design-system.css. O prefixo evita colisão com .card,
+   .btn, .tab etc. que as páginas já usam. Ver docs/DESIGN_SYSTEM.md.
+   ===================================================================== */
+
+/* ---------- Cabeçalho da página ---------- */
+.ds-page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--ds-sp-4);
+  margin-bottom: 26px;
+}
+
+.ds-page-head h1 {
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-fs-h1);
+  font-weight: 700;
+  line-height: 1.05;
+  margin: 0;
+}
+
+.ds-page-head h1 em {
+  font-style: italic;
+  color: var(--ds-gold);
+}
+
+.ds-page-sub {
+  color: var(--ds-muted-2);
+  font-family: var(--ds-font-mono);
+  font-size: var(--ds-fs-sm);
+  letter-spacing: 0.5px;
+  margin: 5px 0 0;
+}
+
+/* ---------- Card ---------- */
+.ds-card {
+  background: var(--ds-card);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius);
+  transition: border-color 0.2s;
+}
+
+.ds-card:hover {
+  border-color: var(--ds-border-hover);
+}
+
+.ds-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 16px 20px 13px;
+  border-bottom: 1px solid var(--ds-border);
+}
+
+.ds-card-label {
+  font-family: var(--ds-font-mono);
+  font-size: var(--ds-fs-label);
+  letter-spacing: var(--ds-ls-label);
+  text-transform: uppercase;
+  color: var(--ds-muted);
+}
+
+.ds-card-body {
+  padding: 16px 20px 20px;
+}
+
+/* ---------- Estatísticas ---------- */
+.ds-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--ds-sp-4);
+}
+
+.ds-stat {
+  position: relative;
+  overflow: hidden;
+  padding: 18px 20px;
+  background: var(--ds-card);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius);
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.ds-stat:hover {
+  border-color: var(--ds-border-hover);
+  transform: translateY(-2px);
+}
+
+/* faixa colorida no topo; a cor vem das variantes abaixo */
+.ds-stat::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: var(--ds-radius) var(--ds-radius) 0 0;
+}
+
+.ds-stat--gold::before { background: linear-gradient(90deg, var(--ds-gold), var(--ds-gold-2)); }
+.ds-stat--teal::before { background: linear-gradient(90deg, var(--ds-teal), #7ee8d0); }
+.ds-stat--rose::before { background: linear-gradient(90deg, var(--ds-rose), #f08fad); }
+.ds-stat--violet::before { background: linear-gradient(90deg, var(--ds-violet), #9d93e0); }
+.ds-stat--amber::before { background: linear-gradient(90deg, var(--ds-amber), #f0a870); }
+
+.ds-stat-label {
+  font-family: var(--ds-font-mono);
+  font-size: var(--ds-fs-label);
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: var(--ds-muted);
+  margin-bottom: var(--ds-sp-2);
+}
+
+.ds-stat-value {
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-fs-stat);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.ds-stat-sub {
+  font-family: var(--ds-font-mono);
+  font-size: var(--ds-fs-xs);
+  color: var(--ds-muted);
+  margin-top: var(--ds-sp-1);
+}
+
+/* ---------- Botões ---------- */
+.ds-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  border: none;
+  border-radius: var(--ds-radius-btn);
+  font-family: var(--ds-font-ui);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ds-btn:focus-visible {
+  outline: 2px solid var(--ds-gold);
+  outline-offset: 2px;
+}
+
+.ds-btn--sm {
+  padding: 6px 13px;
+  font-size: 11.5px;
+  border-radius: var(--ds-radius-btn-sm);
+}
+
+.ds-btn--lg {
+  padding: 14px 32px;
+  font-size: var(--ds-fs-lg);
+  border-radius: var(--ds-radius-btn-lg);
+}
+
+.ds-btn--gold {
+  background: var(--ds-gold);
+  color: #080810;
+}
+
+.ds-btn--gold:hover {
+  background: var(--ds-gold-2);
+  transform: translateY(-1px);
+}
+
+.ds-btn--ghost {
+  background: transparent;
+  color: var(--ds-muted-2);
+  border: 1px solid var(--ds-border);
+}
+
+.ds-btn--ghost:hover {
+  color: var(--ds-text);
+  border-color: var(--ds-border-hover);
+}
+
+.ds-btn--teal {
+  background: rgba(94, 196, 168, 0.15);
+  color: var(--ds-teal);
+  border: 1px solid rgba(94, 196, 168, 0.25);
+}
+
+.ds-btn--teal:hover {
+  background: rgba(94, 196, 168, 0.25);
+}
+
+.ds-btn--rose {
+  background: rgba(224, 107, 139, 0.15);
+  color: var(--ds-rose);
+  border: 1px solid rgba(224, 107, 139, 0.25);
+}
+
+.ds-btn--rose:hover {
+  background: rgba(224, 107, 139, 0.25);
+}
+
+/* ---------- Campos de formulário ---------- */
+.ds-field-label {
+  display: block;
+  font-family: var(--ds-font-mono);
+  font-size: var(--ds-fs-label);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--ds-muted);
+  margin-bottom: 6px;
+}
+
+.ds-field {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--ds-input-bg);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-input);
+  padding: 10px 13px;
+  color: var(--ds-text);
+  font-family: var(--ds-font-ui);
+  font-size: var(--ds-fs-base);
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.ds-field:focus {
+  border-color: var(--ds-gold);
+  box-shadow: 0 0 0 3px rgba(200, 169, 110, 0.09);
+}
+
+.ds-field::placeholder {
+  color: var(--ds-muted);
+}
+
+select.ds-field option {
+  background: #0d0d1a;
+}
+
+textarea.ds-field {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* ---------- Subnavegação (abas fixas abaixo do header) ---------- */
+.ds-subnav {
+  position: sticky;
+  top: var(--ds-header-h);
+  z-index: 90;
+  display: flex;
+  min-height: var(--ds-subnav-h);
+  background: rgba(8, 8, 18, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--ds-border);
+}
+
+.ds-subnav-tab {
+  position: relative;
+  padding: 14px 20px;
+  background: none;
+  border: none;
+  color: var(--ds-muted);
+  font-family: var(--ds-font-ui);
+  font-size: var(--ds-fs-base);
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.ds-subnav-tab::after {
+  content: "";
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  bottom: 0;
+  height: 2px;
+  background: var(--ds-gold);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ds-subnav-tab:hover {
+  color: var(--ds-text);
+}
+
+.ds-subnav-tab:hover::after,
+.ds-subnav-tab.is-active::after,
+.ds-subnav-tab[aria-current="page"]::after {
+  transform: scaleX(1);
+}
+
+.ds-subnav-tab.is-active,
+.ds-subnav-tab[aria-current="page"] {
+  color: var(--ds-gold);
+}
+
+.ds-subnav-tab:focus-visible {
+  outline: 2px solid var(--ds-gold);
+  outline-offset: -2px;
+}
+
+@media (max-width: 640px) {
+  .ds-subnav {
+    overflow-x: auto;
+  }
+}
+
+/* ---------- Estado vazio ---------- */
+.ds-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--ds-muted);
+}
+
+.ds-empty i,
+.ds-empty .ds-empty-icon {
+  display: block;
+  font-size: 30px;
+  margin-bottom: var(--ds-sp-3);
+  opacity: 0.3;
+}
+
+.ds-empty p {
+  font-family: var(--ds-font-mono);
+  font-size: var(--ds-fs-sm);
+  margin: 0;
+}
+
+/* ---------- Movimento reduzido ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .ds-card,
+  .ds-stat,
+  .ds-btn,
+  .ds-field,
+  .ds-subnav-tab,
+  .ds-subnav-tab::after {
+    transition: none;
+    animation: none;
+  }
+
+  .ds-stat:hover,
+  .ds-btn--gold:hover {
+    transform: none;
+  }
+}
