@@ -1,74 +1,54 @@
-# Regras de Segurança do Firebase Realtime Database
+# Regras de segurança do Cloud Firestore
 
-## Contexto
+O projeto usa **Cloud Firestore** (não Realtime Database). A API Key fica exposta no cliente
+(`js/firebase-config.js`), o que é esperado no Firebase. A proteção real dos dados vem das
+**regras do Firestore**.
 
-O projeto `sol-de-soter` usa o Firebase Realtime Database para sincronizar dados do usuário.
-A API Key fica exposta no cliente (`js/firebase-config.js`) — isso é **esperado e normal** no Firebase,
-mas significa que qualquer pessoa que encontrar a key pode tentar acessar o banco.
+As regras ficam em [`firestore.rules`](../firestore.rules), na raiz do repositório. Elas **não**
+são publicadas automaticamente: revise e publique pelo Firebase Console (Firestore Database →
+Regras) ou com `firebase deploy --only firestore:rules`.
 
-A proteção real dos dados vem das **Security Rules**, não da API Key.
+## O que as regras fazem
 
----
+- Só o próprio usuário autenticado (`request.auth.uid == uid`) lê e grava em `users/{uid}` e em
+  tudo o que fica embaixo:
+  - `private/siteState`: formato antigo (schema 1), mantido como backup;
+  - `modules/{nome}`: schema 2, um documento por módulo;
+  - `images/{sha256}`: schema 2, imagens em data URL;
+  - `meta/sync`: schema 2, marca da migração;
+  - `rubrica/{pagina}`: página Projetos.
+- Requisições sem login ou de outro usuário são negadas.
+- **Limites por documento**, além do limite de 1 MiB que o Firestore já impõe:
+  - no máximo 40 campos no nível de cima;
+  - `images/*`: o campo `data` precisa ser texto com no máximo 950.000 caracteres;
+  - `modules/*`: `schema == 2`, `rev` inteiro e `data` como mapa.
+- O site também confere o tamanho antes de enviar. Um módulo acima de ~900 KB (bytes UTF-8) ou uma
+  imagem acima de 900 KB mostra um erro claro e não entra em loop de novas tentativas.
 
-## Regras Recomendadas
+## Observação sobre as regras do Firestore
 
-Cole as regras abaixo no console do Firebase:
-**Firebase Console → Realtime Database → Rules**
+Quando várias regras casam com o mesmo caminho, elas são combinadas com **OU**: basta uma
+permitir. Por isso o arquivo não usa um `match /users/{uid}/{document=**}` genérico com
+`allow write`, que anularia os limites de `images` e `modules`. A regra das subcoleções mais
+fundas usa `{collection}/{docId}/{sub}/{rest=**}`: com `{rest=**}` direto depois de `{docId}`,
+ela casaria também com o próprio documento.
 
-```json
-{
-  "rules": {
-    "users": {
-      "$uid": {
-        ".read": "$uid === auth.uid",
-        ".write": "$uid === auth.uid"
-      }
-    }
-  }
-}
-```
+## Como verificar
 
-### O que essas regras fazem
+1. Firebase Console → Firestore Database → **Regras**: confira que o conteúdo é o de
+   `firestore.rules`.
+2. Use o **Rules Playground**:
+   - leitura de `users/OUTRO_UID/modules/livraria` autenticado como você → **negado**;
+   - leitura sem autenticação → **negado**;
+   - gravação em `users/SEU_UID/modules/livraria` com `{ schema: 2, rev: 1, data: {} }` →
+     **permitido**;
+   - a mesma gravação sem `rev` → **negado**.
+3. Localmente, com o Firebase Emulator Suite, o `firebase.json` pode apontar para o
+   `firestore.rules`. Os testes deste repositório rodaram assim.
 
-- **Leitura e escrita** só são permitidas para o usuário autenticado com aquele `uid`.
-- Nenhum outro usuário (mesmo autenticado) consegue acessar os dados de outro.
-- Requisições sem autenticação (`auth === null`) são **bloqueadas**.
+## Checklist
 
----
-
-## Regras Inseguras — Evite
-
-Nunca deixe as regras em modo aberto (padrão inicial do Firebase):
-
-```json
-{
-  "rules": {
-    ".read": true,
-    ".write": true
-  }
-}
-```
-
-Isso permite que qualquer pessoa leia e escreva no banco sem autenticação.
-
----
-
-## Como Verificar
-
-1. Abra o [Firebase Console](https://console.firebase.google.com/)
-2. Selecione o projeto `sol-de-soter`
-3. Vá em **Realtime Database → Rules**
-4. Confirme que as regras restringem acesso por `auth.uid`
-5. Use a aba **Rules Playground** para testar:
-   - Simule uma requisição sem autenticação → deve retornar `Permission denied`
-   - Simule com o uid correto → deve retornar `Allowed`
-
----
-
-## Checklist de Segurança
-
-- [ ] Security Rules restritas por `auth.uid`
-- [ ] Nenhuma regra `.read: true` ou `.write: true` na raiz
-- [ ] Autenticação por email/senha habilitada
-- [ ] Google Auth e Guest Access desabilitados (conforme `firebase-config.js`)
-- [ ] Regras testadas no Rules Playground
+- [ ] Regras publicadas iguais a `firestore.rules`.
+- [ ] Nenhuma regra `allow read, write: if true`.
+- [ ] Login por email/senha habilitado; Google e visitante conforme `js/firebase-config.js`.
+- [ ] Regras testadas no Rules Playground.

@@ -246,22 +246,41 @@ window.SoterUtils = window.SoterUtils || (function () {
     if (!safeKey) return null;
     try {
       raw = localStorage.getItem(safeKey === "__guest__" ? GUEST_STATE_STORAGE_KEY : (USER_STATE_STORAGE_PREFIX + safeKey));
-      if (raw) return ensureStateShape(JSON.parse(raw));
+      if (raw) return resolvePersistedImages(safeKey, ensureStateShape(JSON.parse(raw)));
     } catch (err) { }
     if (safeKey === "__guest__") return guestScopedSnapshot ? ensureStateShape(deepClone(guestScopedSnapshot)) : null;
-    return userScopedSnapshots[safeKey] ? ensureStateShape(deepClone(userScopedSnapshots[safeKey])) : null;
+    return userScopedSnapshots[safeKey] ? resolvePersistedImages(safeKey, ensureStateShape(deepClone(userScopedSnapshots[safeKey]))) : null;
+  }
+
+  // o cache local do schema 2 guarda "soterimg:<hash>"; as páginas recebem o data URL (ou um
+  // placeholder até o IndexedDB responder, ver syncV2ApplyResolvedImages)
+  function resolvePersistedImages(key, state) {
+    if (key === "__guest__" || !collectImageRefs(state).length) return state;
+    var resolved = resolveImageRefsSync(state);
+    if (stateHasUnresolvedImages(state)) syncV2LoadLocalImages(key);
+    return resolved;
   }
 
   function writePersistedStateToKey(key, state) {
     var safeKey = String(key || "");
     var snapshot = compactStateForStorage(ensureStateShape(state));
+    var useImageRefs = safeKey !== "__guest__" && isSyncV2Enabled();
     if (!safeKey) return;
+    if (useImageRefs) {
+      // schema 2: o localStorage guarda referências; as imagens ficam no IndexedDB
+      snapshot = toImageRefsSync(snapshot);
+      var hasInline = false;
+      forEachStringDeep(snapshot, function (text) { if (!hasInline && isDataImage(text)) hasInline = true; });
+      if (hasInline) syncV2ScheduleLocalExtraction(safeKey);
+    }
     try {
       localStorage.setItem(
         safeKey === "__guest__" ? GUEST_STATE_STORAGE_KEY : (USER_STATE_STORAGE_PREFIX + safeKey),
         JSON.stringify(snapshot)
       );
-    } catch (err) { }
+    } catch (err) {
+      if (useImageRefs && isQuotaError(err)) syncV2ReportLocalQuota(err);
+    }
     if (safeKey === "__guest__") {
       guestScopedSnapshot = deepClone(snapshot);
       return;
@@ -692,6 +711,8 @@ window.SoterUtils = window.SoterUtils || (function () {
     }
     firebaseUnsubscribe = null;
     clearFirebaseRealtimeListeners();
+    syncV2Reset();
+    firebaseLegacyLocked = false;
     firebaseDocRef = null;
     firebaseIsHydrated = false;
     firebasePendingState = null;
@@ -728,6 +749,7 @@ window.SoterUtils = window.SoterUtils || (function () {
   }
 
   function hasUnsyncedLocalChanges() {
+    if (syncV2.active) return !!(syncV2HasDirty() || syncV2.flushPromise);
     return !!(firebaseDirty || firebasePendingState || firebaseSyncInFlight || readPersistedDirty());
   }
 
@@ -1697,6 +1719,10 @@ window.SoterUtils = window.SoterUtils || (function () {
 
   function activateFirebaseForCurrentUser() {
     if (!firebaseDbInstance || !firebaseCurrentUser) return Promise.resolve(false);
+    if (isSyncV2Enabled()) {
+      firebaseDocRef = null;
+      return syncV2Activate(firebaseCurrentUser.uid);
+    }
     var config = getFirebaseRuntimeConfig() || {};
     var userRoot = getFirebaseUserRoot();
     firebaseDocRef = getFirebaseUserStateRef();
@@ -1714,8 +1740,12 @@ window.SoterUtils = window.SoterUtils || (function () {
     });
     if (firebaseDirty) setFirebaseDirty(true);
     else firebaseDirty = readPersistedDirty();
-    connectFirebaseRealtime();
-    return hydrateFirebaseDocument();
+    // se a conta já migrou para o schema 2, este navegador (formato antigo) não grava no siteState
+    return checkLegacyLockForCurrentUser().then(function (locked) {
+      if (locked) return false;
+      connectFirebaseRealtime();
+      return hydrateFirebaseDocument();
+    });
   }
 
   function reloadOnceAfterAuth(uid) {
@@ -1788,6 +1818,8 @@ window.SoterUtils = window.SoterUtils || (function () {
       if (!keepUnsyncedCopy) {
         keys.push(FIREBASE_DIRTY_STORAGE_PREFIX + uid);
         keys.push(RUBRICA_STORAGE_PREFIX + uid);
+        keys.push(SYNC_V2_BASE_PREFIX + uid);
+        keys.push(SYNC_V2_DIRTY_PREFIX + uid);
         removeScopedStateForUser(uid);
       }
     }
@@ -1803,6 +1835,9 @@ window.SoterUtils = window.SoterUtils || (function () {
       try { localStorage.removeItem(keys[i]); } catch (err) { }
     }
     try { sessionStorage.removeItem(SESSION_AUTH_UID_STORAGE_KEY); } catch (err) { }
+    // imagens e cópias de conflito (IndexedDB) só ficam se o usuário escolheu manter a cópia local
+    if (uid && !keepUnsyncedCopy) return syncV2DeleteLocalDatabase(uid);
+    return Promise.resolve(false);
   }
 
   function clearFirestoreLocalCache() {
@@ -1916,6 +1951,1173 @@ window.SoterUtils = window.SoterUtils || (function () {
     });
   }
 
+  // =====================================================================
+  // Sincronização schema 2 (achados A01 e A02)
+  // ---------------------------------------------------------------------
+  // - Um documento por módulo: users/{uid}/modules/{nome} = { schema, data, rev, updatedAt, deviceId }
+  // - Imagens (data:image/...) viram users/{uid}/images/{sha256}; no módulo fica "soterimg:{sha256}".
+  //   Cache local das imagens em IndexedDB (soter_sync_v2_<uid>, store "images").
+  // - Cada módulo é gravado numa transação que confere "rev". Se outro aparelho gravou antes,
+  //   faz merge (arrays com id: une por id, vence o updatedAt mais recente; demais valores: remoto)
+  //   e guarda antes a versão local em IndexedDB (store "soter_conflicts").
+  // - Desligado por padrão: liga com localStorage.soter_sync_schema = "2" ou
+  //   SOTER_FIREBASE_CONFIG.sync.schema = 2. Desligado, o fluxo antigo (private/siteState) segue igual.
+  // =====================================================================
+  var SYNC_V2_FLAG_STORAGE_KEY = "soter_sync_schema";
+  var SYNC_V2_BASE_PREFIX = "soter_sync_v2_base_";
+  var SYNC_V2_DIRTY_PREFIX = "soter_sync_v2_dirty_";
+  var SYNC_V2_DEVICE_STORAGE_KEY = "soter_device_id_v1";
+  var SYNC_V2_IDB_PREFIX = "soter_sync_v2_";
+  var SYNC_V2_MAX_MODULE_BYTES = 900 * 1024;
+  var SYNC_V2_MAX_IMAGE_BYTES = 900 * 1024;
+  var SYNC_V2_PROFILE_MODULE = "perfil";
+  var SYNC_V2_FALLBACK_MODULE = "sistema";
+  // metadados deste aparelho: não vão para a nuvem
+  var SYNC_V2_LOCAL_ONLY_KEYS = { firebaseSync: true, fileStorage: true };
+  var SOTER_IMG_REF_PREFIX = "soterimg:";
+  // enquanto a imagem não sai do IndexedDB, as páginas recebem um GIF transparente com o hash no
+  // fragmento: passa nos validadores das páginas (data:image/...) e o app-shell troca depois
+  var SOTER_IMG_PLACEHOLDER_PREFIX = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7#soterimg:";
+
+  var syncV2 = {
+    active: false,
+    uid: "",
+    base: {},
+    dirty: {},
+    failed: {},
+    listeners: {},
+    hydrated: false,
+    legacyDirty: false,
+    flushPromise: null,
+    flushAgain: false,
+    flushTimer: null,
+    retryTimer: null,
+    retryCount: 0,
+    stats: { imagesFromCloud: 0, imagesFromIdb: 0, imagesUploaded: 0, conflicts: 0 }
+  };
+  var syncV2ImageByHash = {};
+  var syncV2HashByImage = {};
+  var syncV2ImagesLoadedFor = "";
+  var syncV2PlaceholdersDelivered = false;
+  var syncV2DomObserver = null;
+  var syncV2DbPromises = {};
+  var firebaseLegacyLocked = false;
+
+  // além do evento combinado, dispara "soter:storage-hydrated", que Livraria/Cinema/Mangás/RPG
+  // já escutam para reler o estado (o app-shell antigo nunca o disparava)
+  function syncV2DispatchApplied() {
+    dispatchRemoteStateApplied();
+    try { window.dispatchEvent(new CustomEvent("soter:storage-hydrated")); } catch (err) { }
+  }
+
+  function isSyncV2Enabled() {
+    var config;
+    try {
+      if (String(localStorage.getItem(SYNC_V2_FLAG_STORAGE_KEY) || "") === "2") return true;
+    } catch (err) { }
+    config = getFirebaseRuntimeConfig();
+    return !!(config && config.sync && Number(config.sync.schema) === 2);
+  }
+
+  function getSyncDeviceId() {
+    var id = "";
+    try { id = String(localStorage.getItem(SYNC_V2_DEVICE_STORAGE_KEY) || ""); } catch (err) { }
+    if (!id) {
+      id = "d" + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+      try { localStorage.setItem(SYNC_V2_DEVICE_STORAGE_KEY, id); } catch (err) { }
+    }
+    return id;
+  }
+
+  function utf8ByteLength(text) {
+    text = String(text || "");
+    if (typeof TextEncoder !== "undefined") return new TextEncoder().encode(text).length;
+    return unescape(encodeURIComponent(text)).length;
+  }
+
+  // JSON com chaves ordenadas: o Firestore não preserva a ordem das chaves
+  function stableStringify(value) {
+    if (value === null || typeof value !== "object") return JSON.stringify(value === undefined ? null : value);
+    if (Array.isArray(value)) {
+      return "[" + value.map(function (item) { return item === undefined ? "null" : stableStringify(item); }).join(",") + "]";
+    }
+    return "{" + Object.keys(value).sort().filter(function (key) {
+      return value[key] !== undefined && typeof value[key] !== "function";
+    }).map(function (key) {
+      return JSON.stringify(key) + ":" + stableStringify(value[key]);
+    }).join(",") + "}";
+  }
+
+  // hash rápido (FNV-1a) só para saber se um módulo mudou desde a última sincronização
+  function quickHash(text) {
+    var h1 = 0x811c9dc5;
+    var h2 = 0x01000193;
+    var i;
+    var c;
+    text = String(text || "");
+    for (i = 0; i < text.length; i++) {
+      c = text.charCodeAt(i);
+      h1 = Math.imul(h1 ^ c, 16777619) >>> 0;
+      h2 = Math.imul(h2 ^ c, 2246822507) >>> 0;
+    }
+    return h1.toString(16) + h2.toString(16) + ":" + text.length;
+  }
+
+  function moduleHash(data) {
+    return quickHash(stableStringify(data === undefined ? null : data));
+  }
+
+  function sha256Hex(text) {
+    if (!window.crypto || !window.crypto.subtle || typeof TextEncoder === "undefined") {
+      return Promise.reject(new Error("crypto_subtle_unavailable"));
+    }
+    return window.crypto.subtle.digest("SHA-256", new TextEncoder().encode(String(text))).then(function (buffer) {
+      var bytes = new Uint8Array(buffer);
+      var out = "";
+      for (var i = 0; i < bytes.length; i++) out += (bytes[i] < 16 ? "0" : "") + bytes[i].toString(16);
+      return out;
+    });
+  }
+
+  function mapStringsDeep(value, fn) {
+    if (typeof value === "string") return fn(value);
+    if (Array.isArray(value)) return value.map(function (item) { return mapStringsDeep(item, fn); });
+    if (value && typeof value === "object") {
+      var out = {};
+      Object.keys(value).forEach(function (key) { out[key] = mapStringsDeep(value[key], fn); });
+      return out;
+    }
+    return value;
+  }
+
+  function forEachStringDeep(value, fn) {
+    if (typeof value === "string") { fn(value); return; }
+    if (Array.isArray(value)) { value.forEach(function (item) { forEachStringDeep(item, fn); }); return; }
+    if (value && typeof value === "object") Object.keys(value).forEach(function (key) { forEachStringDeep(value[key], fn); });
+  }
+
+  function isDataImage(text) {
+    return typeof text === "string" && text.indexOf("data:image/") === 0 && text.indexOf(SOTER_IMG_PLACEHOLDER_PREFIX) !== 0;
+  }
+
+  function imageHashFromString(text) {
+    if (typeof text !== "string") return "";
+    if (text.indexOf(SOTER_IMG_REF_PREFIX) === 0) return text.slice(SOTER_IMG_REF_PREFIX.length);
+    if (text.indexOf(SOTER_IMG_PLACEHOLDER_PREFIX) === 0) return text.slice(SOTER_IMG_PLACEHOLDER_PREFIX.length);
+    return "";
+  }
+
+  // estado das páginas (data URLs) -> forma com referências; data URL ainda sem hash fica como está
+  function toImageRefsSync(value) {
+    return mapStringsDeep(value, function (text) {
+      var hash = imageHashFromString(text);
+      if (hash) return SOTER_IMG_REF_PREFIX + hash;
+      if (isDataImage(text) && syncV2HashByImage[text]) return SOTER_IMG_REF_PREFIX + syncV2HashByImage[text];
+      return text;
+    });
+  }
+
+  // forma com referências -> estado das páginas; sem a imagem em memória, entrega o placeholder
+  function resolveImageRefsSync(value) {
+    return mapStringsDeep(value, function (text) {
+      var hash = imageHashFromString(text);
+      if (!hash) return text;
+      if (syncV2ImageByHash[hash]) return syncV2ImageByHash[hash];
+      syncV2PlaceholdersDelivered = true;
+      return SOTER_IMG_PLACEHOLDER_PREFIX + hash;
+    });
+  }
+
+  function collectImageRefs(value) {
+    var refs = {};
+    forEachStringDeep(value, function (text) {
+      var hash = imageHashFromString(text);
+      if (hash) refs[hash] = true;
+    });
+    return Object.keys(refs);
+  }
+
+  function stateHasUnresolvedImages(value) {
+    var found = false;
+    forEachStringDeep(value, function (text) {
+      if (found) return;
+      var hash = imageHashFromString(text);
+      if (hash && !syncV2ImageByHash[hash]) found = true;
+    });
+    return found;
+  }
+
+  function rememberImage(hash, dataUrl) {
+    if (!hash || typeof dataUrl !== "string") return;
+    syncV2ImageByHash[hash] = dataUrl;
+    syncV2HashByImage[dataUrl] = hash;
+  }
+
+  // ---------- IndexedDB (imagens e conflitos), um banco por conta ----------
+  function syncV2OpenDb(uid) {
+    uid = String(uid || "");
+    if (!uid || typeof indexedDB === "undefined") return Promise.reject(new Error("indexeddb_unavailable"));
+    if (syncV2DbPromises[uid]) return syncV2DbPromises[uid];
+    syncV2DbPromises[uid] = new Promise(function (resolve, reject) {
+      var request = indexedDB.open(SYNC_V2_IDB_PREFIX + uid, 1);
+      request.onupgradeneeded = function () {
+        var db = request.result;
+        if (!db.objectStoreNames.contains("images")) db.createObjectStore("images", { keyPath: "hash" });
+        if (!db.objectStoreNames.contains("soter_conflicts")) db.createObjectStore("soter_conflicts", { keyPath: "id", autoIncrement: true });
+      };
+      request.onsuccess = function () {
+        var db = request.result;
+        db.onversionchange = function () { try { db.close(); } catch (err) { } delete syncV2DbPromises[uid]; };
+        resolve(db);
+      };
+      request.onerror = function () { delete syncV2DbPromises[uid]; reject(request.error || new Error("indexeddb_open_failed")); };
+    });
+    return syncV2DbPromises[uid];
+  }
+
+  function syncV2IdbRequest(uid, storeName, mode, run) {
+    return syncV2OpenDb(uid).then(function (db) {
+      return new Promise(function (resolve, reject) {
+        var tx = db.transaction(storeName, mode);
+        var result;
+        var request = run(tx.objectStore(storeName));
+        if (request) request.onsuccess = function () { result = request.result; };
+        tx.oncomplete = function () { resolve(result); };
+        tx.onerror = function () { reject(tx.error || new Error("indexeddb_tx_failed")); };
+        tx.onabort = function () { reject(tx.error || new Error("indexeddb_tx_aborted")); };
+      });
+    });
+  }
+
+  function syncV2DeleteLocalDatabase(uid) {
+    uid = String(uid || "");
+    if (!uid || typeof indexedDB === "undefined") return Promise.resolve(false);
+    var pending = syncV2DbPromises[uid];
+    delete syncV2DbPromises[uid];
+    return Promise.resolve(pending).then(function (db) {
+      try { if (db) db.close(); } catch (err) { }
+    }, function () { return null; }).then(function () {
+      return new Promise(function (resolve) {
+        var request = indexedDB.deleteDatabase(SYNC_V2_IDB_PREFIX + uid);
+        request.onsuccess = function () { resolve(true); };
+        request.onerror = function () { resolve(false); };
+        request.onblocked = function () { resolve(false); };
+      });
+    });
+  }
+
+  // carrega do IndexedDB as imagens que o estado local referencia (sem rede)
+  function syncV2LoadLocalImages(uid) {
+    uid = String(uid || "");
+    if (!uid || syncV2ImagesLoadedFor === uid) return Promise.resolve(0);
+    return syncV2IdbRequest(uid, "images", "readonly", function (store) { return store.getAll(); }).then(function (rows) {
+      syncV2ImagesLoadedFor = uid;
+      (rows || []).forEach(function (row) {
+        if (row && row.hash && row.data) rememberImage(row.hash, row.data);
+      });
+      syncV2.stats.imagesFromIdb = (rows || []).length;
+      syncV2ApplyResolvedImages();
+      return (rows || []).length;
+    }).catch(function (err) {
+      console.warn("[SoterStorage] Não foi possível ler as imagens do IndexedDB:", err);
+      return 0;
+    });
+  }
+
+  // troca placeholders pelas imagens no estado, avisa as páginas e corrige o que já está no DOM
+  function syncV2ApplyResolvedImages() {
+    if (!syncV2PlaceholdersDelivered) return;
+    var current = runtimeState;
+    var resolved = resolveImageRefsSync(current);
+    if (stableStringify(resolved) !== stableStringify(current)) {
+      runtimeState = resolved;
+      try {
+        applyProfileToUI(resolved);
+      } catch (err) { }
+      syncV2DispatchApplied();
+    }
+    syncV2PatchDomImages(document);
+    syncV2EnsureDomObserver();
+  }
+
+  function syncV2PatchElementImages(el) {
+    var src;
+    var style;
+    var hash;
+    if (!el || el.nodeType !== 1) return;
+    if (el.tagName === "IMG") {
+      src = el.getAttribute("src") || "";
+      hash = imageHashFromString(src);
+      if (hash && syncV2ImageByHash[hash] && src !== syncV2ImageByHash[hash]) el.setAttribute("src", syncV2ImageByHash[hash]);
+    }
+    style = el.getAttribute("style");
+    if (style && style.indexOf("#soterimg:") >= 0) {
+      el.setAttribute("style", style.replace(/data:image\/gif;base64,[A-Za-z0-9+\/=]+#soterimg:([a-f0-9]{64})/g, function (match, h) {
+        return syncV2ImageByHash[h] || match;
+      }));
+    }
+  }
+
+  function syncV2PatchDomImages(root) {
+    if (!root || !root.querySelectorAll) return;
+    if (root.nodeType === 1) syncV2PatchElementImages(root);
+    Array.prototype.forEach.call(root.querySelectorAll('img[src*="#soterimg:"], [style*="#soterimg:"]'), syncV2PatchElementImages);
+  }
+
+  function syncV2EnsureDomObserver() {
+    if (syncV2DomObserver || typeof MutationObserver === "undefined" || !document.body) return;
+    syncV2DomObserver = new MutationObserver(function (mutations) {
+      mutations.forEach(function (mutation) {
+        if (mutation.type === "attributes") syncV2PatchElementImages(mutation.target);
+        else Array.prototype.forEach.call(mutation.addedNodes || [], function (node) { syncV2PatchDomImages(node); });
+      });
+    });
+    syncV2DomObserver.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ["src", "style"] });
+  }
+
+  // calcula o hash das imagens novas (data URLs) e guarda no IndexedDB; devolve o valor com referências
+  function syncV2ExtractImages(uid, value) {
+    var pending = {};
+    forEachStringDeep(value, function (text) {
+      if (isDataImage(text) && !syncV2HashByImage[text]) pending[text] = true;
+    });
+    var list = Object.keys(pending);
+    return list.reduce(function (chain, dataUrl) {
+      return chain.then(function () {
+        return sha256Hex(dataUrl).then(function (hash) {
+          rememberImage(hash, dataUrl);
+          var mime = (dataUrl.match(/^data:([^;,]+)/) || [])[1] || "image/*";
+          return syncV2IdbRequest(uid, "images", "readwrite", function (store) {
+            return store.get(hash);
+          }).then(function (existing) {
+            if (existing) return null;
+            return syncV2IdbRequest(uid, "images", "readwrite", function (store) {
+              return store.put({ hash: hash, data: dataUrl, mime: mime, bytes: utf8ByteLength(dataUrl), createdAt: new Date().toISOString(), uploaded: false });
+            });
+          }).catch(function () { return null; });
+        });
+      });
+    }, Promise.resolve()).then(function () {
+      return toImageRefsSync(value);
+    });
+  }
+
+  // depois que o hash sai, regrava o cache local só com referências
+  var syncV2LocalExtractTimer = null;
+  function syncV2ScheduleLocalExtraction(uid) {
+    if (syncV2LocalExtractTimer) clearTimeout(syncV2LocalExtractTimer);
+    syncV2LocalExtractTimer = setTimeout(function () {
+      syncV2LocalExtractTimer = null;
+      syncV2ExtractImages(uid, runtimeState).then(function () {
+        if (runtimeStateOwner === uid || (firebaseCurrentUser && firebaseCurrentUser.uid === uid)) {
+          writePersistedStateToKey(uid, runtimeState);
+        }
+      }).catch(function (err) {
+        console.warn("[SoterStorage] Falha ao preparar imagens para o cache local:", err);
+      });
+    }, 50);
+  }
+
+  function syncV2ReportLocalQuota(err) {
+    console.error("[SoterStorage] Cache local cheio (localStorage):", err);
+    showSyncProblem("O cache local deste navegador está cheio. Seus dados continuam na nuvem, mas este aparelho pode não guardar a última versão offline.");
+  }
+
+  // ---------- divisão do estado em módulos ----------
+  function syncV2ModuleNames() {
+    return FIREBASE_COLLECTION_DEFS.map(function (def) { return def.name; }).concat([SYNC_V2_PROFILE_MODULE]);
+  }
+
+  function syncV2KeyModule(key) {
+    for (var i = 0; i < FIREBASE_COLLECTION_DEFS.length; i++) {
+      if (FIREBASE_COLLECTION_DEFS[i].dataKeys.indexOf(key) >= 0) return FIREBASE_COLLECTION_DEFS[i].name;
+    }
+    return SYNC_V2_FALLBACK_MODULE;
+  }
+
+  // estado (forma com referências) -> { modulo: data }. Chaves sem módulo vão para "sistema".
+  function syncV2SplitState(state) {
+    var shaped = compactStateForStorage(ensureStateShape(state));
+    var out = {};
+    syncV2ModuleNames().forEach(function (name) { out[name] = {}; });
+    Object.keys(shaped.data || {}).forEach(function (key) {
+      if (SYNC_V2_LOCAL_ONLY_KEYS[key]) return;
+      if (shaped.data[key] === undefined) return;
+      out[syncV2KeyModule(key)][key] = shaped.data[key];
+    });
+    out[SYNC_V2_PROFILE_MODULE] = { profile: deepClone(shaped.profile || {}) };
+    return JSON.parse(JSON.stringify(out));
+  }
+
+  // listas e objetos vazios não contam como conteúdo (as páginas gravam [] ao abrir)
+  function syncV2HasMeaningfulValue(value) {
+    if (value === null || value === undefined || value === "") return false;
+    if (Array.isArray(value)) return value.length > 0;
+    if (typeof value === "object") return Object.keys(value).some(function (key) { return syncV2HasMeaningfulValue(value[key]); });
+    return true;
+  }
+
+  function syncV2ModuleHasContent(name, data) {
+    if (!data || typeof data !== "object") return false;
+    if (name === SYNC_V2_PROFILE_MODULE) return !!(data.profile && (data.profile.avatar || (data.profile.name && data.profile.name !== DEFAULT_STATE.profile.name)));
+    return syncV2HasMeaningfulValue(data);
+  }
+
+  // troca, no estado, as chaves de um módulo pelos dados vindos da nuvem
+  function syncV2ReplaceModuleInState(state, name, data) {
+    var next = ensureStateShape(deepClone(state));
+    data = data && typeof data === "object" ? data : {};
+    if (name === SYNC_V2_PROFILE_MODULE) {
+      if (data.profile && typeof data.profile === "object") next.profile = Object.assign({}, next.profile, data.profile);
+      return ensureStateShape(next);
+    }
+    Object.keys(next.data).forEach(function (key) {
+      if (SYNC_V2_LOCAL_ONLY_KEYS[key]) return;
+      if (syncV2KeyModule(key) === name) delete next.data[key];
+    });
+    Object.keys(data).forEach(function (key) { next.data[key] = data[key]; });
+    return ensureStateShape(next);
+  }
+
+  // ---------- merge ----------
+  function syncV2IsPlainObject(value) {
+    return !!value && typeof value === "object" && !Array.isArray(value);
+  }
+
+  function syncV2IsIdArray(list) {
+    return Array.isArray(list) && list.every(function (item) {
+      return syncV2IsPlainObject(item) && item.id !== undefined && item.id !== null && item.id !== "";
+    });
+  }
+
+  function syncV2Stamp(value) {
+    var n;
+    if (typeof value === "number") return value;
+    if (typeof value === "string" && value) {
+      n = Number(value);
+      if (!isNaN(n)) return n;
+      n = Date.parse(value);
+      return isNaN(n) ? 0 : n;
+    }
+    return 0;
+  }
+
+  function syncV2PickItem(localItem, remoteItem) {
+    var tl = syncV2Stamp(localItem.updatedAt);
+    var tr = syncV2Stamp(remoteItem.updatedAt);
+    if (!tl && !tr) return localItem;
+    return tl >= tr ? localItem : remoteItem;
+  }
+
+  // arrays de objetos com id: une por id (vence o updatedAt mais recente, ou o local se nenhum tiver);
+  // objetos: recursivo; demais valores: prevalece o remoto. Itens de um lado só são preservados.
+  function syncV2MergeValues(localValue, remoteValue) {
+    if (remoteValue === undefined) return localValue;
+    if (localValue === undefined) return remoteValue;
+    if (Array.isArray(localValue) && Array.isArray(remoteValue) &&
+        (localValue.length || remoteValue.length) &&
+        syncV2IsIdArray(localValue) && syncV2IsIdArray(remoteValue)) {
+      var localById = {};
+      var seen = {};
+      localValue.forEach(function (item) { localById[String(item.id)] = item; });
+      var merged = remoteValue.map(function (item) {
+        var key = String(item.id);
+        seen[key] = true;
+        return localById[key] ? syncV2PickItem(localById[key], item) : item;
+      });
+      localValue.forEach(function (item) {
+        if (!seen[String(item.id)]) merged.push(item);
+      });
+      return merged;
+    }
+    if (syncV2IsPlainObject(localValue) && syncV2IsPlainObject(remoteValue)) {
+      var out = {};
+      Object.keys(remoteValue).forEach(function (key) { out[key] = syncV2MergeValues(localValue[key], remoteValue[key]); });
+      Object.keys(localValue).forEach(function (key) {
+        if (!Object.prototype.hasOwnProperty.call(remoteValue, key)) out[key] = localValue[key];
+      });
+      return out;
+    }
+    return remoteValue;
+  }
+
+  // true se tudo o que existia no lado local continua igual no resultado do merge
+  function syncV2LocalSurvives(localValue, mergedValue) {
+    if (localValue === undefined) return true;
+    if (Array.isArray(localValue) && syncV2IsIdArray(localValue) && Array.isArray(mergedValue)) {
+      var byId = {};
+      mergedValue.forEach(function (item) { if (syncV2IsPlainObject(item)) byId[String(item.id)] = item; });
+      return localValue.every(function (item) {
+        return byId[String(item.id)] && stableStringify(byId[String(item.id)]) === stableStringify(item);
+      });
+    }
+    if (syncV2IsPlainObject(localValue) && syncV2IsPlainObject(mergedValue)) {
+      return Object.keys(localValue).every(function (key) { return syncV2LocalSurvives(localValue[key], mergedValue[key]); });
+    }
+    return stableStringify(localValue) === stableStringify(mergedValue);
+  }
+
+  // merge de 3 vias para salvamentos das páginas: "base" é o que a página tinha (ao carregar ou no
+  // último salvamento dela); "remote" é o estado atual, que pode ter recebido mudanças de outro
+  // aparelho depois disso. Mudança de um lado só vence; exclusão feita na página é respeitada;
+  // os dois mudaram o mesmo item: vence o updatedAt mais recente (empate: a página).
+  function syncV2Merge3(base, local, remote, info) {
+    var sl = stableStringify(local);
+    var sr = stableStringify(remote);
+    if (sl === sr) return local;
+    var sb = stableStringify(base);
+    if (sl === sb) return remote;
+    if (sr === sb) return local;
+    if (Array.isArray(local) && Array.isArray(remote) && syncV2IsIdArray(local) && syncV2IsIdArray(remote) &&
+        (base === undefined || (Array.isArray(base) && syncV2IsIdArray(base)))) {
+      var mapB = {};
+      var mapL = {};
+      var seen = {};
+      var out = [];
+      (base || []).forEach(function (item) { mapB[String(item.id)] = item; });
+      local.forEach(function (item) { mapL[String(item.id)] = item; });
+      var take = function (id, l, r) {
+        var a = mapB[id];
+        if (l && r) {
+          var jl = stableStringify(l);
+          var jr = stableStringify(r);
+          if (jl === jr || !a) { if (jl !== jr) info.conflict = true; return jl === jr ? l : syncV2PickItem(l, r); }
+          var ja = stableStringify(a);
+          if (jl === ja) return r;
+          if (jr === ja) return l;
+          info.conflict = true;
+          return syncV2PickItem(l, r);
+        }
+        if (l) return a && stableStringify(l) === stableStringify(a) ? null : l;
+        if (r) return a && stableStringify(r) === stableStringify(a) ? null : r;
+        return null;
+      };
+      remote.forEach(function (item) {
+        var id = String(item.id);
+        seen[id] = true;
+        var picked = take(id, mapL[id], item);
+        if (picked) out.push(picked);
+      });
+      local.forEach(function (item) {
+        var id = String(item.id);
+        if (seen[id]) return;
+        var picked = take(id, item, null);
+        if (picked) out.push(picked);
+      });
+      return out;
+    }
+    if (syncV2IsPlainObject(local) && syncV2IsPlainObject(remote) && (base === undefined || syncV2IsPlainObject(base))) {
+      var b = base || {};
+      var result = {};
+      var keys = {};
+      Object.keys(local).concat(Object.keys(remote)).concat(Object.keys(b)).forEach(function (key) { keys[key] = true; });
+      Object.keys(keys).forEach(function (key) {
+        var inL = Object.prototype.hasOwnProperty.call(local, key);
+        var inR = Object.prototype.hasOwnProperty.call(remote, key);
+        var inB = Object.prototype.hasOwnProperty.call(b, key);
+        if (inL && inR) { result[key] = syncV2Merge3(b[key], local[key], remote[key], info); return; }
+        if (inL) { if (!inB || stableStringify(local[key]) !== stableStringify(b[key])) result[key] = local[key]; return; }
+        if (inR) { if (!inB || stableStringify(remote[key]) !== stableStringify(b[key])) result[key] = remote[key]; }
+      });
+      return result;
+    }
+    info.conflict = true;
+    return local;
+  }
+
+  // estado que a página tinha da última vez (carregamento ou último salvamento dela)
+  var syncV2PageSeen = null;
+
+  // salvamento de página: preserva o que chegou de outro aparelho depois que a página leu o estado
+  // (as páginas que não escutam eventos continuam com a cópia antiga em memória)
+  function syncV2RebasePageSave(nextState) {
+    if (!isSyncV2Enabled()) return nextState;
+    var incoming = ensureStateShape(deepClone(nextState));
+    if (!syncV2PageSeen || !isSyncV2Enabled() || !firebaseCurrentUser) {
+      syncV2PageSeen = incoming;
+      return nextState;
+    }
+    var seenM = syncV2SplitState(toImageRefsSync(syncV2PageSeen));
+    var curM = syncV2SplitState(toImageRefsSync(loadState()));
+    var nextRefs = toImageRefsSync(incoming);
+    var nextM = syncV2SplitState(nextRefs);
+    var out = nextRefs;
+    var changed = false;
+    syncV2ModuleNames().forEach(function (name) {
+      if (moduleHash(curM[name]) === moduleHash(seenM[name])) return;
+      var info = {};
+      var merged = syncV2Merge3(seenM[name], nextM[name], curM[name], info);
+      if (moduleHash(merged) !== moduleHash(nextM[name])) {
+        out = syncV2ReplaceModuleInState(out, name, merged);
+        changed = true;
+      }
+      if (info.conflict && syncV2.uid) {
+        syncV2SaveConflict(syncV2.uid, name, nextM[name], curM[name], merged, (syncV2.base[name] && syncV2.base[name].rev) || 0).catch(function () { });
+      }
+    });
+    syncV2PageSeen = incoming;
+    return changed ? resolveImageRefsSync(out) : nextState;
+  }
+
+  function syncV2SaveConflict(uid, name, localData, remoteData, mergedData, remoteRev) {
+    syncV2.stats.conflicts += 1;
+    return syncV2IdbRequest(uid, "soter_conflicts", "readwrite", function (store) {
+      return store.add({
+        module: name,
+        savedAt: new Date().toISOString(),
+        deviceId: getSyncDeviceId(),
+        baseRev: (syncV2.base[name] && syncV2.base[name].rev) || 0,
+        remoteRev: remoteRev,
+        local: localData,
+        remote: remoteData,
+        merged: mergedData
+      });
+    });
+  }
+
+  function showSyncNotice(message) {
+    try {
+      var el = document.getElementById("soter-sync-notice");
+      if (!el) {
+        el = document.createElement("div");
+        el.id = "soter-sync-notice";
+        el.setAttribute("role", "status");
+        el.style.cssText = "position:fixed;right:16px;bottom:16px;z-index:99998;max-width:min(420px,90vw);padding:10px 14px;border-radius:10px;background:rgba(16,16,28,.95);border:1px solid rgba(200,169,110,.35);color:#e8e4f0;font:500 12px/1.45 sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.4)";
+        document.body.appendChild(el);
+      }
+      el.textContent = message;
+      el.style.display = "block";
+      clearTimeout(el._t);
+      el._t = setTimeout(function () { el.style.display = "none"; }, 8000);
+    } catch (err) { }
+  }
+
+  // ---------- referências do Firestore ----------
+  function syncV2UserDoc(uid) {
+    return firebaseDbInstance.collection(getFirebaseUserRoot()).doc(String(uid));
+  }
+  function syncV2ModuleRef(uid, name) { return syncV2UserDoc(uid).collection("modules").doc(name); }
+  function syncV2ImageRef(uid, hash) { return syncV2UserDoc(uid).collection("images").doc(hash); }
+  function syncV2MetaRef(uid) { return syncV2UserDoc(uid).collection("meta").doc("sync"); }
+  function syncV2SiteStateRef(uid) { return syncV2UserDoc(uid).collection("private").doc("siteState"); }
+
+  function syncV2LoadBookkeeping(uid) {
+    var base = {};
+    var dirty = {};
+    try { base = JSON.parse(localStorage.getItem(SYNC_V2_BASE_PREFIX + uid) || "{}") || {}; } catch (err) { base = {}; }
+    try { dirty = JSON.parse(localStorage.getItem(SYNC_V2_DIRTY_PREFIX + uid) || "{}") || {}; } catch (err) { dirty = {}; }
+    syncV2.base = base;
+    syncV2.dirty = dirty;
+  }
+
+  function syncV2SaveBookkeeping() {
+    if (!syncV2.uid) return;
+    try { localStorage.setItem(SYNC_V2_BASE_PREFIX + syncV2.uid, JSON.stringify(syncV2.base)); } catch (err) { }
+    try { localStorage.setItem(SYNC_V2_DIRTY_PREFIX + syncV2.uid, JSON.stringify(syncV2.dirty)); } catch (err) { }
+  }
+
+  function syncV2HasDirty() {
+    return Object.keys(syncV2.dirty).some(function (name) { return !!syncV2.dirty[name]; });
+  }
+
+  function syncV2Reset() {
+    Object.keys(syncV2.listeners).forEach(function (name) {
+      try { syncV2.listeners[name](); } catch (err) { }
+    });
+    syncV2.listeners = {};
+    if (syncV2.flushTimer) { clearTimeout(syncV2.flushTimer); syncV2.flushTimer = null; }
+    if (syncV2.retryTimer) { clearTimeout(syncV2.retryTimer); syncV2.retryTimer = null; }
+    syncV2.active = false;
+    syncV2.hydrated = false;
+    syncV2.uid = "";
+    syncV2.base = {};
+    syncV2.dirty = {};
+    syncV2.failed = {};
+    syncV2.legacyDirty = false;
+    syncV2.flushAgain = false;
+    syncV2.retryCount = 0;
+  }
+
+  // ---------- imagens na nuvem ----------
+  function syncV2UploadImages(uid, hashes) {
+    return hashes.reduce(function (chain, hash) {
+      return chain.then(function () {
+        return syncV2IdbRequest(uid, "images", "readonly", function (store) { return store.get(hash); }).then(function (row) {
+          if (row && row.uploaded) return null;
+          var dataUrl = (row && row.data) || syncV2ImageByHash[hash];
+          if (!dataUrl) return null; // referência que veio da nuvem: já está lá
+          var bytes = utf8ByteLength(dataUrl);
+          if (bytes > SYNC_V2_MAX_IMAGE_BYTES) {
+            var tooBig = new Error("image_too_large");
+            tooBig.code = "image_too_large";
+            tooBig.bytes = bytes;
+            throw tooBig;
+          }
+          var ref = syncV2ImageRef(uid, hash);
+          return ref.get().then(function (snap) {
+            if (snap.exists) return null;
+            syncV2.stats.imagesUploaded += 1;
+            return ref.set({
+              data: dataUrl,
+              mime: (row && row.mime) || ((dataUrl.match(/^data:([^;,]+)/) || [])[1] || "image/*"),
+              bytes: bytes,
+              createdAt: new Date().toISOString()
+            });
+          }).then(function () {
+            return syncV2IdbRequest(uid, "images", "readwrite", function (store) {
+              return store.put({ hash: hash, data: dataUrl, mime: (row && row.mime) || "", bytes: bytes, createdAt: (row && row.createdAt) || new Date().toISOString(), uploaded: true });
+            });
+          });
+        });
+      });
+    }, Promise.resolve());
+  }
+
+  // baixa da nuvem só as imagens que não estão no IndexedDB
+  function syncV2FetchMissingImages(uid, hashes) {
+    var missing = hashes.filter(function (hash) { return !syncV2ImageByHash[hash]; });
+    if (!missing.length) return Promise.resolve(0);
+    return Promise.all(missing.map(function (hash) {
+      return syncV2ImageRef(uid, hash).get().then(function (snap) {
+        if (!snap.exists) return 0;
+        var row = snap.data() || {};
+        if (typeof row.data !== "string") return 0;
+        rememberImage(hash, row.data);
+        syncV2.stats.imagesFromCloud += 1;
+        return syncV2IdbRequest(uid, "images", "readwrite", function (store) {
+          return store.put({ hash: hash, data: row.data, mime: row.mime || "", bytes: row.bytes || utf8ByteLength(row.data), createdAt: row.createdAt || new Date().toISOString(), uploaded: true });
+        }).then(function () { return 1; }, function () { return 1; });
+      }).catch(function (err) {
+        console.warn("[SoterStorage] Imagem não encontrada na nuvem:", hash, err);
+        return 0;
+      });
+    })).then(function (counts) {
+      syncV2ApplyResolvedImages();
+      return counts.reduce(function (a, b) { return a + b; }, 0);
+    });
+  }
+
+  function syncV2CountOrphanImages(uid) {
+    var used = {};
+    collectImageRefs(toImageRefsSync(runtimeState)).forEach(function (hash) { used[hash] = true; });
+    return syncV2IdbRequest(uid, "images", "readonly", function (store) { return store.getAllKeys(); }).then(function (keys) {
+      var orphans = (keys || []).filter(function (hash) { return !used[hash]; });
+      if (orphans.length) console.info("[SoterStorage] " + orphans.length + " imagem(ns) sem referência no cache local (não foram apagadas).");
+      return orphans.length;
+    }).catch(function () { return 0; });
+  }
+
+  // ---------- migração siteState -> módulos (idempotente; o siteState não é tocado) ----------
+  function syncV2EnsureMigrated(uid) {
+    var metaRef = syncV2MetaRef(uid);
+    return metaRef.get().then(function (metaSnap) {
+      var meta = metaSnap.exists ? metaSnap.data() : null;
+      if (meta && Number(meta.schema) >= 2) return false;
+      return syncV2SiteStateRef(uid).get().then(function (siteSnap) {
+        var site = siteSnap.exists ? siteSnap.data() : null;
+        var source = site && site.state && typeof site.state === "object" ? ensureStateShape(site.state) : null;
+        var sourceUpdatedAt = site && site.updatedAt ? String(site.updatedAt) : "";
+        var work = Promise.resolve();
+        if (source) {
+          work = syncV2ExtractImages(uid, source).then(function (refsState) {
+            var modules = syncV2SplitState(refsState);
+            var hashes = collectImageRefs(modules);
+            return syncV2UploadImages(uid, hashes).then(function () {
+              return syncV2ModuleNames().reduce(function (chain, name) {
+                return chain.then(function () {
+                  if (!syncV2ModuleHasContent(name, modules[name])) return null;
+                  var ref = syncV2ModuleRef(uid, name);
+                  return firebaseDbInstance.runTransaction(function (tx) {
+                    return tx.get(ref).then(function (snap) {
+                      var current = snap.exists ? snap.data() : null;
+                      // já editado depois de uma migração parcial: não sobrescreve
+                      if (current && Number(current.rev) > 1) return null;
+                      tx.set(ref, {
+                        schema: 2,
+                        data: modules[name],
+                        rev: 1,
+                        updatedAt: new Date().toISOString(),
+                        deviceId: getSyncDeviceId(),
+                        migratedFrom: "private/siteState"
+                      });
+                      return null;
+                    });
+                  });
+                });
+              }, Promise.resolve());
+            });
+          });
+        }
+        return work.then(function () {
+          return metaRef.set({
+            schema: 2,
+            migratedAt: new Date().toISOString(),
+            sourceUpdatedAt: sourceUpdatedAt,
+            deviceId: getSyncDeviceId()
+          });
+        }).then(function () {
+          console.info("[SoterStorage] Migração para o schema 2 concluída" + (source ? "" : " (sem siteState anterior)") + ".");
+          return true;
+        });
+      });
+    });
+  }
+
+  // ---------- leitura inicial ----------
+  function syncV2Hydrate(uid) {
+    // calcula antes o hash das imagens locais, para comparar módulos na forma com referências
+    return syncV2ExtractImages(uid, loadState()).then(function () {
+      return syncV2UserDoc(uid).collection("modules").get();
+    }).then(function (snap) {
+      var remote = {};
+      snap.forEach(function (doc) {
+        var payload = doc.data() || {};
+        if (Number(payload.schema) >= 2) remote[doc.id] = payload;
+      });
+      var localRefs = toImageRefsSync(loadState());
+      var localModules = syncV2SplitState(localRefs);
+      var nextState = localRefs;
+      var applied = [];
+      var refsToFetch = [];
+      syncV2ModuleNames().forEach(function (name) {
+        var r = remote[name];
+        var l = localModules[name];
+        var base = syncV2.base[name];
+        var lHash = moduleHash(l);
+        if (!r) {
+          if (syncV2ModuleHasContent(name, l)) syncV2.dirty[name] = true;
+          return;
+        }
+        var rHash = moduleHash(r.data || {});
+        if (lHash === rHash) {
+          syncV2.base[name] = { rev: Number(r.rev) || 0, hash: rHash };
+          syncV2.dirty[name] = false;
+          return;
+        }
+        if (base && Number(base.rev) === Number(r.rev)) {
+          if (lHash !== base.hash) syncV2.dirty[name] = true;
+          return;
+        }
+        // sem base neste aparelho: só conta como alteração local se havia envio pendente e conteúdo
+        var localChanged = base ? lHash !== base.hash : !!((syncV2.legacyDirty || syncV2.dirty[name]) && syncV2ModuleHasContent(name, l));
+        if (localChanged) {
+          // fica sujo; o envio faz o merge na transação (base menor que a remota)
+          syncV2.dirty[name] = true;
+          if (!base) syncV2.base[name] = { rev: 0, hash: "" };
+          return;
+        }
+        nextState = syncV2ReplaceModuleInState(nextState, name, r.data || {});
+        syncV2.base[name] = { rev: Number(r.rev) || 0, hash: rHash };
+        syncV2.dirty[name] = false;
+        applied.push(name);
+        refsToFetch = refsToFetch.concat(collectImageRefs(r.data || {}));
+      });
+      syncV2SaveBookkeeping();
+      if (applied.length) {
+        firebaseIsApplyingRemote = true;
+        try {
+          applySiteState(mergeAuthProfileIntoState(resolveImageRefsSync(nextState), firebaseCurrentUser), loadState());
+        } finally {
+          firebaseIsApplyingRemote = false;
+        }
+        syncV2DispatchApplied();
+      }
+      return syncV2FetchMissingImages(uid, refsToFetch.concat(collectImageRefs(localRefs)));
+    });
+  }
+
+  // ---------- tempo real ----------
+  function syncV2ConnectRealtime(uid) {
+    syncV2ModuleNames().forEach(function (name) {
+      if (syncV2.listeners[name]) return;
+      syncV2.listeners[name] = syncV2ModuleRef(uid, name).onSnapshot(function (snap) {
+        if (!syncV2.active || syncV2.uid !== uid || !syncV2.hydrated) return;
+        if (!snap || !snap.exists || (snap.metadata && snap.metadata.hasPendingWrites)) return;
+        var r = snap.data() || {};
+        var base = syncV2.base[name];
+        if (Number(r.schema) < 2) return;
+        if (base && Number(r.rev) <= Number(base.rev)) return;
+        if (syncV2.dirty[name] || syncV2.flushPromise) {
+          // há alteração local: o envio faz o merge
+          syncV2ScheduleFlush(50);
+          return;
+        }
+        var localRefs = toImageRefsSync(loadState());
+        var next = syncV2ReplaceModuleInState(localRefs, name, r.data || {});
+        syncV2.base[name] = { rev: Number(r.rev) || 0, hash: moduleHash(r.data || {}) };
+        syncV2SaveBookkeeping();
+        firebaseIsApplyingRemote = true;
+        try {
+          applySiteState(mergeAuthProfileIntoState(resolveImageRefsSync(next), firebaseCurrentUser), loadState());
+        } finally {
+          firebaseIsApplyingRemote = false;
+        }
+        syncV2DispatchApplied();
+        syncV2FetchMissingImages(uid, collectImageRefs(r.data || {}));
+      }, function (err) {
+        console.error("[SoterStorage] Falha ao ouvir o módulo " + name + ":", err);
+      });
+    });
+  }
+
+  // ---------- envio ----------
+  function syncV2QueueChanges(state, userChange) {
+    if (!syncV2.uid) return;
+    var modules = syncV2SplitState(toImageRefsSync(state));
+    var changed = false;
+    syncV2ModuleNames().forEach(function (name) {
+      var base = syncV2.base[name];
+      var h = moduleHash(modules[name]);
+      var differs = base ? h !== base.hash : syncV2ModuleHasContent(name, modules[name]);
+      if (differs && (userChange || syncV2.dirty[name])) {
+        if (!syncV2.dirty[name]) changed = true;
+        syncV2.dirty[name] = true;
+      }
+    });
+    if (changed) syncV2SaveBookkeeping();
+    if (syncV2HasDirty()) syncV2ScheduleFlush(300);
+  }
+
+  function syncV2ScheduleFlush(delay) {
+    if (syncV2.flushTimer) clearTimeout(syncV2.flushTimer);
+    syncV2.flushTimer = setTimeout(function () {
+      syncV2.flushTimer = null;
+      syncV2Flush().catch(function () { });
+    }, typeof delay === "number" ? delay : 300);
+  }
+
+  function syncV2ScheduleRetry() {
+    var delays = [1000, 3000, 8000, 20000, 60000];
+    var delay = delays[Math.min(syncV2.retryCount, delays.length - 1)];
+    syncV2.retryCount += 1;
+    if (syncV2.retryTimer) clearTimeout(syncV2.retryTimer);
+    syncV2.retryTimer = setTimeout(function () {
+      syncV2.retryTimer = null;
+      syncV2Flush().catch(function () { });
+    }, delay);
+  }
+
+  function syncV2Flush() {
+    if (!syncV2.active || !syncV2.hydrated || !firebaseDbInstance) return Promise.resolve(null);
+    if (syncV2.flushPromise) {
+      syncV2.flushAgain = true;
+      return syncV2.flushPromise;
+    }
+    var uid = syncV2.uid;
+    syncV2.flushPromise = syncV2ExtractImages(uid, loadState()).then(function (refsState) {
+      var modules = syncV2SplitState(refsState);
+      var names = syncV2ModuleNames().filter(function (name) {
+        if (!syncV2.dirty[name]) return false;
+        // módulo grande demais: não tenta de novo até o conteúdo mudar
+        if (syncV2.failed[name] && syncV2.failed[name] === moduleHash(modules[name])) return false;
+        return true;
+      });
+      if (!names.length) return null;
+      var hashes = [];
+      names.forEach(function (name) { hashes = hashes.concat(collectImageRefs(modules[name])); });
+      return syncV2UploadImages(uid, hashes).then(function () {
+        return names.reduce(function (chain, name) {
+          return chain.then(function () { return syncV2CommitModule(uid, name, modules[name]); });
+        }, Promise.resolve());
+      });
+    }).then(function () {
+      syncV2.retryCount = 0;
+      firebaseLastSyncedAt = new Date().toISOString();
+      firebaseLastError = "";
+      updateFirebaseMeta({ enabled: true, hydrated: true, lastSyncAt: firebaseLastSyncedAt, lastError: "" });
+      return true;
+    }).catch(function (err) {
+      var code = err && err.code;
+      firebaseLastError = String((err && err.message) || err || "firebase_sync_failed");
+      updateFirebaseMeta({ enabled: true, hydrated: syncV2.hydrated, lastError: firebaseLastError });
+      if (code === "module_too_large") {
+        showSyncProblem("O módulo \"" + err.module + "\" tem " + Math.round(err.bytes / 1024) + " KB e passou do limite de 900 KB da nuvem. As alterações dele ficam só neste aparelho até o tamanho diminuir.");
+        console.error("[SoterStorage] Módulo grande demais para sincronizar:", err.module, err.bytes, "bytes");
+        return false;
+      }
+      if (code === "image_too_large") {
+        showSyncProblem("Uma imagem tem " + Math.round(err.bytes / 1024) + " KB e passou do limite de 900 KB. Use uma imagem menor.");
+        console.error("[SoterStorage] Imagem grande demais para sincronizar:", err.bytes, "bytes");
+        return false;
+      }
+      console.error("[SoterStorage] Falha ao sincronizar (schema 2):", err);
+      if (syncV2.retryCount === 2) showSyncProblem("Não foi possível salvar na nuvem. Vou tentar novamente.");
+      syncV2ScheduleRetry();
+      return false;
+    }).then(function (result) {
+      syncV2.flushPromise = null;
+      if (syncV2.flushAgain) {
+        syncV2.flushAgain = false;
+        syncV2ScheduleFlush(0);
+      }
+      return result;
+    });
+    return syncV2.flushPromise;
+  }
+
+  function syncV2CommitModule(uid, name, data) {
+    var base = syncV2.base[name] || { rev: 0, hash: "" };
+    var ref = syncV2ModuleRef(uid, name);
+    var outcome = null;
+    function checkSize(payload) {
+      var bytes = utf8ByteLength(JSON.stringify(payload));
+      if (bytes > SYNC_V2_MAX_MODULE_BYTES) {
+        var err = new Error("module_too_large");
+        err.code = "module_too_large";
+        err.module = name;
+        err.bytes = bytes;
+        throw err;
+      }
+    }
+    var docBody = { schema: 2, data: data, rev: 0, updatedAt: new Date().toISOString(), deviceId: getSyncDeviceId() };
+    try {
+      checkSize(docBody);
+    } catch (err) {
+      syncV2.failed[name] = moduleHash(data);
+      return Promise.reject(err);
+    }
+    return firebaseDbInstance.runTransaction(function (tx) {
+      return tx.get(ref).then(function (snap) {
+        var remote = snap.exists ? snap.data() : null;
+        var remoteRev = remote && Number(remote.schema) >= 2 ? Number(remote.rev) || 0 : 0;
+        if (remoteRev <= Number(base.rev || 0)) {
+          var rev = Math.max(remoteRev, Number(base.rev || 0)) + 1;
+          tx.set(ref, Object.assign({}, docBody, { rev: rev }));
+          outcome = { rev: rev, data: data, merged: false };
+          return null;
+        }
+        // outro aparelho gravou: merge, guardando antes a versão local
+        var remoteData = remote.data || {};
+        var merged = syncV2MergeValues(data, remoteData);
+        var mergedBody = Object.assign({}, docBody, { data: merged, rev: remoteRev + 1 });
+        checkSize(mergedBody);
+        return syncV2SaveConflict(uid, name, data, remoteData, merged, remoteRev).then(function () {
+          tx.set(ref, mergedBody);
+          outcome = { rev: remoteRev + 1, data: merged, merged: true, localLost: !syncV2LocalSurvives(data, merged) };
+          return null;
+        });
+      });
+    }).then(function () {
+      delete syncV2.failed[name];
+      syncV2.base[name] = { rev: outcome.rev, hash: moduleHash(outcome.data) };
+      var currentModules = syncV2SplitState(toImageRefsSync(loadState()));
+      var localNow = currentModules[name];
+      var localNowHash = moduleHash(localNow);
+      if (outcome.merged) {
+        // aplica o resultado do merge; se houve edição local durante o envio, combina de novo
+        var finalData = localNowHash === moduleHash(data) ? outcome.data : syncV2MergeValues(localNow, outcome.data);
+        var next = syncV2ReplaceModuleInState(toImageRefsSync(loadState()), name, finalData);
+        firebaseIsApplyingRemote = true;
+        try {
+          applySiteState(resolveImageRefsSync(next), loadState());
+        } finally {
+          firebaseIsApplyingRemote = false;
+        }
+        syncV2DispatchApplied();
+        syncV2.dirty[name] = moduleHash(finalData) !== syncV2.base[name].hash;
+        // "sistema" guarda só metadados (última página visitada etc.): a cópia fica salva, sem aviso
+        if (outcome.localLost && name !== SYNC_V2_FALLBACK_MODULE) {
+          showSyncNotice("Outro aparelho alterou \"" + name + "\" ao mesmo tempo. As versões foram combinadas; a sua versão anterior ficou guardada neste navegador.");
+        }
+        syncV2FetchMissingImages(uid, collectImageRefs(outcome.data));
+      } else {
+        syncV2.dirty[name] = localNowHash !== syncV2.base[name].hash;
+      }
+      if (syncV2.dirty[name]) syncV2.flushAgain = true;
+      syncV2SaveBookkeeping();
+      return outcome;
+    });
+  }
+
+  // ---------- ativação ----------
+  function syncV2Activate(uid) {
+    syncV2Reset();
+    syncV2.active = true;
+    syncV2.uid = String(uid);
+    syncV2LoadBookkeeping(syncV2.uid);
+    syncV2.legacyDirty = !!readPersistedDirty() || !!firebaseDirty;
+    var config = getFirebaseRuntimeConfig() || {};
+    updateFirebaseMeta({
+      enabled: true,
+      provider: "firestore",
+      collection: getFirebaseUserRoot(),
+      document: "modules/*",
+      strategy: "modules_v2",
+      projectId: config.projectId,
+      userUid: firebaseCurrentUser ? firebaseCurrentUser.uid || "" : "",
+      userEmail: firebaseCurrentUser ? firebaseCurrentUser.email || "" : "",
+      lastError: ""
+    });
+    return syncV2LoadLocalImages(syncV2.uid).then(function () {
+      return syncV2EnsureMigrated(syncV2.uid);
+    }).then(function () {
+      if (!syncV2.active || syncV2.uid !== String(uid)) return false;
+      return syncV2Hydrate(syncV2.uid);
+    }).then(function () {
+      if (!syncV2.active || syncV2.uid !== String(uid)) return false;
+      syncV2.hydrated = true;
+      firebaseIsHydrated = true;
+      // as alterações pendentes do formato antigo agora estão marcadas por módulo
+      if (syncV2.legacyDirty) {
+        syncV2.legacyDirty = false;
+        setFirebaseDirty(false);
+      }
+      firebasePendingState = null;
+      updateFirebaseMeta({ hydrated: true, lastError: "" });
+      syncV2ConnectRealtime(syncV2.uid);
+      syncV2CountOrphanImages(syncV2.uid);
+      if (syncV2HasDirty()) return syncV2Flush();
+      return true;
+    }).catch(function (err) {
+      var msg = String((err && err.message) || err || "sync_v2_activate_failed");
+      firebaseLastError = msg;
+      updateFirebaseMeta({ enabled: true, hydrated: false, lastError: msg });
+      console.error("[SoterStorage] Falha ao ativar a sincronização schema 2:", err);
+      setTimeout(function () {
+        if (syncV2.active && syncV2.uid === String(uid) && !syncV2.hydrated && firebaseCurrentUser && firebaseCurrentUser.uid === uid) {
+          syncV2Activate(uid).catch(function () { });
+        }
+      }, 4000);
+      throw err;
+    });
+  }
+
+  // formato antigo ligado, mas a conta já migrou: não grava mais no siteState
+  function checkLegacyLockForCurrentUser() {
+    if (!firebaseDbInstance || !firebaseCurrentUser) return Promise.resolve(false);
+    return syncV2MetaRef(firebaseCurrentUser.uid).get().then(function (snap) {
+      var meta = snap.exists ? snap.data() : null;
+      firebaseLegacyLocked = !!(meta && Number(meta.schema) >= 2);
+      if (firebaseLegacyLocked) {
+        console.warn("[SoterStorage] Esta conta já usa o formato novo de sincronização (schema 2). O formato antigo (private/siteState) não será gravado neste navegador.");
+        showSyncProblem("Esta conta já usa o formato novo de sincronização. Neste navegador as alterações ficam só locais até o formato novo ser ativado.");
+      }
+      return firebaseLegacyLocked;
+    }).catch(function () {
+      firebaseLegacyLocked = false;
+      return false;
+    });
+  }
+
+  function syncV2DeleteRemoteData(uid) {
+    return ["modules", "images", "meta"].reduce(function (chain, name) {
+      return chain.then(function () {
+        return deleteFirestoreUserSubcollection(uid, name).catch(function (err) {
+          console.warn("[SoterStorage] Falha ao apagar " + name + ":", err);
+          return null;
+        });
+      });
+    }, Promise.resolve());
+  }
+
+  function syncV2ListConflicts() {
+    var uid = syncV2.uid || (firebaseCurrentUser && firebaseCurrentUser.uid) || "";
+    if (!uid) return Promise.resolve([]);
+    return syncV2IdbRequest(uid, "soter_conflicts", "readonly", function (store) { return store.getAll(); }).then(function (rows) {
+      return rows || [];
+    });
+  }
+
   function initFirebaseSync() {
     var config = getFirebaseRuntimeConfig();
     if (!config) return Promise.resolve(null);
@@ -1940,10 +3142,22 @@ window.SoterUtils = window.SoterUtils || (function () {
           }, appName);
         }
         firebaseDbInstance = firebaseAppInstance.firestore();
+        firebaseAuthInstance = firebaseAppInstance.auth();
+        // só para testes locais com o Firebase Emulator Suite (nunca configurado em produção)
+        if (config.emulators && typeof config.emulators === 'object') {
+          try {
+            if (config.emulators.firestore) {
+              var fsHost = String(config.emulators.firestore).split(':');
+              firebaseDbInstance.useEmulator(fsHost[0], Number(fsHost[1]));
+            }
+            if (config.emulators.auth) firebaseAuthInstance.useEmulator(String(config.emulators.auth));
+          } catch (err) {
+            console.warn('[SoterStorage] Falha ao conectar aos emuladores:', err);
+          }
+        }
         try {
           firebaseDbInstance.enablePersistence({ synchronizeTabs: true }).catch(function () { });
         } catch (err) { }
-        firebaseAuthInstance = firebaseAppInstance.auth();
         bindFirebaseLifecycleFlush();
         ensureFirebaseAuthListener();
         updateFirebaseMeta({
@@ -1978,6 +3192,8 @@ window.SoterUtils = window.SoterUtils || (function () {
   }
 
   function flushFirebaseSync() {
+    if (syncV2.active) return syncV2Flush();
+    if (firebaseLegacyLocked) return Promise.resolve(null);
     if (!firebasePendingState) return Promise.resolve(null);
     return initFirebaseSync().then(function () {
       if (!firebaseDocRef || !firebaseIsHydrated) return null;
@@ -2023,6 +3239,10 @@ window.SoterUtils = window.SoterUtils || (function () {
     if (!getFirebaseRuntimeConfig()) return;
     // estado provisório antes do auth confirmar: não pode ser enviado para conta nenhuma
     if (!firebaseCurrentUser && runtimeStateOwner === RUNTIME_OWNER_PENDING) return;
+    if (syncV2.active) {
+      syncV2QueueChanges(state, force || firebaseUserChangeDepth > 0);
+      return;
+    }
     if (force || firebaseUserChangeDepth > 0) {
       setFirebaseDirty(true);
     } else if (!firebaseDirty) {
@@ -2038,6 +3258,11 @@ window.SoterUtils = window.SoterUtils || (function () {
 
   function flushFirebaseNowOnLeave() {
     if (!firebaseCurrentUser) return;
+    if (syncV2.active) {
+      syncV2.retryCount = 0;
+      if (syncV2HasDirty()) syncV2Flush().catch(function () { });
+      return;
+    }
     if (firebaseDirty && !firebasePendingState && !firebaseSyncInFlight) {
       firebasePendingState = compactStateForStorage(ensureStateShape(loadState()));
     }
@@ -5348,6 +6573,7 @@ window.SoterUtils = window.SoterUtils || (function () {
   function exposeStorageApi(state) {
     function commit(nextState) {
       var previousState = loadState();
+      nextState = syncV2RebasePageSave(nextState);
       firebaseUserChangeDepth += 1;
       try {
         state = applySiteState(nextState, previousState);
@@ -5477,7 +6703,8 @@ window.SoterUtils = window.SoterUtils || (function () {
           firebaseLogoutPurgeUid = keepUnsyncedCopy ? '' : uid;
           return firebaseAuthInstance.signOut();
         }).then(function () {
-          removeLocalAccountData(uid, keepUnsyncedCopy);
+          return removeLocalAccountData(uid, keepUnsyncedCopy);
+        }).then(function () {
           return keepUnsyncedCopy ? false : clearFirestoreLocalCache();
         }).then(function () {
           try { sessionStorage.removeItem("soter_allow_index"); } catch (err) { }
@@ -5513,10 +6740,16 @@ window.SoterUtils = window.SoterUtils || (function () {
 
           return reauthPromise.then(function () {
             firebasePendingDeletedUid = uid;
-            return Promise.resolve(firebaseDocRef ? firebaseDocRef.delete() : null)
+            syncV2Reset();
+            return Promise.resolve(syncV2SiteStateRef(uid).delete())
               .catch(function () { return null; })
               .then(function () { return deleteFirestoreUserSubcollection(uid, 'rubrica').catch(function () { return null; }); })
+              // schema 2: módulos, imagens e meta/sync
+              .then(function () { return syncV2DeleteRemoteData(uid); })
               .then(function () { return user.delete(); })
+              .then(function () {
+                return removeLocalAccountData(uid, false);
+              })
               .then(function () {
                 removeScopedStateForUser(uid);
                 try { sessionStorage.removeItem("soter_allow_index"); } catch (err) { }
@@ -5534,6 +6767,23 @@ window.SoterUtils = window.SoterUtils || (function () {
         queueFirebaseSync(loadState(), { force: true });
         return flushFirebaseSync();
       },
+      // schema 2: cópias locais guardadas antes de cada merge (IndexedDB "soter_conflicts")
+      listSyncConflicts: function () {
+        return syncV2ListConflicts();
+      },
+      getSyncDebug: function () {
+        return {
+          schema: syncV2.active ? 2 : 1,
+          enabled: isSyncV2Enabled(),
+          legacyLocked: firebaseLegacyLocked,
+          hydrated: syncV2.active ? syncV2.hydrated : firebaseIsHydrated,
+          dirty: deepClone(syncV2.dirty),
+          base: deepClone(syncV2.base),
+          stats: deepClone(syncV2.stats),
+          flushing: !!syncV2.flushPromise,
+          deviceId: getSyncDeviceId()
+        };
+      },
       openAuthModal: function (options) {
         openAuthModal(options);
         return Promise.resolve(true);
@@ -5549,6 +6799,7 @@ window.SoterUtils = window.SoterUtils || (function () {
   highlightCurrentPage();
   wireHeaderMenus();
   hydrateRuntimeStateFromCache();
+  if (isSyncV2Enabled()) syncV2PageSeen = ensureStateShape(deepClone(runtimeState));
 
   var siteState = prepareStateForApp(loadState(), loadState());
   saveState(siteState);
