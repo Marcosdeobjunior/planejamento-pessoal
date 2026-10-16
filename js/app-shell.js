@@ -5741,7 +5741,7 @@ window.createLiquidBar = function (canvas, opts) {
 // Registro do Service Worker (cache offline)
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", function () {
-    navigator.serviceWorker.register("/sw.js").catch(function (err) {
+    navigator.serviceWorker.register("sw.js").catch(function (err) {
       console.warn("[SW] Registro falhou:", err);
     });
   });
