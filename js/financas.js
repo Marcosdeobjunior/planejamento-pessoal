@@ -16,6 +16,28 @@
   var editRuleId = null;
   var savingsAnalyticsModel = null;
 
+  // Interações do calendário: seleção múltipla, arraste e cópia.
+  // IDs sempre apontam para transações-base, não para instâncias visuais de recorrência.
+  var finCalSelection = {
+    ids: new Set(),
+    boxActive: false,
+    justBoxSelected: false,
+    justDragged: false,
+    pointerCardId: null,
+    pointerStartX: 0,
+    pointerStartY: 0,
+    pointerDragging: false,
+    sourceId: null,
+    sourceDate: null,
+    sourceTx: null,
+    sourceIsRule: false,
+    dragIds: [],
+    copyOnDrag: false,
+    hoverDate: null
+  };
+  var finCalPointerState = null;
+  var finCalDragGhost = null;
+
   var DEFAULT_CATEGORY_SETS = {
     in: ["Sal\u00e1rio", "Freelance", "Investimento", "Presente", "Outros"],
     out: ["Alimenta\u00e7\u00e3o", "Moradia", "Transporte", "Sa\u00fade", "Lazer", "Educa\u00e7\u00e3o", "Assinaturas", "Roupas", "Eletr\u00f4nicos", "Outros"],
@@ -1145,6 +1167,312 @@
     return totals;
   }
 
+  function finCalApplySelection(ids) {
+    var availableIds = new Set(txs.map(function (tx) { return String(tx.id); }));
+    finCalSelection.ids.clear();
+    Array.from(ids || []).forEach(function (id) {
+      var key = String(id);
+      if (availableIds.has(key)) finCalSelection.ids.add(key);
+    });
+    document.querySelectorAll('.fin-cal-ev[data-fin-tx-id]').forEach(function (ev) {
+      ev.classList.toggle('selected', finCalSelection.ids.has(String(ev.dataset.finTxId)));
+    });
+  }
+
+  function finCalClearSelection() {
+    finCalApplySelection([]);
+  }
+
+  function finCalEnsureSelectionBox() {
+    var grid = document.getElementById('cal-grid');
+    if (!grid) return null;
+    var box = document.getElementById('fin-cal-select-box');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'fin-cal-select-box';
+      box.className = 'fin-cal-select-box';
+      box.setAttribute('aria-hidden', 'true');
+      grid.appendChild(box);
+    }
+    return box;
+  }
+
+  function finCalSelectByRect(rect, additiveIds) {
+    var ids = new Set(Array.from(additiveIds || []).map(String));
+    document.querySelectorAll('.fin-cal-ev[data-fin-tx-id]').forEach(function (ev) {
+      var cardRect = ev.getBoundingClientRect();
+      var hit = !(cardRect.right < rect.left || cardRect.left > rect.right || cardRect.bottom < rect.top || cardRect.top > rect.bottom);
+      if (hit) ids.add(String(ev.dataset.finTxId));
+    });
+    finCalApplySelection(ids);
+  }
+
+  function finCalStartSelection(event) {
+    if (event.button !== 0 || event.target.closest('.fin-cal-ev')) return;
+    var grid = document.getElementById('cal-grid');
+    var box = finCalEnsureSelectionBox();
+    if (!grid || !box) return;
+    var rect = grid.getBoundingClientRect();
+    finCalPointerState = {
+      rect: rect,
+      startX: event.clientX,
+      startY: event.clientY,
+      moved: false,
+      additive: event.ctrlKey || event.metaKey,
+      baseIds: new Set(finCalSelection.ids)
+    };
+    finCalSelection.boxActive = true;
+    if (!finCalPointerState.additive) finCalClearSelection();
+    box.style.display = 'block';
+    box.style.left = (event.clientX - rect.left) + 'px';
+    box.style.top = (event.clientY - rect.top) + 'px';
+    box.style.width = '0px';
+    box.style.height = '0px';
+  }
+
+  function finCalMoveSelection(event) {
+    if (!finCalSelection.boxActive || !finCalPointerState) return;
+    var box = finCalEnsureSelectionBox();
+    if (!box) return;
+    var state = finCalPointerState;
+    var rect = state.rect;
+    if (Math.abs(event.clientX - state.startX) > 4 || Math.abs(event.clientY - state.startY) > 4) {
+      state.moved = true;
+      document.body.classList.add('fin-cal-dragging');
+      event.preventDefault();
+    }
+    var left = Math.max(0, Math.min(event.clientX, state.startX) - rect.left);
+    var top = Math.max(0, Math.min(event.clientY, state.startY) - rect.top);
+    var right = Math.min(rect.width, Math.max(event.clientX, state.startX) - rect.left);
+    var bottom = Math.min(rect.height, Math.max(event.clientY, state.startY) - rect.top);
+    box.style.left = left + 'px';
+    box.style.top = top + 'px';
+    box.style.width = Math.max(0, right - left) + 'px';
+    box.style.height = Math.max(0, bottom - top) + 'px';
+    finCalSelectByRect(
+      { left: left + rect.left, top: top + rect.top, right: right + rect.left, bottom: bottom + rect.top },
+      state.additive ? state.baseIds : []
+    );
+  }
+
+  function finCalEndSelection() {
+    var hadBoxPointer = !!finCalPointerState;
+    if (finCalPointerState && finCalPointerState.moved) {
+      finCalSelection.justBoxSelected = true;
+      setTimeout(function () { finCalSelection.justBoxSelected = false; }, 120);
+    }
+    finCalSelection.boxActive = false;
+    finCalPointerState = null;
+    if (hadBoxPointer) document.body.classList.remove('fin-cal-dragging');
+    var box = document.getElementById('fin-cal-select-box');
+    if (box) box.style.display = 'none';
+  }
+
+  function finCalSetHoverDate(dateStr) {
+    finCalSelection.hoverDate = dateStr || null;
+    document.querySelectorAll('.fin-cal-cell[data-date]').forEach(function (cell) {
+      cell.classList.toggle('drop-target', cell.dataset.date === finCalSelection.hoverDate);
+    });
+  }
+
+  function finCalFindDateAtPoint(clientX, clientY) {
+    var target = document.elementFromPoint(clientX, clientY);
+    var cell = target ? target.closest('.fin-cal-cell[data-date]') : null;
+    return cell ? cell.dataset.date : null;
+  }
+
+  function finCalResetPointerDrag() {
+    finCalSelection.pointerCardId = null;
+    finCalSelection.pointerStartX = 0;
+    finCalSelection.pointerStartY = 0;
+    finCalSelection.pointerDragging = false;
+    finCalSelection.sourceId = null;
+    finCalSelection.sourceDate = null;
+    finCalSelection.sourceTx = null;
+    finCalSelection.sourceIsRule = false;
+    finCalSelection.dragIds = [];
+    finCalSelection.copyOnDrag = false;
+    finCalSetHoverDate(null);
+    document.body.classList.remove('fin-cal-dragging');
+    if (finCalDragGhost && finCalDragGhost.parentNode) finCalDragGhost.parentNode.removeChild(finCalDragGhost);
+    finCalDragGhost = null;
+  }
+
+  function finCalEnsureDragGhost() {
+    if (finCalDragGhost) return finCalDragGhost;
+    finCalDragGhost = document.createElement('div');
+    finCalDragGhost.className = 'fin-cal-drag-ghost';
+    document.body.appendChild(finCalDragGhost);
+    return finCalDragGhost;
+  }
+
+  function finCalUpdateDragGhost(clientX, clientY) {
+    if (!finCalSelection.pointerDragging || !finCalSelection.sourceTx) return;
+    var ghost = finCalEnsureDragGhost();
+    var ids = finCalSelection.dragIds.slice();
+    var sourceName = finCalSelection.sourceTx.description || 'Transação';
+    ghost.classList.toggle('copy-mode', !!finCalSelection.copyOnDrag);
+    ghost.innerHTML = finCalSelection.copyOnDrag
+      ? '<span class="fin-cal-drag-ghost-count">＋</span><span>Duplicar · ' + esc(sourceName) + '</span>'
+      : '<span class="fin-cal-drag-ghost-count">' + (ids.length || 1) + '</span><span>' + (ids.length > 1 ? 'Mover ' + ids.length + ' transações' : 'Mover · ' + esc(sourceName)) + '</span>';
+    ghost.style.left = Math.min(clientX + 16, window.innerWidth - 300) + 'px';
+    ghost.style.top = Math.min(clientY + 16, window.innerHeight - 64) + 'px';
+    ghost.classList.add('show');
+  }
+
+  function finCalTxPointerDown(event, tx) {
+    if (event.button !== 0 || !tx) return;
+    var isRule = tx._source === 'rule';
+    // Ocorrências de regras são editadas no gerenciador; Alt+arraste pode copiá-las como lançamento único.
+    if (isRule && !event.altKey) return;
+    event.stopPropagation();
+    event.preventDefault();
+
+    var id = String(tx._original || tx.id);
+    if (isRule) {
+      finCalClearSelection();
+    } else if (event.altKey) {
+      finCalClearSelection();
+      finCalSelection.ids.add(id);
+    } else if (event.ctrlKey || event.metaKey) {
+      if (finCalSelection.ids.has(id)) finCalSelection.ids.delete(id);
+      else finCalSelection.ids.add(id);
+    } else if (!finCalSelection.ids.has(id)) {
+      finCalClearSelection();
+      finCalSelection.ids.add(id);
+    }
+    finCalApplySelection(finCalSelection.ids);
+
+    finCalSelection.pointerCardId = id;
+    finCalSelection.pointerStartX = event.clientX;
+    finCalSelection.pointerStartY = event.clientY;
+    finCalSelection.pointerDragging = false;
+    finCalSelection.sourceId = isRule ? null : id;
+    finCalSelection.sourceDate = tx.date || null;
+    finCalSelection.sourceTx = Object.assign({}, tx);
+    finCalSelection.sourceIsRule = isRule;
+    finCalSelection.copyOnDrag = !!event.altKey;
+    finCalSelection.dragIds = isRule || event.altKey
+      ? [id]
+      : (finCalSelection.ids.has(id) ? Array.from(finCalSelection.ids) : [id]);
+  }
+
+  function finCalHandleDragMove(event) {
+    if (!finCalSelection.pointerCardId || finCalSelection.boxActive) return;
+    var dx = Math.abs(event.clientX - finCalSelection.pointerStartX);
+    var dy = Math.abs(event.clientY - finCalSelection.pointerStartY);
+    if (event.altKey) finCalSelection.copyOnDrag = true;
+    if (!finCalSelection.pointerDragging && (dx > 6 || dy > 6)) {
+      finCalSelection.pointerDragging = true;
+      document.body.classList.add('fin-cal-dragging');
+    }
+    if (!finCalSelection.pointerDragging) return;
+    finCalSetHoverDate(finCalFindDateAtPoint(event.clientX, event.clientY));
+    finCalUpdateDragGhost(event.clientX, event.clientY);
+  }
+
+  function finCalAddDays(dateStr, amount) {
+    if (!dateStr) return dateStr;
+    var date = new Date(dateStr + 'T12:00:00');
+    if (isNaN(date.getTime())) return dateStr;
+    date.setDate(date.getDate() + amount);
+    return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+  }
+
+  function finCalDuplicateTransactionAtDate(source, targetDate) {
+    if (!source || !targetDate) return false;
+    // Copiar uma ocorrência gera uma transação única, sem duplicar uma série/regra inteira.
+    var copy = {
+      id: uid(),
+      type: source.type,
+      description: source.description,
+      value: Number(source.value || 0),
+      date: targetDate,
+      category: source.category || (isSavingsType(source.type) ? 'Poupança' : 'Outros'),
+      recurrence: '',
+      note: source.note || ''
+    };
+    txs.push(copy);
+    if (copy.type === 'save_withdraw' && copy.value > getSavingsBalanceUntil(copy.date, copy.id)) {
+      txs = txs.filter(function (item) { return item.id !== copy.id; });
+      toast('Não é possível duplicar essa retirada: o valor supera a poupança disponível na data escolhida.', 'err');
+      return false;
+    }
+    finCalClearSelection();
+    persist();
+    renderAll();
+    toast('Transação duplicada!', 'ok');
+    return true;
+  }
+
+  function finCalMoveTransactions(ids, dayDelta) {
+    if (!dayDelta || !ids.length) return false;
+    var idSet = new Set(ids.map(String));
+    var moving = txs.filter(function (tx) { return idSet.has(String(tx.id)); });
+    if (!moving.length) return false;
+    var previousDates = moving.map(function (tx) { return { tx: tx, date: tx.date }; });
+    moving.forEach(function (tx) { tx.date = finCalAddDays(tx.date, dayDelta); });
+
+    // Mantém a regra já existente: uma retirada nunca pode exceder a poupança disponível.
+    var invalidWithdrawal = moving.some(function (tx) {
+      return tx.type === 'save_withdraw' && Number(tx.value || 0) > getSavingsBalanceUntil(tx.date, tx.id);
+    });
+    if (invalidWithdrawal) {
+      previousDates.forEach(function (entry) { entry.tx.date = entry.date; });
+      toast('Não é possível mover: uma retirada ficaria acima da poupança disponível nessa data.', 'err');
+      return false;
+    }
+
+    finCalClearSelection();
+    persist();
+    renderAll();
+    toast(moving.length === 1 ? 'Data da transação atualizada!' : 'Datas das transações atualizadas!', 'ok');
+    return true;
+  }
+
+  function finCalHandleDragEnd(event) {
+    if (!finCalSelection.pointerCardId) return;
+    var wasDragging = finCalSelection.pointerDragging;
+    var sourceDate = finCalSelection.sourceDate;
+    var sourceId = finCalSelection.sourceId;
+    var sourceTx = finCalSelection.sourceTx;
+    var sourceIsRule = finCalSelection.sourceIsRule;
+    var ids = finCalSelection.dragIds.slice();
+    var copyOnDrag = !!finCalSelection.copyOnDrag;
+    var targetDate = finCalFindDateAtPoint(event.clientX, event.clientY);
+    finCalResetPointerDrag();
+    if (!wasDragging || !targetDate) return;
+
+    if (copyOnDrag) {
+      finCalDuplicateTransactionAtDate(sourceTx, targetDate);
+      finCalSelection.justDragged = true;
+      setTimeout(function () { finCalSelection.justDragged = false; }, 120);
+      return;
+    }
+    // Itens provenientes de regras mantêm seu funcionamento atual; movê-los exigiria editar a regra.
+    if (sourceIsRule || !sourceDate || !sourceId || !ids.length) return;
+    var delta = diffDays(sourceDate, targetDate);
+    if (!delta) {
+      finCalSelection.justDragged = true;
+      setTimeout(function () { finCalSelection.justDragged = false; }, 100);
+      return;
+    }
+    finCalMoveTransactions(ids, delta);
+    finCalSelection.justDragged = true;
+    setTimeout(function () { finCalSelection.justDragged = false; }, 120);
+  }
+
+  function finCalInitInteractions() {
+    var grid = document.getElementById('cal-grid');
+    if (!grid || grid.dataset.finInteractionsReady === '1') return;
+    grid.dataset.finInteractionsReady = '1';
+    grid.addEventListener('pointerdown', finCalStartSelection);
+    document.addEventListener('pointermove', finCalMoveSelection);
+    document.addEventListener('pointerup', finCalEndSelection);
+    document.addEventListener('pointermove', finCalHandleDragMove);
+    document.addEventListener('pointerup', finCalHandleDragEnd);
+  }
+
   function renderCalendar() {
     var title = document.getElementById("cal-title");
     title.innerHTML = "<em>" + MONTHS_PT[calMonth] + "</em> " + calYear;
@@ -1205,12 +1533,17 @@
       } else if (i < firstDay + daysInMonth) {
         dayNum = i - firstDay + 1;
         var ds = calYear + "-" + String(calMonth + 1).padStart(2, "0") + "-" + String(dayNum).padStart(2, "0");
+        cell.dataset.date = ds;
         (function (dateStr) {
           cell.setAttribute("role", "button");
           cell.setAttribute("tabindex", "0");
           cell.setAttribute("aria-label", "Adicionar transação em " + fmtD(dateStr));
           cell.addEventListener("click", function (event) {
             if (event.target.closest(".fin-cal-ev")) return;
+            if (finCalSelection.justBoxSelected) {
+              finCalSelection.justBoxSelected = false;
+              return;
+            }
             openCreateAtDate(dateStr);
           });
           cell.addEventListener("keydown", function (event) {
@@ -1231,13 +1564,24 @@
           var ev = document.createElement("div");
           var fut = isFuture(tx);
           var txClass = getTxClass(tx.type);
-          ev.className = "fin-cal-ev " + (fut ? "future-" + txClass : txClass);
+          var baseTxId = tx._original || tx.id;
+          var canInteract = tx._source !== "rule";
+          ev.className = "fin-cal-ev " + (fut ? "future-" + txClass : txClass) +
+            (canInteract && finCalSelection.ids.has(String(baseTxId)) ? " selected" : "");
           ev.setAttribute("role", "button");
           ev.setAttribute("tabindex", "0");
+          if (canInteract) {
+            ev.dataset.finTxId = String(baseTxId);
+            ev.dataset.finTxDate = tx.date;
+          }
+          // Regras não podem ser movidas sem editar sua configuração, mas Alt+arraste pode criar um lançamento único.
+          ev.addEventListener("pointerdown", function (event) { finCalTxPointerDown(event, tx); });
           ev.textContent = getTxSign(tx.type) + fmtR(tx.value).replace("R$ ", "");
-          ev.title = tx.description + " — " + fmtR(tx.value) + (fut ? " (futuro)" : "");
+          ev.title = tx.description + " — " + fmtR(tx.value) + (fut ? " (futuro)" : "") +
+            (canInteract ? " · Arraste para mover · Ctrl/Cmd+clique para selecionar · Alt+arraste para duplicar" : " · Clique para editar a regra");
           ev.addEventListener("click", function (event) {
             event.stopPropagation();
+            if (finCalSelection.justDragged || finCalSelection.justBoxSelected || event.ctrlKey || event.metaKey || event.altKey) return;
             openGeneratedSource(tx);
           });
           ev.addEventListener("keydown", function (event) {
@@ -1279,6 +1623,8 @@
       cell.insertBefore(dn, cell.firstChild);
       grid.appendChild(cell);
     }
+    finCalInitInteractions();
+    finCalApplySelection(finCalSelection.ids);
   }
 
   function renderTxList() {
@@ -2111,6 +2457,7 @@
       if (!tx) return;
       if (!window.confirm('Excluir "' + tx.description + '"?')) return;
       txs = txs.filter(function (item) { return item.id !== editId; });
+      finCalSelection.ids.delete(String(editId));
       persist();
       renderAll();
       closeModal("modal-tx");
@@ -2185,6 +2532,7 @@
     resetModal();
     bindEvents();
     renderAll();
+    finCalInitInteractions();
 
     // Quando os dados da nuvem são aplicados (login/sincronização), recarrega e redesenha,
     // refazendo a projeção da poupança com os lançamentos atualizados.
