@@ -1,0 +1,48 @@
+rules_version = '2';
+
+// Regras do Cloud Firestore do Sól de Sóter.
+// NÃO são publicadas automaticamente: copie para Firebase Console → Firestore Database → Regras
+// (ou use `firebase deploy --only firestore:rules`) depois de revisar.
+// Ver docs/FIREBASE_SECURITY_RULES.md.
+//
+// Tudo o que é do usuário fica embaixo de users/{uid} e só o próprio usuário lê e grava:
+//   private/siteState  formato antigo (schema 1), mantido como backup
+//   modules/{nome}     schema 2: um documento por módulo
+//   images/{sha256}    schema 2: imagens (data URL) extraídas dos módulos
+//   meta/sync          schema 2: marca de migração
+//   rubrica/{pagina}   página Projetos
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // Limites por documento (além do limite de 1 MiB que o próprio Firestore impõe):
+    // - no máximo 40 campos no nível de cima;
+    // - images: o data URL em "data" com no máximo 950.000 caracteres;
+    // - modules: schema 2, "rev" inteiro e "data" como mapa.
+    function validWrite(collection) {
+      let d = request.resource.data;
+      return d.keys().size() <= 40
+        && (collection != 'images' || (d.data is string && d.data.size() <= 950000))
+        && (collection != 'modules' || (d.schema == 2 && d.rev is int && d.data is map));
+    }
+
+    match /users/{uid} {
+      allow read, write: if isOwner(uid);
+    }
+
+    match /users/{uid}/{collection}/{docId} {
+      allow read, delete: if isOwner(uid);
+      allow create, update: if isOwner(uid) && validWrite(collection);
+    }
+
+    // subcoleções mais fundas (hoje não usadas): só o dono. O "{sub}" garante pelo menos um
+    // segmento a mais: "{rest=**}" sozinho também casaria com o próprio documento e anularia
+    // os limites acima (as regras do Firestore são combinadas com OU).
+    match /users/{uid}/{collection}/{docId}/{sub}/{rest=**} {
+      allow read, write: if isOwner(uid);
+    }
+  }
+}

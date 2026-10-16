@@ -13,4 +13,9 @@ window.SOTER_FIREBASE_CONFIG = {
     google: false,
     allowGuest: false
   }
+  // Sincronização por módulos (schema 2). Desligada por padrão. Para ligar para todos,
+  // descomente a linha abaixo (lembre de colocar a vírgula depois de "auth: {...}").
+  // Para testar num navegador só: localStorage.setItem("soter_sync_schema", "2").
+  // Ver FIREBASE_SETUP.md.
+  // sync: { schema: 2 }
 };
