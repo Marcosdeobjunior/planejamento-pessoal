@@ -1318,7 +1318,7 @@
     if (logEl) {
       var log = rpgBuildLog();
       logEl.innerHTML = log.length ? log.map(function (entry) {
-        return '<div class="rpg-log-item"><div class="rpg-log-icon">' + entry.icon + '</div><div class="rpg-log-text">' + entry.text + '</div><div class="rpg-log-xp">+' + entry.xp + "</div></div>";
+        return '<div class="rpg-log-item"><div class="rpg-log-icon">' + entry.icon + '</div><div class="rpg-log-text">' + escapeHtml(entry.text) + '</div><div class="rpg-log-xp">+' + entry.xp + "</div></div>";
       }).join("") : '<div class="rpg-log-empty">\u2726 Nenhuma atividade ainda. Comece a explorar o universo! \u2726</div>';
     }
   }
