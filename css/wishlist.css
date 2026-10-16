@@ -14,6 +14,7 @@ body[data-page="wishlist"] {
   --ws-r: 16px;
   background: #04040c;
   color: var(--ws-text);
+  font-family: var(--font-ui);
   overflow-x: hidden;
 }
 

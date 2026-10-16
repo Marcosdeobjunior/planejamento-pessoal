@@ -849,7 +849,7 @@ body[data-page="academia"] .modal.cardio-mode .ex-strength-fields {
 }
 
 @media (max-width: 1100px) {
-  .top-row { grid-template-columns: 1fr; }
+  .gym-page .top-row { grid-template-columns: 1fr; }
   .mid-row { grid-template-columns: 1fr; }
 }
 
@@ -886,7 +886,7 @@ body[data-page="academia"] .modal.cardio-mode .ex-strength-fields {
     grid-template-columns: 1fr;
   }
 
-  .top-row,
+  .gym-page .top-row,
   .mid-row,
   .weight-stats,
   .ex-days-picker {

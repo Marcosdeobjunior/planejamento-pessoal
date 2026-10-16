@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" type="image/png" href="img/soldesoter_logo.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
+  <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
   <title>Sol de Sóter · Cinema</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -842,6 +843,7 @@
     .modal-fields-col { padding: 16px 16px 0 14px; }
   }
   @media (max-width: 560px) {
+    #lv-search, #ci-search, #mg-search { width: 100%; min-width: 0 !important; flex: 1 1 auto !important; }
     .modal-body { grid-template-columns: 1fr; }
     .modal-img-col { margin-top: 0; padding: 16px 16px 0; flex-direction: row; align-items: flex-start; }
     .img-upload-zone { width: 100px; aspect-ratio: 2/3; flex-shrink: 0; }

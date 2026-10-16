@@ -44,20 +44,21 @@
   ];
 
   var ACHIEVEMENT_GROUP_IMAGES = {
-    Leitura: "img/conquista-leitura.png",
-    Cinema: "img/conquista-cinema.png",
-    Academia: "img/conquista-academia.png",
-    Estudo: "img/conquista-estudos.png",
-    Sonhos: "img/conquista-sonhos.png",
-    Viagens: "img/conquista-viagens.png",
-    Mangas: "img/conquista-mangas.png",
-    Tarefas: "img/conquista-tarefas.png",
-    "Evolução": "img/conquista-evolucao.png",
-    "Coleção": "img/conquista-colecao.png",
-    Wishlist: "img/conquista-wishlist.png"
+    Leitura: "img/conquista-leitura.webp",
+    Cinema: "img/conquista-cinema.webp",
+    Academia: "img/conquista-academia.webp",
+    Estudo: "img/conquista-estudos.webp",
+    Sonhos: "img/conquista-sonhos.webp",
+    Viagens: "img/conquista-viagens.webp",
+    Mangas: "img/conquista-mangas.webp",
+    Tarefas: "img/conquista-tarefas.webp",
+    "Evolução": "img/conquista-evolucao.webp",
+    "Coleção": "img/conquista-colecao.webp",
+    Wishlist: "img/conquista-wishlist.webp"
   };
 
   var achievementGroupsCache = {};
+  var achievementGroupsHtml = "";
   var achievementStatusCache = {};
   var accountPanelState = {
     status: null,
@@ -847,14 +848,14 @@
         '<div class="rpg-badge-status">' + (unlocked ? "\u2713 Obtida" : "\uD83D\uDD12 " + item.req) + '</div></div>';
     }
 
-    container.innerHTML = Object.keys(groups).map(function (groupName) {
+    var groupsHtml = Object.keys(groups).map(function (groupName) {
       var items = groups[groupName];
       var unlockedInGroup = items.filter(function (item) { return !!achievementStatusCache[item.id]; }).length;
       var imagePath = ACHIEVEMENT_GROUP_IMAGES[groupName];
       var progress = items.length ? Math.round((unlockedInGroup / items.length) * 100) : 0;
       if (imagePath) {
         return '<button class="rpg-ach-group" type="button" onclick="openAchievementGroup(\'' + groupName + '\')">' +
-          '<img class="rpg-ach-group-cover" src="' + imagePath + '" alt="Conquistas de ' + groupName + '">' +
+          '<img class="rpg-ach-group-cover" src="' + imagePath + '" loading="lazy" decoding="async" alt="Conquistas de ' + groupName + '">' +
           '<div class="rpg-ach-group-body">' +
           '<div class="rpg-ach-group-title">' + groupName + '</div>' +
           '<div class="rpg-ach-group-progress"><div class="rpg-ach-group-progress-fill" style="width:' + progress + '%"></div></div>' +
@@ -865,6 +866,10 @@
         '<div class="rpg-ach-group-head"><div class="rpg-ach-group-title">' + groupName + '</div><div class="rpg-ach-group-meta">' + unlockedInGroup + "/" + items.length + '</div></div>' +
         '<div class="rpg-ach-group-grid">' + items.map(buildBadge).join("") + "</div></section>";
     }).join("");
+    // Só redesenha se mudou: trocar o innerHTML a cada render cancela e baixa de novo as capas.
+    if (groupsHtml === achievementGroupsHtml && container.firstChild) return;
+    achievementGroupsHtml = groupsHtml;
+    container.innerHTML = groupsHtml;
   }
 
   function openAchievementGroup(groupName) {

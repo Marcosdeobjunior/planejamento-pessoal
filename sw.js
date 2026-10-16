@@ -1,17 +1,21 @@
-var CACHE = "soter-v1";
+var CACHE = "soter-v2";
 
-// Arquivos críticos pré-cacheados na instalação
+// Respostas maiores que isso não vão para o cache (imagens pesadas, vídeos)
+var MAX_CACHE_BYTES = 1024 * 1024;
+
+// Arquivos críticos pré-cacheados na instalação. Caminhos relativos ao sw.js: o site é
+// servido em um subcaminho (GitHub Pages /planejamento-pessoal/), não na raiz do domínio.
 var PRECACHE = [
-  "/",
-  "/index.html",
-  "/apresentacao.html",
-  "/css/design-system.css",
-  "/css/app-shell.css",
-  "/css/apresentacao.css",
-  "/js/firebase-config.js",
-  "/js/app-shell.js",
-  "/js/apresentacao.js",
-  "/img/soldesoter_logo.png",
+  "./",
+  "./index.html",
+  "./apresentacao.html",
+  "./css/design-system.css",
+  "./css/app-shell.css",
+  "./css/apresentacao.css",
+  "./js/firebase-config.js",
+  "./js/app-shell.js",
+  "./js/apresentacao.js",
+  "./img/favicon-32.png",
 ];
 
 // Rotas que nunca devem ser servidas do cache (Firebase, Google Fonts CDN)
@@ -65,7 +69,19 @@ self.addEventListener("fetch", function (e) {
       // Cacheia respostas válidas de mesma origem
       if (res && res.status === 200 && req.url.startsWith(self.location.origin)) {
         var clone = res.clone();
-        caches.open(CACHE).then(function (cache) { cache.put(req, clone); });
+        var declared = Number(res.headers.get("Content-Length") || 0);
+        if (declared <= MAX_CACHE_BYTES) {
+          clone.blob().then(function (body) {
+            if (body.size > MAX_CACHE_BYTES) return;
+            return caches.open(CACHE).then(function (cache) {
+              return cache.put(req, new Response(body, {
+                status: clone.status,
+                statusText: clone.statusText,
+                headers: clone.headers
+              }));
+            });
+          }).catch(function () { });
+        }
       }
       return res;
     }).catch(function () {
