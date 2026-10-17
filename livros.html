@@ -16,1216 +16,7 @@
   <link rel="stylesheet" href="css/biblioteca-tracker.css">
   <link rel="stylesheet" href="css/livros.css">
   <link rel="stylesheet" href="css/sonhos.css">
-  <style>
-  /* ══════════════════════════════════════════
-     TOKENS
-  ══════════════════════════════════════════ */
-  :root {
-    --bg: #0d0d12;
-    --bg2: #13131c;
-    --bg3: #1a1a27;
-    --card: #16161f;
-    --border: rgba(255,255,255,0.07);
-    --text: #e8e4f0;
-    --muted: #7a7590;
-    --accent1: #c8a96e; /* gold */
-    --accent2: #7c6fcd; /* violet */
-    --accent3: #5ec4a8; /* teal */
-    --accent4: #e06b8b; /* rose */
-    --accent5: #e8864a; /* amber */
-    --accent6: #4ab0e8; /* sky */
-    --radius: 16px;
-    --font-display: 'Playfair Display', serif;
-    --font-ui: 'Syne', sans-serif;
-    --font-mono: 'DM Mono', monospace;
-  }
-
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  body {
-    background: #04040c;
-    color: var(--text);
-    font-family: var(--font-ui);
-    min-height: 100vh;
-    overflow-x: hidden;
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* ── STARFIELD CANVAS ── */
-  #bg-canvas {
-    position: fixed; inset: 0;
-    z-index: 0; pointer-events: none;
-  }
-/* ══════════════════════════════════════════
-     HEADER
-  ══════════════════════════════════════════ */
-  .site-header {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-    background: rgba(6,5,16,0.85); backdrop-filter: blur(22px);
-    -webkit-backdrop-filter: blur(22px);
-    border-bottom: 1px solid var(--border);
-    height: 58px; display: flex; align-items: center;
-    padding: 0 40px; gap: 0;
-  }
-  .header-brand {
-    font-family: var(--font-display); font-size: 17px;
-    color: var(--accent1); letter-spacing: .5px;
-    cursor: pointer; white-space: nowrap; flex-shrink: 0;
-    margin-right: 36px; text-decoration: none;
-  }
-  .header-brand em { font-style: italic; }
-  .header-nav {
-    display: flex; align-items: stretch; gap: 0; flex: 1; height: 100%;
-  }
-  .hn-link {
-    background: none; border: none; color: var(--muted);
-    font-family: var(--font-ui); font-size: 13px; font-weight: 600;
-    letter-spacing: .3px; cursor: pointer; padding: 0 14px;
-    position: relative; transition: color .2s; white-space: nowrap;
-    text-decoration: none; display: flex; align-items: center; height: 100%;
-  }
-  .hn-link::after {
-    content: ''; position: absolute; bottom: 0; left: 14px; right: 14px;
-    height: 2px; background: var(--accent1);
-    transform: scaleX(0); transform-origin: left;
-    transition: transform .25s cubic-bezier(.22,1,.36,1);
-    border-radius: 2px 2px 0 0;
-  }
-  .hn-link:hover { color: var(--text); }
-  .hn-link:hover::after { transform: scaleX(1); }
-  .hn-link.active { color: var(--accent1); }
-  .hn-link.active::after { transform: scaleX(1); }
-
-  /* nav tabs for biblioteca */
-  .nav-tabs {
-    display: flex; align-items: center; gap: 0; height: 100%; margin-left: 8px;
-  }
-  .nav-tab {
-    background: none; border: none; color: var(--muted);
-    font-family: var(--font-ui); font-size: 13px; font-weight: 600;
-    letter-spacing: .3px; cursor: pointer; padding: 0 14px;
-    position: relative; transition: color .2s; display: flex;
-    align-items: center; height: 100%;
-  }
-  .nav-tab::after {
-    content: ''; position: absolute; bottom: 0; left: 14px; right: 14px;
-    height: 2px; background: var(--accent1);
-    transform: scaleX(0); transform-origin: left;
-    transition: transform .25s cubic-bezier(.22,1,.36,1);
-    border-radius: 2px 2px 0 0;
-  }
-  .nav-tab:hover { color: var(--text); }
-  .nav-tab:hover::after { transform: scaleX(1); }
-  .nav-tab.active { color: var(--accent1); }
-  .nav-tab.active::after { transform: scaleX(1); }
-
-  /* hamburger */
-  .hamburger {
-    display: none; background: none; border: none; color: var(--muted);
-    font-size: 20px; cursor: pointer; padding: 4px 8px;
-    margin-left: auto; flex-shrink: 0; transition: color .2s;
-  }
-  .hamburger:hover { color: var(--text); }
-  .mobile-nav {
-    display: none; position: fixed; top: 58px; left: 0; right: 0;
-    background: rgba(6,5,16,0.97); backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid var(--border);
-    z-index: 99; padding: 12px 24px 18px; flex-direction: column;
-    gap: 0; animation: fadeIn .2s ease;
-  }
-  .mobile-nav.open { display: flex; }
-  .mobile-nav-label {
-    font-size: 9px; letter-spacing: 2.5px; text-transform: uppercase;
-    color: var(--muted); font-family: var(--font-mono); padding: 12px 0 4px; opacity: .6;
-  }
-  .mobile-nav .nav-tab { padding: 10px 0; font-size: 14px; }
-  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 98; }
-  .overlay.open { display: block; }
-
-  /* ══════════════════════════════════════════
-     LAYOUT
-  ══════════════════════════════════════════ */
-/* mesma largura, margens e padding de .app-content (app-shell.css) */
-.main { position: relative; z-index: 1; width: min(var(--ds-content-max), calc(100% - 2 * var(--ds-gutter))); max-width: var(--ds-content-max); margin: 0 auto; padding: calc(var(--ds-header-h) + var(--ds-page-pad-top)) 0 var(--ds-page-pad-bottom); flex: 1 0 auto; }
-  [data-app-footer] { margin-top: auto; }
-  .page { display: none; animation: fadeIn .35s ease; }
-  .page.active { display: block; }
-  @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-
-  /* ── PAGE HEADER ── */
-  .page-header { margin-bottom: 36px; position:relative; z-index:2; display:block !important; }
-  .page-title { font-family: var(--font-display); font-size: 38px; font-weight: 700; line-height: 1.1; color: var(--text); display:block !important; }
-  .page-title span { font-style: italic; }
-  .page-subtitle { color: var(--muted); font-size: 13px; margin-top: 6px; font-family: var(--font-mono); display:block !important; }
-
-  .library-top { display:grid; grid-template-columns: 1.4fr .95fr; gap:16px; margin-bottom:24px; }
-  .quote-panel { min-height:170px; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; background:rgba(255,255,255,.03); }
-  .quote-panel.clickable, .goal-panel.clickable { cursor: pointer; }
-  .quote-panel.clickable:hover, .goal-panel.clickable:hover {
-    border-color: rgba(200,169,110,.45);
-    box-shadow: 0 14px 34px rgba(0,0,0,.35);
-  }
-  .quote-text { font-family:var(--font-display); font-size:42px; line-height:1.2; font-style:italic; color:#e7e7e7; max-width:92%; }
-  .quote-author { margin-top:14px; font-family:var(--font-ui); font-size:26px; font-weight:700; color:rgba(255,255,255,.62); }
-  .goal-panel { padding:20px 22px; min-height:112px; }
-  .goal-title { font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); font-family:var(--font-mono); margin-bottom:6px; }
-  .goal-main { display:flex; align-items:flex-end; justify-content:center; gap:8px; margin-bottom:8px; }
-  .goal-main strong { font-size:44px; line-height:1; font-family:var(--font-display); }
-  .goal-main span { font-size:26px; line-height:1; color:var(--muted); font-family:var(--font-display); }
-  .goal-sub { text-align:center; color:var(--muted); font-family:var(--font-mono); font-size:11px; margin-bottom:8px; }
-  .goal-track { height:8px; border-radius:999px; background:rgba(255,255,255,.1); overflow:hidden; }
-  .goal-fill { height:100%; border-radius:999px; background:linear-gradient(90deg,#d0d55a,#c8a96e); width:0; transition:width .4s ease; }
-  .goal-pct { text-align:center; margin-top:8px; color:var(--muted); font-family:var(--font-mono); font-size:11px; }
-  .mini-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-top:12px; }
-  .mini-stat { text-align:center; padding:14px 10px; }
-  .mini-stat .card-big-num { font-size:42px; line-height:1; margin-bottom:6px; }
-  .mini-stat .card-title { margin-bottom:0; font-size:10px; letter-spacing:1.5px; }
-  .tracker-headline { margin-bottom:14px; font-family:var(--font-ui); font-size:28px; font-weight:800; letter-spacing:.5px; text-transform:uppercase; }
-
-  /* ── GRIDS ── */
-  .grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; }
-
-  /* ── CARD ── */
-  .card {
-    background: rgba(18,18,28,0.72); backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 24px; transition: border-color .2s;
-  }
-  .card:hover { border-color: rgba(255,255,255,.14); }
-  .card-title { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); font-family: var(--font-mono); margin-bottom: 14px; }
-  .card-big-num { font-family: var(--font-display); font-size: 48px; font-weight: 700; line-height: 1; }
-
-  /* ── BUTTONS ── */
-  .btn {
-    padding: 10px 18px; border-radius: 10px; border: none;
-    font-family: var(--font-ui); font-weight: 700; font-size: 12.5px;
-    cursor: pointer; transition: all .2s; letter-spacing: .5px;
-  }
-  .btn-primary { background: linear-gradient(135deg,#d4b070,#c8a96e); color: #0d0d12; box-shadow: 0 4px 14px rgba(200,169,110,.3); }
-  .btn-primary:hover { opacity:.9; transform:translateY(-1px); box-shadow:0 6px 20px rgba(200,169,110,.4); }
-  .btn-ghost { background: rgba(255,255,255,.04); color: var(--muted); border: 1px solid rgba(255,255,255,.08); }
-  .btn-ghost:hover { color:var(--text); border-color:rgba(255,255,255,.18); background:rgba(255,255,255,.07); }
-  .btn-danger {
-    padding: 10px 14px; border-radius: 10px; border: 1px solid rgba(224,107,139,.25);
-    background: rgba(224,107,139,.07); color: var(--accent4); font-family: var(--font-ui);
-    font-weight: 700; font-size: 12.5px; cursor: pointer; transition: all .2s;
-    letter-spacing: .5px; display: none;
-  }
-  .btn-danger:hover { background:rgba(224,107,139,.18); border-color:var(--accent4); transform:translateY(-1px); }
-  .btn-danger.visible { display: block; }
-
-  /* ── INPUTS ── */
-  .inp {
-    flex: 1; min-width: 120px; background: rgba(255,255,255,.04);
-    border: 1px solid rgba(255,255,255,.07); border-radius: 10px;
-    padding: 9px 13px; color: var(--text); font-family: var(--font-ui);
-    font-size: 13px; outline: none;
-    transition: border-color .2s, background .2s, box-shadow .2s;
-  }
-  .inp:focus { border-color:rgba(200,169,110,.5); background:rgba(200,169,110,.04); box-shadow:0 0 0 3px rgba(200,169,110,.07); }
-  .inp::placeholder { color: rgba(122,117,144,.6); }
-  select.inp option { background: #0d0c1e; }
-  textarea.inp { resize: vertical; min-height: 70px; }
-  .form-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
-
-  /* ── EMPTY STATE ── */
-  .empty { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 13px; }
-  .empty-icon { font-size: 36px; margin-bottom: 10px; }
-
-  /* scrollbar */
-  ::-webkit-scrollbar { width: 4px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 4px; }
-
-  /* ══════════════════════════════════════════
-     TRACKER GRID & CARDS
-  ══════════════════════════════════════════ */
-  .tracker-count { font-family: var(--font-mono); font-size: 10px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; }
-
-  .tracker-tabs { display: flex; gap: 5px; margin-bottom: 20px; flex-wrap: wrap; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
-  .quick-tabs {
-    display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:10px 0 14px; padding:10px;
-    border:1px solid rgba(255,255,255,.08); border-radius:18px;
-    background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.015));
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.04), 0 14px 32px rgba(0,0,0,.14);
-  }
-  .quick-tab {
-    background:rgba(255,255,255,.02); border:1px solid transparent; color:var(--muted); cursor:pointer;
-    font-size:14px; font-weight:700; font-family:var(--font-ui);
-    padding:10px 16px; border-radius:999px; position:relative;
-    transition:color .18s, background .18s, border-color .18s, transform .18s;
-  }
-  .quick-tab::after {
-    content:''; position:absolute; left:14px; right:14px; bottom:7px; height:2px;
-    background:var(--accent1); transform:scaleX(0); transform-origin:left;
-    transition:transform .2s cubic-bezier(.22,1,.36,1);
-  }
-  .quick-tab:hover { color:var(--text); background:rgba(255,255,255,.05); border-color:rgba(255,255,255,.12); transform:translateY(-1px); }
-  .quick-tab.active { color:var(--text); background:rgba(200,169,110,.12); border-color:rgba(200,169,110,.3); }
-  .quick-tab.active::after { transform:scaleX(1); }
-  .genre-strip {
-    display:none; margin:0 0 14px; padding:12px; border-radius:12px;
-    border:1px solid var(--border); background:rgba(255,255,255,.03);
-  }
-  .genre-strip.open { display:block; }
-  .genre-chip.active {
-    background:#e35a43; color:#fff; border-color:rgba(227,90,67,.7);
-  }
-  .ttab {
-    font-size: 11px; font-family: var(--font-mono); padding: 6px 16px;
-    border-radius: 6px; border: 1px solid var(--border); background: transparent;
-    color: var(--muted); cursor: pointer; transition: all .18s; letter-spacing: .5px;
-  }
-  .ttab:hover { color:var(--text); border-color:rgba(255,255,255,.18); background:rgba(255,255,255,.04); }
-  .ttab.active { background:rgba(200,169,110,.12); color:var(--accent1); border-color:rgba(200,169,110,.35); font-weight:700; }
-
-  .tracker-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 16px; }
-  .collection-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
-  .collection-card {
-    position:relative; min-height:320px; padding:18px; border-radius:22px; overflow:hidden; cursor:pointer;
-    background:
-      radial-gradient(circle at top right, rgba(200,169,110,.12), transparent 30%),
-      linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.018));
-    border:1px solid rgba(255,255,255,.09); box-shadow:0 24px 54px rgba(0,0,0,.24);
-    transition:transform .22s ease, border-color .22s ease, box-shadow .22s ease;
-  }
-  .collection-card:hover { transform:translateY(-3px); border-color:rgba(200,169,110,.28); box-shadow:0 30px 66px rgba(0,0,0,.28); }
-  .collection-stack {
-    position:relative; height:188px; margin-bottom:18px; display:flex; align-items:flex-start; justify-content:center;
-    overscroll-behavior:contain;
-  }
-  .collection-cover {
-    position:absolute; width:132px; aspect-ratio:2/3; border-radius:18px; overflow:hidden;
-    border:4px solid #0b0b12; box-shadow:0 18px 30px rgba(0,0,0,.3);
-    background:linear-gradient(160deg,rgba(28,22,48,.95),rgba(10,8,20,.98));
-    transition:transform .28s cubic-bezier(.22,1,.36,1), opacity .22s, box-shadow .22s;
-    animation:collectionCardIn .36s cubic-bezier(.22,1,.36,1) both;
-  }
-  .collection-cover img { width:100%; height:100%; object-fit:cover; display:block; }
-  .collection-cover::before {
-    content:''; position:absolute; inset:0; border-radius:14px; pointer-events:none;
-    box-shadow:inset 0 0 0 2px rgba(255,255,255,.04);
-  }
-  .collection-cover.c1 { left:calc(50% - 64px); top:14px; transform:translateX(18px); z-index:1; opacity:.92; }
-  .collection-cover.c2 { left:calc(50% - 64px); top:7px; transform:translateX(9px); z-index:2; opacity:.97; }
-  .collection-cover.c3 { left:calc(50% - 64px); top:0; transform:translateX(0); z-index:3; opacity:1; }
-  .collection-card.is-cycling-next .collection-cover.c3 { animation:collectionTopNext .36s cubic-bezier(.22,1,.36,1) both; }
-  .collection-card.is-cycling-prev .collection-cover.c3 { animation:collectionTopPrev .36s cubic-bezier(.22,1,.36,1) both; }
-  .collection-cover.cc-yellow { background:#f2e600; }
-  .collection-cover.cc-red { background:#f04343; }
-  .collection-cover.cc-blue { background:#3f5bff; }
-  .collection-cover:not(.has-img) { display:grid; place-items:center; }
-  .collection-fallback { width:100%; height:100%; display:grid; place-items:center; font-size:30px; color:rgba(255,255,255,.45); }
-  .collection-type {
-    display:inline-flex; padding:6px 10px; border-radius:999px; font-size:10px; font-family:var(--font-mono);
-    letter-spacing:1px; text-transform:uppercase; color:var(--accent1);
-    border:1px solid rgba(200,169,110,.28); background:rgba(200,169,110,.08);
-  }
-  .collection-name { font-size:22px; font-weight:700; line-height:1.02; margin:12px 0 10px; }
-  .collection-meta { display:flex; justify-content:space-between; gap:8px; color:var(--muted); font-size:11px; padding-bottom:10px; border-bottom:1px solid rgba(255,255,255,.06); }
-  .collection-items-preview { margin-top:12px; display:grid; gap:5px; font-size:12px; color:var(--text); }
-  @keyframes collectionCardIn {
-    from { opacity:0; transform:translateY(8px) scale(.98); }
-    to { opacity:1; }
-  }
-  @keyframes collectionTopNext {
-    0% { transform:translateX(0) translateY(0) scale(1); opacity:1; }
-    49% { transform:translateX(24px) translateY(6px) scale(.96); opacity:.2; }
-    50% { transform:translateX(-8px) translateY(18px) scale(.92); opacity:0; }
-    100% { transform:translateX(0) translateY(0) scale(1); opacity:1; }
-  }
-  @keyframes collectionTopPrev {
-    0% { transform:translateX(0) translateY(0) scale(1); opacity:1; }
-    49% { transform:translateX(-24px) translateY(6px) scale(.96); opacity:.2; }
-    50% { transform:translateX(8px) translateY(18px) scale(.92); opacity:0; }
-    100% { transform:translateX(0) translateY(0) scale(1); opacity:1; }
-  }
-  .hub-timeline, .hub-history-list { display:grid; gap:10px; }
-  .hub-timeline-row, .hub-history-row {
-    display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:center;
-    padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.06); background:rgba(255,255,255,.03);
-  }
-  .hub-timeline-dot, .hub-history-dot {
-    width:10px; height:10px; border-radius:50%; background:var(--accent1); box-shadow:0 0 0 4px rgba(200,169,110,.12);
-  }
-  .hub-timeline-label, .hub-history-label { font-size:12px; font-weight:700; }
-  .hub-timeline-date, .hub-history-date { font-size:10px; font-family:var(--font-mono); color:var(--muted); letter-spacing:.8px; text-transform:uppercase; }
-  .hub-history-row { grid-template-columns:auto 1fr auto auto; }
-  .hub-history-value { font-size:11px; color:var(--accent3); font-family:var(--font-mono); }
-  .hub-abandon-card {
-    position: relative;
-    overflow: hidden;
-    border-color: rgba(255,255,255,.08);
-    background:
-      linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.02)),
-      radial-gradient(circle at top right, rgba(200,169,110,.12), transparent 48%);
-  }
-  .hub-abandon-card::before {
-    content: '';
-    position: absolute;
-    inset: 0 auto 0 0;
-    width: 3px;
-    background: var(--abandon-tone, rgba(200,169,110,.7));
-    box-shadow: 0 0 18px var(--abandon-tone, rgba(200,169,110,.35));
-  }
-  .hub-abandon-card.is-fresh { --abandon-tone: rgba(94,196,168,.82); }
-  .hub-abandon-card.is-watch { --abandon-tone: rgba(200,169,110,.82); }
-  .hub-abandon-card.is-risk { --abandon-tone: rgba(232,134,74,.82); }
-  .hub-abandon-card.is-critical { --abandon-tone: rgba(224,107,139,.86); }
-  .hub-abandon-card.is-off { --abandon-tone: rgba(122,117,144,.72); }
-  .hub-abandon-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    margin-bottom: 10px;
-  }
-  .hub-abandon-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 7px 12px;
-    border-radius: 999px;
-    border: 1px solid color-mix(in srgb, var(--abandon-tone) 55%, transparent);
-    background: color-mix(in srgb, var(--abandon-tone) 14%, transparent);
-    color: var(--abandon-tone);
-    font: 700 10px var(--font-mono);
-    letter-spacing: 1px;
-    text-transform: uppercase;
-  }
-  .hub-abandon-badge::before {
-    content: '';
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: currentColor;
-    box-shadow: 0 0 12px currentColor;
-  }
-  .hub-abandon-days {
-    font: 700 11px var(--font-mono);
-    color: var(--text);
-    letter-spacing: .4px;
-    text-align: right;
-  }
-  .hub-abandon-text {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--text);
-    margin-bottom: 6px;
-  }
-  .hub-abandon-sub {
-    font-size: 11px;
-    line-height: 1.55;
-    color: var(--muted);
-  }
-  .collection-hub-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 16px;
-  }
-  .collection-hub-summary {
-    display: grid;
-    gap: 10px;
-  }
-  .collection-hub-summary p {
-    font-size: 13px;
-    line-height: 1.7;
-    color: rgba(232,228,240,.82);
-  }
-  .collection-hub-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  .collection-hub-tag {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 12px;
-    border-radius: 999px;
-    border: 1px solid rgba(255,255,255,.09);
-    background: rgba(255,255,255,.04);
-    font: 700 10px var(--font-mono);
-    letter-spacing: .8px;
-    text-transform: uppercase;
-    color: var(--text);
-  }
-  .collection-hub-tag strong {
-    color: var(--accent1);
-    font-weight: 700;
-  }
-  .collection-hub-metrics {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-  }
-  .collection-hub-metric {
-    padding: 14px;
-    border-radius: 14px;
-    border: 1px solid rgba(255,255,255,.07);
-    background: rgba(255,255,255,.03);
-  }
-  .collection-hub-metric .k {
-    margin-bottom: 8px;
-    color: var(--muted);
-    font: 700 10px var(--font-mono);
-    letter-spacing: 1px;
-    text-transform: uppercase;
-  }
-  .collection-hub-metric .v {
-    font: 700 34px var(--font-display);
-    line-height: 1;
-  }
-  .collection-hub-metric .s {
-    margin-top: 6px;
-    color: var(--muted);
-    font: 400 11px var(--font-mono);
-  }
-  .collection-hub-status {
-    display: grid;
-    gap: 10px;
-  }
-  .collection-hub-status-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 10px;
-    align-items: center;
-  }
-  .collection-hub-status-main {
-    min-width: 0;
-  }
-  .collection-hub-status-head {
-    display: flex;
-    justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 6px;
-    font-size: 12px;
-    font-weight: 700;
-  }
-  .collection-hub-status-track {
-    height: 8px;
-    border-radius: 999px;
-    overflow: hidden;
-    background: rgba(255,255,255,.09);
-  }
-  .collection-hub-status-fill {
-    height: 100%;
-    border-radius: 999px;
-  }
-  .collection-hub-status-value {
-    color: var(--muted);
-    font: 700 10px var(--font-mono);
-    letter-spacing: .8px;
-    text-transform: uppercase;
-  }
-  .collection-hub-related {
-    display: grid;
-    gap: 10px;
-  }
-  .collection-link-card {
-    padding: 14px 16px;
-    border-radius: 14px;
-    border: 1px solid rgba(255,255,255,.07);
-    background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.02));
-    cursor: pointer;
-    transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
-  }
-  .collection-link-card:hover {
-    transform: translateY(-2px);
-    border-color: rgba(200,169,110,.3);
-    box-shadow: 0 16px 34px rgba(0,0,0,.22);
-  }
-  .collection-link-type {
-    color: var(--accent1);
-    font: 700 10px var(--font-mono);
-    letter-spacing: 1px;
-    text-transform: uppercase;
-  }
-  .collection-link-title {
-    margin-top: 8px;
-    font-size: 16px;
-    font-weight: 700;
-  }
-  .collection-link-meta {
-    margin-top: 8px;
-    color: var(--muted);
-    font-size: 11px;
-  }
-  .adapt-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
-  .adapt-card {
-    display:grid; grid-template-columns:64px 1fr; gap:12px; align-items:center; cursor:pointer;
-    padding:12px; border-radius:14px; border:1px solid rgba(255,255,255,.06); background:rgba(255,255,255,.03);
-  }
-  .adapt-thumb { width:64px; aspect-ratio:2/3; border-radius:10px; overflow:hidden; background:rgba(255,255,255,.04); display:grid; place-items:center; }
-  .adapt-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
-  .adapt-title { font-size:12px; font-weight:700; }
-  .adapt-meta { margin-top:4px; font-size:10px; color:var(--muted); font-family:var(--font-mono); }
-
-  /* ── MEDIA CARD ── */
-  .mc {
-    position: relative; border-radius: 14px; overflow: hidden;
-    border: 1px solid rgba(255,255,255,.08); background: rgba(12,11,22,0.8);
-    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-    cursor: pointer; aspect-ratio: 2/3; display: flex; flex-direction: column;
-    transition: transform .28s cubic-bezier(.22,1,.36,1), border-color .28s, box-shadow .28s;
-  }
-  .mc::after {
-    content: ''; position: absolute; inset: 0; border-radius: 14px;
-    background: linear-gradient(180deg,transparent 50%,rgba(0,0,0,.7) 100%);
-    pointer-events: none; opacity: 0; transition: opacity .28s;
-  }
-  .mc:hover { transform: translateY(-8px) scale(1.03); border-color: rgba(200,169,110,.5); box-shadow: 0 20px 60px rgba(0,0,0,.6), 0 0 0 1px rgba(200,169,110,.15); }
-  .mc:hover::after { opacity: 1; }
-  .mc.fav { border-color: rgba(200,169,110,.45); }
-  .mc.fav::before { content:''; position:absolute; inset:0; background:linear-gradient(135deg,rgba(200,169,110,.06) 0%,transparent 60%); pointer-events:none; z-index:1; }
-
-  .mc-img { width:100%; flex:1; object-fit:cover; display:block; min-height:0; transition:transform .4s cubic-bezier(.22,1,.36,1); }
-  .mc:hover .mc-img { transform: scale(1.05); }
-
-  .mc-img-placeholder {
-    flex: 1; display: flex; align-items: center; justify-content: center;
-    flex-direction: column; gap: 8px;
-    background: linear-gradient(160deg,rgba(28,22,48,.95),rgba(10,8,20,.98));
-    position: relative; overflow: hidden;
-  }
-  .mc-img-placeholder::before { content:''; position:absolute; inset:0; background:radial-gradient(ellipse at 30% 30%,rgba(124,111,205,.15),transparent 70%); }
-  .mc-img-placeholder .ph-icon { font-size:36px; position:relative; z-index:1; }
-  .mc-img-placeholder .ph-title { font-size:10px; font-family:var(--font-display); font-style:italic; color:rgba(255,255,255,.35); text-align:center; padding:0 10px; position:relative; z-index:1; max-height:2.6em; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
-
-  .mc-body { padding:10px 11px 11px; background:linear-gradient(180deg,rgba(6,5,16,0) 0%,rgba(6,5,16,.97) 18px); position:relative; z-index:2; }
-  .mc-title { font-size:11px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:2px; line-height:1.3; letter-spacing:.2px; }
-  .mc-author { font-size:9.5px; color:var(--muted); font-family:var(--font-mono); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:6px; }
-  .mc-stars { font-size:9px; color:var(--accent1); letter-spacing:1px; margin-bottom:5px; text-shadow:0 0 8px rgba(200,169,110,.5); }
-  .mc-progress-bar { height:2px; background:rgba(255,255,255,.07); border-radius:2px; overflow:hidden; margin-bottom:6px; }
-  .mc-progress-fill { height:100%; border-radius:2px; background:linear-gradient(90deg,var(--accent2),var(--accent1)); transition:width .6s; position:relative; }
-  .mc-progress-fill::after { content:''; position:absolute; right:0; top:-1px; width:4px; height:4px; border-radius:50%; background:var(--accent1); box-shadow:0 0 6px var(--accent1); }
-  .mc-bottom { display:flex; align-items:center; justify-content:space-between; gap:4px; }
-  .mc-status-pill { display:inline-flex; align-items:center; gap:4px; font-size:8.5px; font-family:var(--font-mono); font-weight:600; letter-spacing:.8px; text-transform:uppercase; padding:2px 7px; border-radius:20px; border:1px solid currentColor; opacity:.85; }
-  .mc-pct { font-size:9px; font-family:var(--font-mono); color:var(--muted); flex-shrink:0; }
-  .mc-fav-badge { position:absolute; top:8px; right:8px; font-size:13px; filter:drop-shadow(0 1px 6px rgba(0,0,0,.9)); z-index:3; animation:favPop .3s cubic-bezier(.22,1,.36,1) both; }
-  @keyframes favPop { from { transform:scale(0); } to { transform:scale(1); } }
-  .mc-ribbon { position:absolute; top:10px; left:0; font-size:8px; font-family:var(--font-mono); font-weight:700; letter-spacing:1.2px; text-transform:uppercase; padding:4px 10px 4px 7px; border-radius:0 8px 8px 0; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); box-shadow:2px 2px 8px rgba(0,0,0,.4); z-index:3; }
-  .quick-actions-menu {
-    position: fixed;
-    z-index: 1200;
-    width: min(240px, calc(100vw - 24px));
-    padding: 10px;
-    border-radius: 16px;
-    border: 1px solid rgba(255,255,255,.1);
-    background: rgba(8,7,20,.96);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
-    box-shadow: 0 18px 60px rgba(0,0,0,.58), 0 0 0 1px rgba(200,169,110,.08);
-    display: none;
-  }
-  .quick-actions-menu.open { display: block; animation: fadeIn .18s ease both; }
-  .quick-actions-head { margin-bottom: 8px; }
-  .quick-actions-kicker { font: 700 9px var(--font-mono); letter-spacing: 1.8px; text-transform: uppercase; color: var(--muted); }
-  .quick-actions-title { margin-top: 4px; font-size: 13px; font-weight: 700; line-height: 1.35; }
-  .quick-actions-list { display: grid; gap: 6px; }
-  .quick-action-btn {
-    width: 100%;
-    border: 1px solid rgba(255,255,255,.08);
-    background: rgba(255,255,255,.04);
-    color: var(--text);
-    border-radius: 12px;
-    padding: 10px 12px;
-    text-align: left;
-    cursor: pointer;
-    font: 600 11px var(--font-ui);
-    transition: background .18s, border-color .18s, transform .18s;
-  }
-  .quick-action-btn:hover {
-    background: rgba(200,169,110,.1);
-    border-color: rgba(200,169,110,.28);
-    transform: translateY(-1px);
-  }
-  .quick-action-btn.danger {
-    color: #ffb4c4;
-    border-color: rgba(224,107,139,.18);
-    background: rgba(224,107,139,.08);
-  }
-  .quick-action-btn.danger:hover {
-    background: rgba(224,107,139,.14);
-    border-color: rgba(224,107,139,.34);
-  }
-
-  /* ══════════════════════════════════════════
-     FILTER BUTTON & PANEL
-  ══════════════════════════════════════════ */
-  .filter-wrap { position: relative; }
-  .btn-filter {
-    display: flex; align-items: center; gap: 6px; padding: 9px 14px;
-    border-radius: 8px; border: 1px solid var(--border); background: rgba(255,255,255,.04);
-    color: var(--muted); font-family: var(--font-ui); font-size: 12.5px; font-weight: 700;
-    cursor: pointer; transition: all .2s; white-space: nowrap; letter-spacing: .4px;
-  }
-  .btn-filter:hover { color:var(--text); border-color:rgba(255,255,255,.2); background:rgba(255,255,255,.07); }
-  .btn-filter.active { color:var(--accent1); border-color:rgba(200,169,110,.5); background:rgba(200,169,110,.08); }
-  .btn-filter .filter-badge { display:none; background:var(--accent1); color:#0d0d12; font-size:9px; font-weight:800; border-radius:50%; width:16px; height:16px; align-items:center; justify-content:center; }
-  .btn-filter.active .filter-badge { display:flex; }
-
-  .filter-panel {
-    position: absolute; top: calc(100% + 6px); right: 0; z-index: 300;
-    background: rgba(8,7,20,.98); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255,255,255,.1); border-top: 2px solid var(--accent1);
-    border-radius: 0 0 14px 14px; width: min(860px, calc(100vw - 32px)); padding: 14px 16px 16px;
-    box-shadow: 0 20px 50px rgba(0,0,0,.7);
-    opacity: 0; visibility: hidden; transform: translateY(-6px);
-    transition: opacity .2s, transform .2s, visibility .2s;
-  }
-  .filter-panel.open { opacity:1; visibility:visible; transform:translateY(0); }
-  .filter-layout { display:grid; grid-template-columns: minmax(260px, .9fr) minmax(430px, 1.45fr); gap:12px; align-items:start; }
-  .filter-col { min-width:0; }
-  .filter-col-right { border-left:1px solid var(--border); padding-left:12px; }
-  .filter-section-title { font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); font-family:var(--font-mono); margin-bottom:8px; margin-top:10px; }
-  .filter-section-title:first-child { margin-top:0; }
-  .filter-chips { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:2px; }
-  .filter-chip { font-size:11px; font-family:var(--font-mono); padding:5px 10px; border-radius:6px; border:1px solid var(--border); background:transparent; color:var(--muted); cursor:pointer; transition:all .15s; letter-spacing:.3px; }
-  .filter-chip:hover { color:var(--text); border-color:rgba(255,255,255,.2); }
-  .filter-chip.selected { background:rgba(200,169,110,.12); color:var(--accent1); border-color:rgba(200,169,110,.45); font-weight:700; }
-  .filter-chips.sort-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px; }
-  .filter-chips.sort-grid .filter-chip { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:center; }
-  .filter-divider { height:1px; background:var(--border); margin:12px 0; }
-  .filter-actions { display:flex; gap:7px; margin-top:14px; }
-  .filter-actions .btn { flex:1; font-size:11.5px; padding:8px 10px; }
-
-  /* ══════════════════════════════════════════
-     MODAL — full redesign v2
-  ══════════════════════════════════════════ */
-  .modal-backdrop {
-    position: fixed; inset: 0; background: rgba(2,2,10,.88);
-    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
-    z-index: 600; display: none; align-items: center; justify-content: center;
-    padding: 24px 8vw;
-  }
-  .modal-backdrop.open { display: flex; animation: backdropIn .3s ease both; }
-  @keyframes backdropIn { from { opacity:0; } to { opacity:1; } }
-
-  .modal {
-    background: #0c0b1a; border: 1px solid rgba(255,255,255,.08);
-    border-radius: 24px; width: 100%; max-width: 780px; max-height: 94vh;
-    overflow: hidden; display: flex; flex-direction: column;
-    animation: modalIn .38s cubic-bezier(.16,1,.3,1) both; position: relative;
-    box-shadow: 0 0 0 1px rgba(200,169,110,.07), 0 32px 80px rgba(0,0,0,.8), 0 8px 24px rgba(0,0,0,.5);
-  }
-  @keyframes modalIn { from { opacity:0; transform:translateY(28px) scale(.96); } to { opacity:1; transform:none; } }
-
-  .modal-hero { position:relative; height:88px; flex-shrink:0; overflow:hidden; background:linear-gradient(135deg,#1a1230 0%,#0d0c1e 100%); }
-  .modal-hero-blur { position:absolute; inset:-20px; background-size:cover; background-position:center top; filter:blur(28px) brightness(.35) saturate(1.4); transform:scale(1.1); transition:background-image .4s; }
-  .modal-hero-gradient { position:absolute; inset:0; background:linear-gradient(180deg,rgba(12,11,26,0) 0%,rgba(12,11,26,.5) 60%,rgba(12,11,26,1) 100%); }
-  .modal-hero-content { display:none; }
-  .modal-hero-title { font-family:var(--font-display); font-size:15px; font-weight:700; font-style:italic; color:rgba(255,255,255,.55); letter-spacing:.3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:300px; }
-  .modal-hero-type-badge { font-size:9px; font-family:var(--font-mono); letter-spacing:1.5px; text-transform:uppercase; color:var(--accent1); background:rgba(200,169,110,.12); border:1px solid rgba(200,169,110,.25); padding:2px 8px; border-radius:20px; white-space:nowrap; flex-shrink:0; }
-
-  .modal-close { position:absolute; top:14px; right:14px; z-index:10; background:rgba(10,9,24,.7); border:1px solid rgba(255,255,255,.1); color:var(--muted); width:30px; height:30px; border-radius:50%; font-size:11px; cursor:pointer; transition:all .2s; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); }
-  .modal-close:hover { background:rgba(224,107,139,.22); border-color:var(--accent4); color:var(--accent4); transform:rotate(90deg); }
-
-  .modal-body { display:grid; grid-template-columns:180px 1fr; flex:1; overflow:hidden; min-height:0; }
-
-  .modal-img-col { padding:16px 0 0 24px; display:flex; flex-direction:column; gap:12px; position:relative; margin-top:0; z-index:2; padding-bottom:24px; }
-  .img-upload-zone { border:2px solid rgba(255,255,255,.1); border-radius:14px; cursor:pointer; transition:border-color .22s, box-shadow .22s, transform .22s; overflow:hidden; aspect-ratio:2/3; display:flex; align-items:center; justify-content:center; background:linear-gradient(160deg,rgba(28,22,52,.95),rgba(10,8,22,.98)); position:relative; box-shadow:0 8px 32px rgba(0,0,0,.5),0 2px 8px rgba(0,0,0,.3); }
-  .img-upload-zone:hover { border-color:rgba(200,169,110,.6); box-shadow:0 12px 40px rgba(0,0,0,.6),0 0 0 1px rgba(200,169,110,.2),0 0 30px rgba(200,169,110,.08); transform:translateY(-2px); }
-  .img-upload-zone img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:none; }
-  .img-upload-zone.has-img img { display:block; }
-  .img-upload-zone.has-img .upload-hint { display:none; }
-  .upload-hint { font-size:11px; color:var(--muted); text-align:center; padding:12px; display:flex; flex-direction:column; align-items:center; gap:8px; }
-  .upload-hint .uh-icon { font-size:28px; opacity:.6; }
-  .upload-hint .uh-text { line-height:1.5; font-size:11px; }
-  .upload-hint .uh-sub { font-size:9px; opacity:.4; font-family:var(--font-mono); letter-spacing:1px; }
-  #modal-img-input { display:none; }
-  .img-url-row { display:flex; gap:6px; width:100%; }
-  .img-url-row .inp { min-width:0; font-size:11px; padding:7px 9px; }
-  .img-url-row .btn { padding:7px 10px; font-size:11px; white-space:nowrap; }
-  .img-change-btn { position:absolute; bottom:8px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,.8); border:1px solid rgba(255,255,255,.18); color:rgba(255,255,255,.85); font-size:10px; font-family:var(--font-mono); letter-spacing:.8px; padding:4px 12px; border-radius:20px; cursor:pointer; display:none; white-space:nowrap; z-index:2; transition:all .2s; backdrop-filter:blur(4px); }
-  .img-upload-zone.has-img:hover .img-change-btn { display:block; }
-
-  .fav-toggle { display:flex; align-items:center; gap:8px; cursor:pointer; font-size:12px; color:var(--muted); user-select:none; padding:8px 12px; border-radius:10px; border:1px solid var(--border); transition:all .2s; background:rgba(255,255,255,.025); }
-  .fav-toggle:hover { border-color:rgba(200,169,110,.35); color:var(--accent1); background:rgba(200,169,110,.06); }
-  .fav-toggle input { display:none; }
-  .fav-toggle .fav-icon { font-size:15px; transition:transform .25s cubic-bezier(.34,1.56,.64,1); }
-  .fav-toggle input:checked ~ .fav-icon { transform:scale(1.3); }
-  .fav-toggle input:checked ~ span:last-child { color:var(--accent1); }
-
-  .modal-fields-col { padding:8px 24px 0 20px; display:flex; flex-direction:column; overflow-y:auto; overflow-x:hidden; min-height:0; scrollbar-width:thin; scrollbar-color:rgba(255,255,255,.06) transparent; }
-  .modal-fields-col::-webkit-scrollbar { width:4px; }
-  .modal-fields-col::-webkit-scrollbar-track { background:transparent; }
-  .modal-fields-col::-webkit-scrollbar-thumb { background:rgba(255,255,255,.08); border-radius:4px; }
-
-  .modal-top-bar { display:flex; flex-direction:column; align-items:flex-start; justify-content:flex-start; margin-bottom:12px; gap:6px; padding-top:0; }
-  .modal-pretitle { font-family:var(--font-display); font-size:15px; font-weight:700; font-style:italic; color:rgba(255,255,255,.62); letter-spacing:.3px; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .modal-title { font-family:var(--font-display); font-size:18px; font-weight:700; line-height:1.25; flex:1; }
-  .modal-title em { font-style:italic; color:var(--accent1); }
-  .modal-badges-row { display:flex; align-items:center; gap:8px; margin-top:2px; }
-  .modal-type-inline { margin-top:0; }
-  .modal-badges-row .modal-status-pill { margin-left:auto; }
-
-  .modal-status-row { display:flex; align-items:center; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
-  .modal-status-pill { font-size:10px; font-family:var(--font-mono); font-weight:700; padding:3px 10px; border-radius:20px; letter-spacing:.5px; border:1px solid; transition:all .2s; }
-
-  .mlabel { font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); font-family:var(--font-mono); margin:12px 0 6px; display:flex; align-items:center; gap:8px; }
-  .mlabel::after { content:''; flex:1; height:1px; background:var(--border); }
-  .mlabel:first-child { margin-top:0; }
-
-  .modal-progress-wrap { margin-bottom:12px; }
-  .modal-progress-bar-bg { height:6px; background:rgba(255,255,255,.06); border-radius:6px; overflow:hidden; margin-top:8px; margin-bottom:4px; }
-  .modal-progress-bar-fill { height:100%; border-radius:6px; background:linear-gradient(90deg,var(--accent2),var(--accent1)); transition:width .5s cubic-bezier(.22,1,.36,1); box-shadow:0 0 8px rgba(200,169,110,.4); }
-  .modal-progress-pct { font-family:var(--font-mono); font-size:10px; color:var(--muted); text-align:right; }
-
-  .modal-stars { display:flex; gap:3px; margin-bottom:2px; }
-  .mstar { font-size:22px; cursor:pointer; opacity:.18; transition:opacity .12s, transform .15s cubic-bezier(.34,1.56,.64,1); background:none; border:none; padding:0 2px; color:var(--accent1); line-height:1; }
-  .mstar.on { opacity:1; text-shadow:0 0 12px rgba(200,169,110,.7); }
-  .mstar:hover { transform:scale(1.3); opacity:.8; }
-
-  .modal-footer { padding:14px 24px 20px; border-top:1px solid rgba(255,255,255,.05); background:linear-gradient(180deg,rgba(12,11,26,0) 0%,rgba(12,11,26,1) 100%); flex-shrink:0; }
-  .modal-actions { display:flex; gap:8px; align-items:center; }
-  .modal-actions .btn-save { flex:1; }
-
-  /* Related */
-  .modal-related { margin-top:20px; padding-top:0; animation:fadeIn .3s .1s ease both; }
-  .modal-related-title { font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); font-family:var(--font-mono); margin-bottom:12px; display:flex; align-items:center; gap:8px; }
-  .modal-related-title::before { content:'✦'; color:var(--accent1); font-size:8px; opacity:.7; }
-  .modal-related-title::after { content:''; flex:1; height:1px; background:rgba(255,255,255,.06); }
-  .adapt-editor {
-    margin-top: 18px;
-    padding-top: 0;
-    animation: fadeIn .3s .12s ease both;
-  }
-  .adapt-editor-row {
-    display: grid;
-    grid-template-columns: 150px 1fr auto;
-    gap: 8px;
-    margin-bottom: 10px;
-  }
-  .adapt-editor-list {
-    display: grid;
-    gap: 8px;
-  }
-  .adapt-editor-item {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 10px;
-    align-items: center;
-    padding: 10px 12px;
-    border-radius: 12px;
-    border: 1px solid rgba(255,255,255,.07);
-    background: rgba(255,255,255,.03);
-  }
-  .adapt-editor-meta {
-    font-size: 10px;
-    color: var(--muted);
-    font-family: var(--font-mono);
-    margin-top: 4px;
-  }
-  .adapt-editor-empty {
-    font-size: 11px;
-    color: var(--muted);
-    font-family: var(--font-mono);
-    padding: 8px 0 2px;
-  }
-  .adapt-editor-remove {
-    background: rgba(224,107,139,.1);
-    border: 1px solid rgba(224,107,139,.25);
-    color: var(--accent4);
-    border-radius: 10px;
-    padding: 8px 10px;
-    cursor: pointer;
-    font: 700 10px var(--font-mono);
-    letter-spacing: .7px;
-    text-transform: uppercase;
-  }
-  .adapt-highlight {
-    border-color: rgba(74,176,232,.18);
-    background:
-      linear-gradient(180deg, rgba(74,176,232,.07), rgba(255,255,255,.02)),
-      radial-gradient(circle at top right, rgba(74,176,232,.16), transparent 48%);
-  }
-  .adapt-highlight::before {
-    background: rgba(74,176,232,.82);
-    box-shadow: 0 0 18px rgba(74,176,232,.42);
-  }
-  .related-scroll { display:flex; gap:10px; overflow-x:auto; padding-bottom:8px; scrollbar-width:thin; scrollbar-color:rgba(200,169,110,.25) transparent; }
-  .related-scroll::-webkit-scrollbar { height:3px; }
-  .related-scroll::-webkit-scrollbar-track { background:transparent; }
-  .related-scroll::-webkit-scrollbar-thumb { background:rgba(200,169,110,.25); border-radius:3px; }
-  .rel-card { flex-shrink:0; width:76px; cursor:pointer; transition:transform .22s cubic-bezier(.22,1,.36,1); position:relative; }
-  .rel-card:hover { transform:translateY(-5px); }
-  .rel-thumb { width:76px; height:114px; border-radius:10px; overflow:hidden; border:1px solid rgba(255,255,255,.08); background:linear-gradient(160deg,rgba(28,22,52,.95),rgba(10,8,22,.98)); display:flex; align-items:center; justify-content:center; font-size:24px; position:relative; transition:border-color .2s, box-shadow .2s; box-shadow:0 4px 12px rgba(0,0,0,.4); }
-  .rel-card:hover .rel-thumb { border-color:rgba(200,169,110,.45); box-shadow:0 8px 24px rgba(0,0,0,.5),0 0 0 1px rgba(200,169,110,.15); }
-  .rel-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
-  .rel-status-bar { position:absolute; bottom:0; left:0; right:0; height:3px; border-radius:0 0 10px 10px; }
-  .rel-name { font-size:10px; font-weight:600; margin-top:6px; line-height:1.35; color:var(--text); overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
-  .rel-meta { font-size:9px; font-family:var(--font-mono); color:var(--muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .rel-stars { font-size:8px; color:var(--accent1); margin-top:2px; letter-spacing:.5px; }
-
-  /* HUBS */
-  .hub-backdrop {
-    position: fixed; inset: 0; z-index: 1900;
-    display: none; align-items: center; justify-content: center;
-    background: rgba(0,0,0,.66); backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px); padding: 24px;
-  }
-  .hub-backdrop.open { display: flex; animation: backdropIn .2s ease; }
-  .hub-card {
-    width: min(1080px, 96vw); max-height: 88vh; overflow: auto;
-    background: rgba(14,14,22,.95); border: 1px solid var(--border);
-    border-radius: 18px; padding: 18px;
-  }
-  .hub-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
-  .hub-title { font-size: 20px; font-weight: 700; font-family: var(--font-ui); }
-  .hub-grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 14px; }
-  .hub-metric { padding: 14px; border-radius: 14px; border: 1px solid var(--border); background: rgba(255,255,255,.03); }
-  .hub-metric .k { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; font-family: var(--font-mono); margin-bottom: 8px; }
-  .hub-metric .v { font-size: 42px; line-height: 1; font-family: var(--font-display); }
-  .hub-metric .s { margin-top: 6px; color: var(--muted); font-size: 11px; font-family: var(--font-mono); }
-  .hub-goal-track { height: 8px; border-radius: 999px; margin-top: 10px; background: rgba(255,255,255,.1); overflow: hidden; }
-  .hub-goal-fill { height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg,#d0d55a,#c8a96e); }
-  .hub-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .hub-panel { border: 1px solid var(--border); border-radius: 14px; background: rgba(255,255,255,.02); padding: 14px; }
-  .hub-panel-title { margin-bottom: 10px; font-size: 18px; font-weight: 700; }
-  .hub-bars { display: flex; flex-direction: column; gap: 8px; }
-  .hub-bar { display: grid; grid-template-columns: 110px 1fr 28px; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; }
-  .hub-bar-track { height: 10px; border-radius: 999px; background: rgba(255,255,255,.12); overflow: hidden; }
-  .hub-bar-fill { height: 100%; border-radius: 999px; background: rgba(240,220,170,.95); }
-  .hub-heatmap { display: grid; grid-template-columns: repeat(53, 1fr); gap: 4px; }
-  .hub-streak-card {
-    position: relative;
-    overflow: hidden;
-    display: grid;
-    grid-template-columns: 96px minmax(0, 1fr);
-    gap: 14px;
-    align-items: center;
-    padding: 16px 18px;
-    border-radius: 18px;
-    border: 1px solid rgba(255,255,255,.08);
-    background:
-      radial-gradient(circle at 20% 20%, rgba(255,255,255,.08), transparent 42%),
-      linear-gradient(135deg, rgba(20,16,42,.98), rgba(10,8,24,.96));
-  }
-  .hub-streak-card::after {
-    content: "";
-    position: absolute;
-    inset: auto -20% -55% auto;
-    width: 180px;
-    height: 180px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(255,255,255,.12), transparent 70%);
-    opacity: .32;
-    pointer-events: none;
-  }
-  .hub-streak-medal {
-    width: 82px;
-    height: 82px;
-    border-radius: 18px;
-    display: grid;
-    place-items: center;
-    background: rgba(255,255,255,.05);
-    border: 1px solid rgba(255,255,255,.1);
-    box-shadow: 0 10px 22px rgba(0,0,0,.18);
-  }
-  .hub-streak-medal-inner {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 10px 6px;
-    overflow: hidden;
-  }
-  .hub-streak-value {
-    margin-top: 0;
-    font-size: 9px;
-    line-height: 1.1;
-    letter-spacing: 1.4px;
-    text-transform: uppercase;
-    font-family: var(--font-mono);
-    color: rgba(255,255,255,.62);
-  }
-  .hub-streak-count {
-    margin-top: 8px;
-    font-size: 28px;
-    line-height: 1;
-    font-family: var(--font-display);
-    color: #f3ecdc;
-  }
-  .hub-streak-icon {
-    display: none;
-  }
-  .hub-streak-copy { position: relative; z-index: 1; min-width: 0; }
-  .hub-streak-kicker {
-    font-size: 10px;
-    font-family: var(--font-mono);
-    letter-spacing: 1.8px;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-  .hub-streak-title {
-    margin-top: 6px;
-    font-size: 20px;
-    font-family: var(--font-display);
-  }
-  .hub-streak-desc {
-    margin-top: 6px;
-    font-size: 12px;
-    color: var(--muted);
-    line-height: 1.55;
-  }
-  .hub-streak-progress {
-    margin-top: 12px;
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-  .hub-streak-track {
-    flex: 1;
-    min-width: 160px;
-    height: 8px;
-    border-radius: 999px;
-    background: rgba(255,255,255,.08);
-    overflow: hidden;
-  }
-  .hub-streak-fill {
-    height: 100%;
-    width: 0%;
-    border-radius: inherit;
-    transition: width .5s ease;
-  }
-  .hub-streak-meta {
-    font-size: 10px;
-    font-family: var(--font-mono);
-    letter-spacing: 1.1px;
-    text-transform: uppercase;
-    color: rgba(255,255,255,.72);
-    white-space: nowrap;
-  }
-  .hub-streak-card.tier-dormant .hub-streak-fill { background: linear-gradient(90deg, rgba(122,111,147,.45), rgba(160,149,188,.72)); }
-  .hub-streak-card.tier-spark .hub-streak-medal { box-shadow: 0 0 0 1px rgba(200,169,110,.18), 0 12px 30px rgba(200,169,110,.18); }
-  .hub-streak-card.tier-spark .hub-streak-fill { background: linear-gradient(90deg, #c8a96e, #f0d59f); }
-  .hub-streak-card.tier-flare .hub-streak-medal { animation: hubStreakPulse 2.6s ease-in-out infinite; }
-  .hub-streak-card.tier-flare .hub-streak-fill { background: linear-gradient(90deg, #d78a4f, #ffd08a); }
-  .hub-streak-card.tier-blaze .hub-streak-medal { animation: hubStreakOrbit 3.2s linear infinite; }
-  .hub-streak-card.tier-blaze .hub-streak-fill { background: linear-gradient(90deg, #7c6fcd, #c8a96e); }
-  .hub-streak-card.tier-crown .hub-streak-medal {
-    animation: hubStreakCrown 3.4s ease-in-out infinite;
-    box-shadow: 0 0 0 1px rgba(255,219,127,.3), 0 18px 42px rgba(255,219,127,.24);
-  }
-  .hub-streak-card.tier-crown .hub-streak-fill { background: linear-gradient(90deg, #f1c96b, #fff1b8); }
-  @keyframes hubStreakPulse {
-    0%, 100% { transform: scale(1); box-shadow: 0 12px 28px rgba(215,138,79,.18); }
-    50% { transform: scale(1.06); box-shadow: 0 18px 38px rgba(215,138,79,.34); }
-  }
-  @keyframes hubStreakOrbit {
-    0%, 100% { transform: translateY(0px) rotate(0deg); }
-    25% { transform: translateY(-3px) rotate(1deg); }
-    50% { transform: translateY(2px) rotate(0deg); }
-    75% { transform: translateY(-2px) rotate(-1deg); }
-  }
-  @keyframes hubStreakCrown {
-    0%, 100% { transform: translateY(0) scale(1); filter: brightness(1); }
-    50% { transform: translateY(-4px) scale(1.07); filter: brightness(1.14); }
-  }
-  @media (max-width: 760px) {
-    .hub-streak-card {
-      grid-template-columns: 1fr;
-      gap: 12px;
-      text-align: left;
-    }
-    .hub-streak-medal {
-      width: 72px;
-      height: 72px;
-    }
-    .hub-streak-progress {
-      flex-direction: column;
-      align-items: stretch;
-    }
-    .hub-streak-track {
-      min-width: 0;
-      width: 100%;
-    }
-    .hub-streak-meta {
-      white-space: normal;
-    }
-  }
-  .hub-week { display: grid; grid-template-rows: repeat(7, 9px); gap: 4px; }
-  .hub-day { width: 9px; height: 9px; border-radius: 2px; background: rgba(255,255,255,.12); }
-  .hub-day.lv1 { background: #2b6d59; }
-  .hub-day.lv2 { background: #1f8c65; }
-  .hub-day.lv3 { background: #16a06f; }
-  .hub-day.lv4 { background: #11b57f; }
-  .quote-modal-grid { display: grid; grid-template-columns: 240px 1fr; gap: 12px; }
-  .quote-list { border: 1px solid var(--border); border-radius: 12px; padding: 8px; max-height: 320px; overflow: auto; }
-  .quote-item { width: 100%; text-align: left; background: rgba(255,255,255,.03); border: 1px solid transparent; border-radius: 10px; padding: 10px; margin-bottom: 8px; color: var(--text); cursor: pointer; }
-  .quote-item.active { border-color: rgba(200,169,110,.5); background: rgba(200,169,110,.12); }
-  .quote-item:last-child { margin-bottom: 0; }
-  #quote-text-input {
-    height: 140px;
-    min-height: 140px;
-    max-height: 140px;
-    resize: none !important;
-  }
-  .quote-item-text { font-size: 12px; font-style: italic; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .quote-item-author { font-size: 10px; color: var(--muted); font-family: var(--font-mono); }
-
-  /* TRACKER HUB FULLSCREEN (Livros / Mangás / Cinema) */
-  #tracker-hub {
-    position: fixed; inset: 0; z-index: 500;
-    background: #05040f;
-    overflow-y: auto; overflow-x: hidden;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(200,169,110,.12) transparent;
-    display: none;
-  }
-  #tracker-hub.open {
-    display: block;
-    animation: hubFadeIn .45s cubic-bezier(.16,1,.3,1) both;
-  }
-  #tracker-hub.open .hub-hero-img { transform: scale(1); }
-  #tracker-hub.open .hub-icon-bubble { animation: iconPop .6s .2s cubic-bezier(.34,1.56,.64,1) both; }
-  #collection-hub {
-    position: fixed; inset: 0; z-index: 510;
-    background: #05040f;
-    overflow-y: auto; overflow-x: hidden;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(200,169,110,.12) transparent;
-    display: none;
-  }
-  #collection-hub.open {
-    display: block;
-    animation: hubFadeIn .45s cubic-bezier(.16,1,.3,1) both;
-  }
-  #collection-hub.open .hub-hero-img { transform: scale(1); }
-  #collection-hub.open .hub-icon-bubble { animation: iconPop .6s .2s cubic-bezier(.34,1.56,.64,1) both; }
-
-  #th-drawer-bd {
-    position: fixed; inset: 0; z-index: 580;
-    background: rgba(2,1,12,.72);
-    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-    opacity: 0; visibility: hidden; pointer-events: none;
-    transition: opacity .32s ease, visibility .32s;
-  }
-  #th-drawer-bd.open { opacity:1; visibility:visible; pointer-events:all; }
-  #th-drawer {
-    position: fixed; top:0; right:0; bottom:0; z-index: 590;
-    width: 420px; max-width: 96vw;
-    background: linear-gradient(180deg, #0b0920 0%, #07061a 100%);
-    border-left: 1px solid rgba(255,255,255,.08);
-    box-shadow: -40px 0 120px rgba(0,0,0,.8), -1px 0 0 rgba(124,111,205,.12);
-    display: flex; flex-direction: column;
-    overflow: clip;
-    transform: translateX(110%);
-    transition: transform .42s cubic-bezier(.16,1,.3,1);
-  }
-  #th-drawer.open { transform: translateX(0); }
-
-  .th-stars { display: flex; gap: 4px; }
-  .th-star {
-    font-size: 22px; cursor: pointer; color: rgba(255,255,255,.15);
-    transition: color .15s, transform .15s;
-  }
-  .th-star.on { color: var(--accent1); }
-  .th-star:hover { transform: scale(1.2); }
-
-  .th-progress-section { display: flex; align-items: center; gap: 20px; }
-  .th-progress-info { flex: 1; }
-  .th-progress-label {
-    font-size: 12px; font-family: var(--font-mono); color: var(--muted);
-    margin-bottom: 8px; letter-spacing: .5px;
-  }
-  .th-progress-track {
-    height: 6px; background: rgba(255,255,255,.06); border-radius: 6px; overflow: hidden;
-  }
-  .th-progress-fill {
-    height: 100%; border-radius: 6px;
-    background: linear-gradient(90deg, var(--accent2), var(--accent1));
-    transition: width 1.2s cubic-bezier(.22,1,.36,1);
-  }
-  .th-progress-pct {
-    font-size: 11px; font-family: var(--font-mono); color: var(--muted); margin-top: 6px;
-  }
-
-  .th-obs-text {
-    font-size: 13px; line-height: 1.7; color: rgba(210,205,230,.8);
-    font-family: var(--font-ui); font-style: italic;
-  }
-  .th-obs-empty {
-    font-size: 12px; color: rgba(122,117,144,.4); font-family: var(--font-mono);
-    font-style: italic;
-  }
-
-  .th-fav-btn {
-    display: flex; align-items: center; gap: 8px;
-    padding: 10px 18px; border-radius: 12px; cursor: pointer;
-    background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08);
-    color: var(--muted); font-family: var(--font-mono); font-size: 11px;
-    font-weight: 700; letter-spacing: .8px; text-transform: uppercase;
-    transition: all .2s; width: 100%;
-  }
-  .th-fav-btn.is-fav {
-    background: rgba(224,107,139,.1); border-color: rgba(224,107,139,.3);
-    color: var(--accent4);
-  }
-  .th-fav-btn:hover { background: rgba(224,107,139,.15); border-color: rgba(224,107,139,.35); color: var(--accent4); }
-
-  @media (max-width: 960px) {
-    #th-drawer { width: 100vw; max-width: 100vw; }
-  }
-
-  /* ══════════════════════════════════════════
-     FOOTER
-  ══════════════════════════════════════════ */
-  .site-footer {
-    position: relative; z-index: 1; background: rgba(10,10,18,0.78);
-    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-    border-top: 1px solid var(--border); padding: 28px 40px;
-    display: flex; align-items: center; justify-content: space-between;
-    flex-wrap: wrap; gap: 14px;
-  }
-  .footer-brand { font-family: var(--font-display); font-size: 18px; color: var(--accent1); }
-  .footer-brand span { font-style: italic; }
-  .footer-tagline { font-family: var(--font-mono); font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-top: 3px; }
-  .footer-copy { font-family: var(--font-mono); font-size: 10px; color: var(--muted); letter-spacing: 1px; }
-
-  /* ══════════════════════════════════════════
-     RESPONSIVE
-  ══════════════════════════════════════════ */
-  @media (max-width: 1100px) { .tracker-grid { grid-template-columns: repeat(4,1fr); } }
-  @media (max-width: 860px)  { .tracker-grid { grid-template-columns: repeat(3,1fr); } }
-  @media (max-width: 640px)  { .tracker-grid { grid-template-columns: repeat(2,1fr); } }
-  @media (max-width: 1120px) {
-    .library-top { grid-template-columns:1fr; }
-    .mini-stats { grid-template-columns:repeat(2,1fr); }
-    .quote-text { font-size:34px; }
-    .quote-author { font-size:22px; }
-  }
-  @media (max-width: 900px) {
-    .site-header { padding: 0 20px; }
-    .header-nav { display: none; }
-    .hamburger { display: block; }
-    .grid-4 { grid-template-columns: repeat(2,1fr); }
-    .modal-body { grid-template-columns: 140px 1fr; }
-    .modal-hero-content { left: 168px; }
-    .modal-img-col { padding-left: 16px; }
-    .modal-fields-col { padding: 16px 16px 0 14px; }
-  }
-  @media (max-width: 560px) {
-    #lv-search, #ci-search, #mg-search { width: 100%; min-width: 0 !important; flex: 1 1 auto !important; }
-    .modal-body { grid-template-columns: 1fr; }
-    .modal-img-col { margin-top: 0; padding: 16px 16px 0; flex-direction: row; align-items: flex-start; }
-    .img-upload-zone { width: 100px; aspect-ratio: 2/3; flex-shrink: 0; }
-    .modal-hero-content { left: 16px; }
-    .hub-grid-4 { grid-template-columns: repeat(2,1fr); }
-    .hub-grid-2 { grid-template-columns: 1fr; }
-    .collection-hub-grid,
-    .collection-hub-metrics { grid-template-columns: 1fr; }
-    .quote-modal-grid { grid-template-columns: 1fr; }
-    .filter-layout { grid-template-columns: 1fr; }
-    .filter-col-right { border-left:0; padding-left:0; }
-  }
-</style>
+  <link rel="stylesheet" href="css/biblioteca-page.css">
 </head>
 <body data-page="livros">
 
@@ -2178,6 +969,7 @@
 <script src="js/firebase-config.js"></script>
   <script src="js/app-shell.js"></script>
 <script src="js/starfield.js"></script>
+<script src="js/biblioteca.js"></script>
 <script>
 // Dados do usuário escapados antes de entrar em innerHTML/atributos (SoterUtils vem do js/app-shell.js).
 const esc = value => window.SoterUtils.esc(value);
@@ -2196,142 +988,23 @@ const HUB_STATE = {
 let currentQuoteId = null;
 let currentGoalHubTracker = 'livros';
 
-function syncAppShellLibraryState() {
-  if (!window.SoterStorage || typeof window.SoterStorage.getState !== 'function') return;
-  try {
-    const appState = window.SoterStorage.getState();
-    if (!appState.data || typeof appState.data !== 'object') appState.data = {};
-    appState.data.trackerLivraria = Array.isArray(S.livros) ? S.livros : [];
-    appState.data.trackerCinema = Array.isArray(S.cinema) ? S.cinema : [];
-    appState.data.trackerMangas = Array.isArray(S.mangas) ? S.mangas : [];
-    appState.data.libraryHub = {
-      quotes: Array.isArray(HUB_STATE.quotes) ? HUB_STATE.quotes : [],
-      activeQuoteId: HUB_STATE.activeQuoteId || '',
-      goals: {
-        livros: +HUB_STATE.goals.livros || 24,
-        cinema: +HUB_STATE.goals.cinema || 24,
-        mangas: +HUB_STATE.goals.mangas || 24
-      }
-    };
-    syncAbandonNotificationsToHeader(appState);
-    window.SoterStorage.save(appState);
-    window.dispatchEvent(new CustomEvent('soter:notifications-changed'));
-  } catch (e) {}
-}
 
-function save() {
-  syncAppShellLibraryState();
-}
-function load() {
-  try {
-    if (window.SoterStorage && typeof window.SoterStorage.getState === 'function') {
-      const appState = window.SoterStorage.getState();
-      const data = appState && appState.data ? appState.data : {};
-      const hasCanonical = Array.isArray(data.trackerLivraria) || Array.isArray(data.trackerCinema) || Array.isArray(data.trackerMangas);
-      if (hasCanonical) {
-        S.livros = Array.isArray(data.trackerLivraria) ? data.trackerLivraria : [];
-        S.cinema = Array.isArray(data.trackerCinema) ? data.trackerCinema : [];
-        S.mangas = Array.isArray(data.trackerMangas) ? data.trackerMangas : [];
-        return;
-      }
-    }
-    S.livros = [];
-    S.cinema = [];
-    S.mangas = [];
-  } catch(e){}
-}
-function saveHubState() {
-  syncAppShellLibraryState();
-}
-function loadHubState() {
-  try {
-    if (window.SoterStorage && typeof window.SoterStorage.getState === 'function') {
-      const appState = window.SoterStorage.getState();
-      const hub = appState && appState.data && appState.data.libraryHub && typeof appState.data.libraryHub === 'object'
-        ? appState.data.libraryHub
-        : null;
-      if (hub) {
-        if (Array.isArray(hub.quotes) && hub.quotes.length) HUB_STATE.quotes = hub.quotes;
-        if (typeof hub.activeQuoteId === 'string') HUB_STATE.activeQuoteId = hub.activeQuoteId;
-        if (hub.goals && typeof hub.goals === 'object') {
-          HUB_STATE.goals.livros = +hub.goals.livros || HUB_STATE.goals.livros;
-          HUB_STATE.goals.cinema = +hub.goals.cinema || HUB_STATE.goals.cinema;
-          HUB_STATE.goals.mangas = +hub.goals.mangas || HUB_STATE.goals.mangas;
-        }
-        return;
-      }
-    }
-  } catch (e) {}
-}
 
-function reloadLibraryFromScopedState() {
-  loadHubState();
-  load();
-  if (!HUB_STATE.quotes.length) {
-    HUB_STATE.quotes = [{ id: 'q1', text: 'Ler é sonhar pela mão de outrem.', author: 'Fernando Pessoa' }];
-    HUB_STATE.activeQuoteId = 'q1';
-  }
-  if (!HUB_STATE.activeQuoteId || !HUB_STATE.quotes.some(q => q.id === HUB_STATE.activeQuoteId)) {
-    HUB_STATE.activeQuoteId = HUB_STATE.quotes[0].id;
-  }
-  renderSharedQuotePanels();
-  renderTracker('livros');
-  renderTracker('cinema');
-  renderTracker('mangas');
-}
-function fmtDate(ts) {
-  return ts ? new Date(ts).toLocaleDateString('pt-BR', { day:'2-digit', month:'short', year:'numeric' }) : 'Sem data';
-}
-function progressValueByTracker(tracker, item) {
-  const pct = TRACKER_CFG[tracker].progressFn(item);
-  if (pct !== null && !Number.isNaN(pct)) return Math.max(0, pct);
-  return item.status === 'concluido' ? 100 : 0;
-}
-function progressSnapshotValue(tracker, item) {
-  if (tracker === 'livros') return +item.atual || 0;
-  if (tracker === 'mangas') return +item.capAtual || 0;
-  if (tracker === 'cinema' && item.tipo === 'Série') return +item.episodioAtual || +item.temporadaAtual || 0;
-  return item.status === 'concluido' ? 1 : 0;
-}
-function progressSnapshotLabel(tracker, item, value) {
-  if (tracker === 'livros') return `Página ${value}`;
-  if (tracker === 'mangas') return `Capítulo ${value}`;
-  if (tracker === 'cinema' && item.tipo === 'Série') return `Episódio ${value}`;
-  return value > 0 ? 'Concluído' : 'Sem progresso';
-}
-function ensureProgressHistory(item) {
-  if (!Array.isArray(item.progressHistory)) item.progressHistory = [];
-  item.progressHistory = item.progressHistory.slice(0, 24);
-}
-function pushProgressHistory(tracker, item, at = Date.now()) {
-  ensureProgressHistory(item);
-  const value = progressSnapshotValue(tracker, item);
-  const last = item.progressHistory[0];
-  if (last && last.value === value) return;
-  item.progressHistory.unshift({ at, value, pct: progressValueByTracker(tracker, item), label: progressSnapshotLabel(tracker, item, value) });
-  item.progressHistory = item.progressHistory.slice(0, 18);
-}
-function ensureTimeline(item) {
-  if (!Array.isArray(item.timeline)) item.timeline = [];
-  item.timeline = item.timeline.slice(0, 24);
-}
-function pushTimeline(item, label, at = Date.now(), tone = 'default') {
-  ensureTimeline(item);
-  item.timeline.unshift({ at, label, tone });
-  item.timeline = item.timeline.slice(0, 18);
-}
-function getTimelineRows(item) {
-  const rows = Array.isArray(item.timeline) ? item.timeline.slice() : [];
-  if (item.createdAt) rows.push({ at:item.createdAt, label:'Adicionado ao tracker', tone:'default' });
-  if (item.finishedAt) rows.push({ at:item.finishedAt, label:'Marcado como concluído', tone:'done' });
-  const seen = new Set();
-  return rows.filter(r => {
-    const key = `${r.label}|${r.at}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  }).sort((a,b)=>b.at-a.at).slice(0,8);
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 const ABANDON_RULES = { watch: 2, risk: 14, critical: 30 };
 const ABANDON_NOTIF_PREFIX = 'tracker-abandon-';
 const ABANDON_TRACKER_LABELS = { livros: 'Livraria', cinema: 'Cinema', mangas: 'Mangás' };
@@ -2340,104 +1013,13 @@ const ABANDON_ACTIVE_STATUSES = {
   cinema: new Set(['assistindo', 'reassistindo', 'pausado']),
   mangas: new Set(['lendo', 'relendo', 'pausado'])
 };
-function getItemLastTouch(item) {
-  const stamps = [+item.updatedAt || 0, +item.createdAt || 0, +item.finishedAt || 0];
-  if (Array.isArray(item.timeline)) item.timeline.forEach(row => stamps.push(+row.at || 0));
-  if (Array.isArray(item.progressHistory)) item.progressHistory.forEach(row => stamps.push(+row.at || 0));
-  return Math.max.apply(null, stamps.concat(0));
-}
-function formatElapsedDays(days) {
-  if (days <= 0) return 'hoje';
-  if (days === 1) return '1 dia';
-  return `${days} dias`;
-}
-function getAbandonState(tracker, item) {
-  const lastTouch = getItemLastTouch(item);
-  const days = lastTouch ? Math.max(0, Math.floor((Date.now() - lastTouch) / 86400000)) : 0;
-  const isActive = !!(ABANDON_ACTIVE_STATUSES[tracker] && ABANDON_ACTIVE_STATUSES[tracker].has(item.status));
-  if (!isActive) {
-    return {
-      active: false,
-      key: 'off',
-      label: 'Fora da regra',
-      days,
-      daysText: 'Monitoramento inativo',
-      summary: 'Esse status não entra no ante-abandono.',
-      detail: lastTouch ? `Última atualização em ${fmtDate(lastTouch)}.` : 'Sem histórico de atualização ainda.',
-      lastTouch,
-      notify: false
-    };
-  }
-  let key = 'fresh';
-  let label = 'Seguro';
-  let detail = 'Ritmo saudável por enquanto.';
-  if (days >= ABANDON_RULES.critical) {
-    key = 'critical';
-    label = 'Crítico';
-    detail = 'Entrou no alerta do header por muito tempo sem avanço.';
-  } else if (days >= ABANDON_RULES.risk) {
-    key = 'risk';
-    label = 'Risco';
-    detail = 'Pede retomada para não virar abandono.';
-  } else if (days >= ABANDON_RULES.watch) {
-    key = 'watch';
-    label = 'Atenção';
-    detail = 'Começa a pedir revisão de ritmo.';
-  }
-  return {
-    active: true,
-    key,
-    label,
-    days,
-    daysText: `Sem atualização há ${formatElapsedDays(days)}.`,
-    summary: `Atualizado há ${formatElapsedDays(days)}.`,
-    detail: lastTouch ? `${detail} Última atualização em ${fmtDate(lastTouch)}.` : detail,
-    lastTouch,
-    notify: days >= ABANDON_RULES.watch
-  };
-}
-function buildAbandonNotification(tracker, item, state) {
-  return {
-    id: `${ABANDON_NOTIF_PREFIX}${tracker}-${item.id}`,
-    text: `${ABANDON_TRACKER_LABELS[tracker]}: "${item.titulo}" está há ${state.days} dias sem atualização.`
-  };
-}
-function syncAbandonNotificationsToHeader(appState) {
-  if (!appState || typeof appState !== 'object') return appState;
-  if (!appState.data || typeof appState.data !== 'object') appState.data = {};
-  const current = Array.isArray(appState.data.notifications) ? appState.data.notifications : [];
-  const foreign = current.filter(n => !String((n && n.id) || '').startsWith(ABANDON_NOTIF_PREFIX));
-  const generated = [];
-  ['livros', 'cinema', 'mangas'].forEach(tracker => {
-    (S[tracker] || []).forEach(item => {
-      const state = getAbandonState(tracker, item);
-      if (state.notify) generated.push({ ...buildAbandonNotification(tracker, item, state), days: state.days });
-    });
-  });
-  generated.sort((a, b) => b.days - a.days || String(a.text).localeCompare(String(b.text), 'pt-BR'));
-  appState.data.notifications = foreign.concat(generated.map(({ days, ...rest }) => rest));
-  return appState;
-}
-function renderHubAbandonment(tracker, item) {
-  const card = document.getElementById('th-abandon-card');
-  const badge = document.getElementById('th-abandon-badge');
-  const days = document.getElementById('th-abandon-days');
-  const summary = document.getElementById('th-abandon-text');
-  const detail = document.getElementById('th-abandon-sub');
-  if (!card || !badge || !days || !summary || !detail) return;
-  const state = getAbandonState(tracker, item);
-  card.className = `hub-section hub-abandon-card is-${state.key}`;
-  badge.textContent = state.label;
-  days.textContent = state.daysText;
-  summary.textContent = state.summary;
-  detail.textContent = state.detail;
-}
-function getBaseTitle(title) {
-  return normalizeTitle(title)
-    .replace(/\b(?:part|parte|vol\.?|volume|livro|book|tomo|temporada|season|cap\.?|capitulo|capítulo|episodio|episódio|ep)\s*[ivxlcdm\d]+\b.*$/i,'')
-    .replace(/\b[ivxlcdm\d]+\b$/i,'')
-    .trim();
-}
+
+
+
+
+
+
+
 function getSagaInfo(item, tracker) {
   const explicitName = String(item && item.sagaNome || '').trim();
   const explicitVolume = +(item && item.sagaVolume || 0) || 0;
@@ -2513,44 +1095,14 @@ function getCollectionGroups(tracker, items) {
   byAuthor.forEach((entry, key) => { if (entry.items.length > 1) groups.push({ id:'author-'+key, title:entry.label, type:'Autor', items:entry.items }); });
   return groups.sort((a,b)=>b.items.length-a.items.length || a.title.localeCompare(b.title,'pt-BR'));
 }
-function getActiveQuote() {
-  if (!HUB_STATE.quotes.length) return { text: 'Sem citação cadastrada.', author: 'Sol de Sóter' };
-  const found = HUB_STATE.quotes.find(q => q.id === HUB_STATE.activeQuoteId);
-  return found || HUB_STATE.quotes[0];
-}
-function renderSharedQuotePanels() {
-  const quote = getActiveQuote();
-  document.querySelectorAll('[data-quote-panel]').forEach(panel => {
-    const textEl = panel.querySelector('.quote-text');
-    const authorEl = panel.querySelector('.quote-author');
-    if (textEl) textEl.textContent = '"' + (quote.text || '') + '"';
-    if (authorEl) authorEl.textContent = '- ' + (quote.author || 'Autor desconhecido');
-  });
-}
 
 
-// ─── NAV ─────────────────────────────────────────────────────────────────
-function goTo(id) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.getElementById('page-' + id).classList.add('active');
-  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-  const tab = document.getElementById('tab-' + id);
-  if (tab) tab.classList.add('active');
-}
 
-function toggleMobileNav() {
-  const nav = document.getElementById('mobile-nav');
-  const overlay = document.getElementById('overlay');
-  const btn = document.getElementById('hamburger-btn');
-  const open = nav.classList.toggle('open');
-  overlay.classList.toggle('open', open);
-  btn.textContent = open ? '✕' : '☰';
-}
-function closeMobileNav() {
-  document.getElementById('mobile-nav').classList.remove('open');
-  document.getElementById('overlay').classList.remove('open');
-  document.getElementById('hamburger-btn').textContent = '☰';
-}
+
+
+
+
+
 
 // ─── TRACKER CONFIG ───────────────────────────────────────────────────────
 const TRACKER_CFG = {
@@ -2706,138 +1258,24 @@ function removeDrawerAdaptationLink(tracker, id) {
   renderDrawerAdaptationList();
 }
 
-function updateGoalDisplay(prefix, done, target) {
-  const doneEl = document.getElementById(prefix + '-goal-done');
-  const targetEl = document.getElementById(prefix + '-goal-target');
-  const fillEl = document.getElementById(prefix + '-goal-fill');
-  const pctEl = document.getElementById(prefix + '-goal-pct');
-  const yearEl = document.getElementById(prefix + '-goal-year');
-  if (yearEl) yearEl.textContent = new Date().getFullYear();
-  if (!doneEl || !targetEl || !fillEl || !pctEl) return;
-  const safeTarget = Math.max(1, +target || 1);
-  const safeDone = Math.max(0, +done || 0);
-  const pct = Math.min(100, Math.round((safeDone / safeTarget) * 100));
-  doneEl.textContent = String(safeDone);
-  targetEl.textContent = String(safeTarget);
-  fillEl.style.width = pct + '%';
-  pctEl.textContent = pct + '% concluído';
-}
 
-function openQuoteModal() {
-  currentQuoteId = getActiveQuote().id || (HUB_STATE.quotes[0] && HUB_STATE.quotes[0].id) || null;
-  renderQuoteModalList();
-  fillQuoteEditor();
-  document.getElementById('quote-hub').classList.add('open');
-}
-function closeQuoteModal() { document.getElementById('quote-hub').classList.remove('open'); }
-function closeQuoteHubOutside(event) { if (event.target.id === 'quote-hub') closeQuoteModal(); }
-function renderQuoteModalList() {
-  const list = document.getElementById('quote-list');
-  if (!list) return;
-  list.innerHTML = HUB_STATE.quotes.map(q => `
-    <button type="button" class="quote-item ${q.id===currentQuoteId?'active':''}" onclick="selectQuote(${escJs(q.id)})">
-      <div class="quote-item-text">"${esc(q.text||'')}"</div>
-      <div class="quote-item-author">- ${esc(q.author||'Autor desconhecido')}</div>
-    </button>
-  `).join('');
-}
-function fillQuoteEditor() {
-  const quote = HUB_STATE.quotes.find(q => q.id === currentQuoteId) || HUB_STATE.quotes[0];
-  if (!quote) return;
-  currentQuoteId = quote.id;
-  const textEl = document.getElementById('quote-text-input');
-  const authorEl = document.getElementById('quote-author-input');
-  if (textEl) textEl.value = quote.text || '';
-  if (authorEl) authorEl.value = quote.author || '';
-  renderQuoteModalList();
-}
-function selectQuote(id) { currentQuoteId = id; fillQuoteEditor(); }
-function addNewQuote() {
-  currentQuoteId = 'q' + Date.now();
-  const textEl = document.getElementById('quote-text-input');
-  const authorEl = document.getElementById('quote-author-input');
-  if (textEl) textEl.value = '';
-  if (authorEl) authorEl.value = '';
-  renderQuoteModalList();
-}
-function saveQuoteDraft() {
-  const text = (document.getElementById('quote-text-input') || { value: '' }).value.trim();
-  const author = (document.getElementById('quote-author-input') || { value: '' }).value.trim();
-  if (!text) return;
-  const quote = { id: currentQuoteId || ('q' + Date.now()), text, author: author || 'Autor desconhecido' };
-  const idx = HUB_STATE.quotes.findIndex(q => q.id === quote.id);
-  if (idx >= 0) HUB_STATE.quotes[idx] = quote;
-  else HUB_STATE.quotes.unshift(quote);
-  HUB_STATE.activeQuoteId = quote.id;
-  currentQuoteId = quote.id;
-  saveHubState();
-  renderQuoteModalList();
-  renderSharedQuotePanels();
-}
-function deleteCurrentQuote() {
-  if (!currentQuoteId || HUB_STATE.quotes.length <= 1) return;
-  HUB_STATE.quotes = HUB_STATE.quotes.filter(q => q.id !== currentQuoteId);
-  HUB_STATE.activeQuoteId = HUB_STATE.quotes[0].id;
-  currentQuoteId = HUB_STATE.activeQuoteId;
-  saveHubState();
-  renderQuoteModalList();
-  fillQuoteEditor();
-  renderSharedQuotePanels();
-}
 
-function openGoalHub(tracker) {
-  currentGoalHubTracker = tracker;
-  renderGoalHub(tracker);
-  document.getElementById('goal-hub').classList.add('open');
-}
-function closeGoalHub() { document.getElementById('goal-hub').classList.remove('open'); }
-function closeGoalHubOutside(event) { if (event.target.id === 'goal-hub') closeGoalHub(); }
-function saveHubGoalTarget() {
-  const inp = document.getElementById('hub-goal-target-input');
-  const val = Math.max(1, +((inp && inp.value) || 0) || 1);
-  HUB_STATE.goals[currentGoalHubTracker] = val;
-  saveHubState();
-  renderTracker(currentGoalHubTracker);
-  renderGoalHub(currentGoalHubTracker);
-}
-function getYearDailyCounts(items, year) {
-  const out = {};
-  items.forEach(item => {
-    const ts = +item.finishedAt || +item.updatedAt || +item.createdAt || 0;
-    if (!ts) return;
-    const dt = new Date(ts);
-    if (dt.getFullYear() !== year) return;
-    const key = SoterUtils.localDateKey(dt);
-    out[key] = (out[key] || 0) + 1;
-  });
-  return out;
-}
-function renderHeatmap(containerId, dailyCounts, year) {
-  const container = document.getElementById(containerId);
-  if (!container) return;
-  const jan1 = new Date(year, 0, 1);
-  const dec31 = new Date(year, 11, 31);
-  const totalDays = Math.floor((dec31 - jan1) / 86400000) + 1;
-  const cells = [];
-  for (let i = 0; i < totalDays; i += 1) {
-    const d = new Date(year, 0, 1 + i);
-    const key = SoterUtils.localDateKey(d);
-    const v = dailyCounts[key] || 0;
-    const cls = v >= 5 ? 'lv4' : v >= 3 ? 'lv3' : v >= 2 ? 'lv2' : v >= 1 ? 'lv1' : '';
-    cells.push(`<div class="hub-day ${cls}" title="${key}: ${v}"></div>`);
-  }
-  const startOffset = jan1.getDay();
-  let html = '';
-  for (let w = 0; w < 53; w += 1) {
-    html += '<div class="hub-week">';
-    for (let d = 0; d < 7; d += 1) {
-      const idx = (w * 7 + d) - startOffset;
-      html += idx >= 0 && idx < cells.length ? cells[idx] : '<div class="hub-day"></div>';
-    }
-    html += '</div>';
-  }
-  container.innerHTML = html;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 function getStreakInfoFromDays(days) {
   const ordered = Array.from(new Set((days || []).filter(Boolean))).sort();
   if (!ordered.length) return { streak: 0, lastActiveDay: '', todayDone: false };
@@ -2929,31 +1367,8 @@ function renderGoalHubStreak(tracker, items) {
   document.getElementById('hub-streak-fill').style.width = pct + '%';
   document.getElementById('hub-streak-meta').textContent = info.streak + '/30 para liberar Sábio';
 }
-function renderHubBars(containerId, rows) {
-  const wrap = document.getElementById(containerId);
-  if (!wrap) return;
-  if (!rows.length) {
-    wrap.innerHTML = '<div class="s">Sem dados suficientes ainda.</div>';
-    return;
-  }
-  const max = rows[0].count || 1;
-  wrap.innerHTML = rows.slice(0, 5).map(row => {
-    const pct = Math.max(8, Math.round((row.count / max) * 100));
-    return `<div class="hub-bar"><div>${esc(row.label)}</div><div class="hub-bar-track"><div class="hub-bar-fill" style="width:${pct}%"></div></div><div>${row.count}</div></div>`;
-  }).join('');
-}
-function renderGoalRecommendation(tracker) {
-  const el = document.getElementById('hub-recommendation');
-  if (!el) return;
-  const items = (S[tracker] || []).filter(item => item.status !== 'concluido');
-  const rec = items.sort((a,b) => progressValueByTracker(tracker, b) - progressValueByTracker(tracker, a) || (+b.nota||0) - (+a.nota||0))[0];
-  if (!rec) {
-    el.innerHTML = '<div class="tracker-count">Nada pendente por aqui.</div>';
-    return;
-  }
-  const meta = [rec.autor, rec.genero, TRACKER_CFG[tracker].statusLabels[rec.status] || rec.status].filter(Boolean).join(' • ');
-  el.innerHTML = `<div style="display:grid;gap:8px"><div style="font-size:16px;font-weight:700">${esc(rec.titulo)}</div><div class="tracker-count">${esc(meta || 'Sem metadados')}</div><div style="font-size:12px;color:var(--text)">Maior potencial agora por progresso e prioridade atual.</div><button class="btn btn-primary" type="button" onclick="openModal('${tracker}',${escJs(rec.id)})">Abrir item</button></div>`;
-}
+
+
 function renderGoalHub(tracker) {
   const year = new Date().getFullYear();
   const cfgTitle = tracker === 'livros' ? 'Meta de Leitura' : (tracker === 'cinema' ? 'Meta de Cinema' : 'Meta de Mangás');
@@ -3027,137 +1442,14 @@ function renderGoalHub(tracker) {
 // ─── MODAL STATE ──────────────────────────────────────────────────────────
 let modalTracker = null, modalEditId = null, modalStarVal = 0, modalImgData = '';
 
-// ─── MODAL UI HELPERS ─────────────────────────────────────────────────────
-function updateModalHero() {
-  const t = (document.getElementById('m-titulo')||{value:''}).value;
-  const el = document.getElementById('modal-hero-title');
-  const pretitleEl = document.getElementById('modal-pretitle');
-  if (el) el.textContent = t;
-  if (pretitleEl) pretitleEl.textContent = t;
-}
-function updateModalHeroImage(src) {
-  const el = document.getElementById('modal-hero-blur');
-  if (!el) return;
-  const safeSrc = window.SoterUtils.safeUrl(src);
-  el.style.backgroundImage = safeSrc ? `url(${JSON.stringify(safeSrc)})` : '';
-  el.style.opacity = safeSrc ? '1' : '0';
-}
-function updateModalStatusPill() {
-  if (!modalTracker) return;
-  const cfg = TRACKER_CFG[modalTracker];
-  const sel = document.getElementById('m-status');
-  const pill = document.getElementById('modal-status-pill');
-  const row  = document.getElementById('modal-status-row');
-  if (!sel||!pill||!row) return;
-  const color = cfg.statusColors[sel.value]||'#7a7590';
-  pill.textContent = cfg.statusLabels[sel.value]||sel.value;
-  pill.style.color = color;
-  pill.style.borderColor = color+'44';
-  pill.style.background  = color+'18';
-  row.style.display = 'flex';
-}
-function getAutoStatusForItem(tracker, item, fallbackStatus = 'quero') {
-  const stickyStatuses = new Set(['pausado','abandonado','relendo','reassistindo']);
-  if (stickyStatuses.has(fallbackStatus)) return fallbackStatus;
-  if (tracker === 'livros') {
-    const total = +item.paginas || 0;
-    const atual = +item.atual || 0;
-    if (atual <= 0) return 'quero';
-    if (total > 0 && atual >= total) return 'concluido';
-    return 'lendo';
-  }
-  if (tracker === 'mangas') {
-    const total = +item.capTotal || 0;
-    const atual = +item.capAtual || 0;
-    if (atual <= 0) return 'quero';
-    if (total > 0 && atual >= total) return 'concluido';
-    return 'lendo';
-  }
-  if (tracker === 'cinema') {
-    const tipo = item.tipo || 'Filme';
-    if (tipo === 'Série') {
-      const epTotal = +item.episodioTotal || 0;
-      const epAtual = +item.episodioAtual || 0;
-      const tempTotal = +item.temporadaTotal || 0;
-      const tempAtual = +item.temporadaAtual || 0;
-      if (epTotal > 0) {
-        if (epAtual <= 0) return 'quero';
-        if (epAtual >= epTotal) return 'concluido';
-        return 'assistindo';
-      }
-      if (tempTotal > 0) {
-        if (tempAtual <= 0) return 'quero';
-        if (tempAtual >= tempTotal) return 'concluido';
-        return 'assistindo';
-      }
-      return 'quero';
-    }
-    return fallbackStatus === 'concluido' ? 'concluido' : 'quero';
-  }
-  return fallbackStatus;
-}
-function applyAutoStatusToModal() {
-  if (!modalTracker) return;
-  const statusEl = document.getElementById('m-status');
-  if (!statusEl) return;
-  const draft = {
-    paginas: +((document.getElementById('m-paginas') || { value: 0 }).value || 0),
-    atual: +((document.getElementById('m-atual-pag') || { value: 0 }).value || 0),
-    capTotal: +((document.getElementById('m-cap-total') || { value: 0 }).value || 0),
-    capAtual: +((document.getElementById('m-cap-atual') || { value: 0 }).value || 0),
-    tipo: (document.getElementById('m-tipo-cinema') || { value: 'Filme' }).value,
-    episodioTotal: +((document.getElementById('m-ep-total') || { value: 0 }).value || 0),
-    episodioAtual: +((document.getElementById('m-ep-atual') || { value: 0 }).value || 0),
-    temporadaTotal: +((document.getElementById('m-temp-total') || { value: 0 }).value || 0),
-    temporadaAtual: +((document.getElementById('m-temp-atual') || { value: 0 }).value || 0),
-  };
-  const auto = getAutoStatusForItem(modalTracker, draft, statusEl.value);
-  statusEl.value = auto;
-  updateModalStatusPill();
-}
-function updateModalProgress() {
-  // Livros
-  const pags = +(document.getElementById('m-paginas')||{value:0}).value||0;
-  const atual= +(document.getElementById('m-atual-pag')||{value:0}).value||0;
-  const wrap=document.getElementById('modal-progress-wrap'), fill=document.getElementById('modal-progress-fill'), pct=document.getElementById('modal-progress-pct');
-  if (wrap&&fill&&pct) { if(pags>0){const p=Math.min(100,Math.round(atual/pags*100));wrap.style.display='';fill.style.width=p+'%';pct.textContent=p+'% · pág. '+atual+'/'+pags;}else{wrap.style.display='none';} }
-  // Mangás
-  const capT=+(document.getElementById('m-cap-total')||{value:0}).value||0;
-  const capA=+(document.getElementById('m-cap-atual')||{value:0}).value||0;
-  const wM=document.getElementById('modal-progress-wrap-mg'),fM=document.getElementById('modal-progress-fill-mg'),pM=document.getElementById('modal-progress-pct-mg');
-  if(wM&&fM&&pM){if(capT>0){const p=Math.min(100,Math.round(capA/capT*100));wM.style.display='';fM.style.width=p+'%';pM.textContent=p+'% · cap. '+capA+'/'+capT;}else{wM.style.display='none';}}
-  // Cinema (Séries)
-  const tipo = (document.getElementById('m-tipo-cinema')||{value:''}).value;
-  const tempA=+(document.getElementById('m-temp-atual')||{value:0}).value||0;
-  const tempT=+(document.getElementById('m-temp-total')||{value:0}).value||0;
-  const epA=+(document.getElementById('m-ep-atual')||{value:0}).value||0;
-  const epT=+(document.getElementById('m-ep-total')||{value:0}).value||0;
-  const wC=document.getElementById('modal-progress-wrap-ci'),fC=document.getElementById('modal-progress-fill-ci'),pC=document.getElementById('modal-progress-pct-ci');
-  if(wC&&fC&&pC){
-    if(modalTracker==='cinema' && tipo==='Série' && (epT>0 || tempT>0)){
-      const p = epT>0 ? Math.min(100,Math.round(epA/epT*100)) : Math.min(100,Math.round(tempA/tempT*100));
-      wC.style.display='';
-      fC.style.width=p+'%';
-      if(epT>0){ pC.textContent=p+'% · EP '+epA+'/'+epT; }
-      else { pC.textContent=p+'% · T '+tempA+'/'+tempT; }
-    }else{
-      wC.style.display='none';
-    }
-  }
-  applyAutoStatusToModal();
-}
-function updateCinemaTypeFields() {
-  const wrap = document.getElementById('m-cinema-serie-extra');
-  const tipo = document.getElementById('m-tipo-cinema');
-  if (!wrap || !tipo) return;
-  const showSerie = modalTracker === 'cinema' && tipo.value === 'Série';
-  wrap.style.display = showSerie ? '' : 'none';
-  updateModalProgress();
-}
-function updateFavToggle(cb) {
-  const icon = cb.nextElementSibling;
-  if (icon) icon.textContent = cb.checked ? '❤️' : '🤍';
-}
+
+
+
+
+
+
+
+
 function toggleModalSagaFields() {
   const enabled = !!document.getElementById('m-saga-enabled')?.checked;
   const fields = document.getElementById('m-saga-fields');
@@ -3314,54 +1606,14 @@ function openModal(tracker, editId = null) {
   setTimeout(() => document.getElementById('m-titulo').focus(), 100);
 }
 
-function closeModal() { document.getElementById('tracker-modal').classList.remove('open'); }
-function closeModalOutside(e) { if(e.target.id==='tracker-modal') closeModal(); }
 
-// ─── IMAGE UPLOAD ─────────────────────────────────────────────────────────
-function handleImgUpload(e) {
-  const file = e.target.files[0]; if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const maxW=300, maxH=450; let w=img.width, h=img.height;
-      if(w/h>maxW/maxH){w=maxW;h=Math.round(img.height*maxW/img.width);}else{h=maxH;w=Math.round(img.width*maxH/img.height);}
-      canvas.width=w; canvas.height=h; canvas.getContext('2d').drawImage(img,0,0,w,h);
-      modalImgData = canvas.toDataURL('image/jpeg', 0.82);
-      document.getElementById('modal-preview').src = modalImgData;
-      document.getElementById('img-zone').classList.add('has-img');
-      updateModalHeroImage(modalImgData);
-    };
-    img.src = ev.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-function applyImgUrl() {
-  const input = document.getElementById('m-img-url');
-  if (!input) return;
-  const raw = input.value.trim();
-  if (!raw) return;
-  const url = window.SoterUtils.safeUrl(raw);
-  if (!url) { alert('URL de imagem inválida. Use um endereço http:// ou https://.'); return; }
-  modalImgData = url;
-  document.getElementById('modal-preview').src = url;
-  document.getElementById('img-zone').classList.add('has-img');
-  updateModalHeroImage(url);
-}
 
-// ─── STARS ────────────────────────────────────────────────────────────────
-function setModalStar(n) {
-  modalStarVal = n;
-  document.querySelectorAll('.mstar').forEach(b => b.classList.toggle('on', +b.dataset.v <= n));
-  const labels = ['','★ Fraco','★★ Regular','★★★ Bom','★★★★ Ótimo','★★★★★ Incrível!'];
-  document.getElementById('modal-star-label').textContent = labels[n]||'Sem nota';
-}
-function resetModalStars() {
-  modalStarVal = 0;
-  document.querySelectorAll('.mstar').forEach(b => b.classList.remove('on'));
-  document.getElementById('modal-star-label').textContent = 'Sem nota';
-}
+
+
+
+
+
+
 
 // ─── SAVE / DELETE ────────────────────────────────────────────────────────
 function saveModalItem() {
@@ -3424,12 +1676,7 @@ function saveModalItem() {
   save(); renderTracker(modalTracker); closeModal();
 }
 
-function modalDeleteItem() {
-  if (!modalTracker || modalEditId === null || modalEditId === undefined) return;
-  if (!confirm('Excluir este item?')) return;
-  S[modalTracker] = S[modalTracker].filter(x=>x.id!==modalEditId);
-  save(); renderTracker(modalTracker); closeModal();
-}
+
 
 // TRACKER HUB FULLSCREEN — Livros · Mangás · Cinema
 let thTracker  = null;
@@ -3439,44 +1686,11 @@ let thImgData  = '';
 let quickActionState = null;
 const TH_STAR_LABELS = ['','Ruim','Regular','Bom','Ótimo','Imperdível'];
 
-function thOpen(tracker, itemId) {
-  thTracker = tracker;
-  thItemId  = itemId;
-  const item = (S[tracker] || []).find(x => x.id === itemId);
-  if (!item) return;
-  const cfg  = TRACKER_CFG[tracker];
-  const hub = document.getElementById('tracker-hub');
-  hub.scrollTop = 0;
-  hub.classList.add('open');
-  document.body.style.overflow = 'hidden';
-  const header = document.querySelector('.site-header');
-  if (header) header.style.zIndex = '1';
-  thRender(item, cfg);
-}
 
-function thClose() {
-  document.getElementById('tracker-hub').classList.remove('open');
-  document.body.style.overflow = '';
-  const header = document.querySelector('.site-header');
-  if (header) header.style.zIndex = '';
-  thTracker = null; thItemId = null;
-}
-function renderHubTimeline(item) {
-  const el = document.getElementById('th-timeline');
-  if (!el) return;
-  const rows = getTimelineRows(item);
-  el.innerHTML = rows.length
-    ? rows.map(row => `<div class="hub-timeline-row"><div class="hub-timeline-dot"></div><div class="hub-timeline-label">${esc(row.label)}</div><div class="hub-timeline-date">${fmtDate(row.at)}</div></div>`).join('')
-    : '<div class="th-obs-empty">Sem eventos registrados.</div>';
-}
-function renderHubHistory(tracker, item) {
-  const el = document.getElementById('th-history');
-  if (!el) return;
-  const rows = Array.isArray(item.progressHistory) ? item.progressHistory.slice(0, 6) : [];
-  el.innerHTML = rows.length
-    ? rows.map(row => `<div class="hub-history-row"><div class="hub-history-dot"></div><div class="hub-history-label">${esc(row.label)}</div><div class="hub-history-value">${row.pct ?? 0}%</div><div class="hub-history-date">${fmtDate(row.at)}</div></div>`).join('')
-    : '<div class="th-obs-empty">Sem histórico suficiente ainda.</div>';
-}
+
+
+
+
 function renderHubAdaptations(tracker, item) {
   const section = document.getElementById('th-adapt-section');
   const grid = document.getElementById('th-adapt-grid');
@@ -3713,47 +1927,15 @@ function thDrawerOpen() {
   setTimeout(() => document.getElementById('th-titulo').focus(), 180);
 }
 
-function thDrawerClose() {
-  document.getElementById('th-drawer').classList.remove('open');
-  document.getElementById('th-drawer-bd').classList.remove('open');
-}
 
-function thDrawerHandleImg(e) {
-  const file = e.target.files[0]; if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    const img = new Image();
-    img.onload = () => {
-      const MAX = 900;
-      const scale = Math.min(1, MAX / Math.max(img.width, img.height));
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.round(img.width * scale);
-      canvas.height = Math.round(img.height * scale);
-      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-      thImgData = canvas.toDataURL('image/jpeg', 0.82);
-      document.getElementById('th-cover-img').src = thImgData;
-      document.getElementById('th-cover-zone').classList.add('hci');
-    };
-    img.src = ev.target.result;
-  };
-  reader.readAsDataURL(file);
-}
 
-function thDrawerRemoveImg() {
-  thImgData = '';
-  document.getElementById('th-cover-img').src = '';
-  document.getElementById('th-cover-zone').classList.remove('hci');
-  document.getElementById('th-img-input').value = '';
-}
 
-function thSetStar(n) {
-  thStarVal = thStarVal === n ? 0 : n;
-  thUpdateStars(thStarVal);
-}
 
-function thUpdateStars(n) {
-  document.querySelectorAll('#th-stars-edit .th-star').forEach((el, i) => el.classList.toggle('on', i < n));
-}
+
+
+
+
+
 
 function thDrawerSalvar() {
   const titulo = document.getElementById('th-titulo').value.trim();
@@ -3795,28 +1977,11 @@ function thDrawerSalvar() {
   thRender(updated, TRACKER_CFG[thTracker]);
 }
 
-function thDeleteItem() {
-  if (!thTracker || !thItemId) return;
-  const item = (S[thTracker]||[]).find(x=>x.id===thItemId);
-  const nome = item ? item.titulo : 'este item';
-  if (!confirm('Excluir "' + nome + '"? Esta ação não pode ser desfeita.')) return;
-  S[thTracker] = S[thTracker].filter(x => x.id !== thItemId);
-  save();
-  renderTracker(thTracker);
-  thDrawerClose();
-  thClose();
-}
 
-function getItemByTrackerId(tracker, itemId) {
-  return (S[tracker] || []).find(item => item.id === itemId) || null;
-}
 
-function getQuickActionPrimaryLabel(tracker, item) {
-  if (tracker === 'livros') return 'Atualizar leitura';
-  if (tracker === 'mangas') return 'Atualizar capítulos';
-  if (tracker === 'cinema' && item && item.tipo === 'Série') return 'Atualizar progresso';
-  return 'Editar item';
-}
+
+
+
 
 function focusQuickActionField(tracker) {
   if (tracker === 'livros' || tracker === 'mangas') {
@@ -3826,37 +1991,9 @@ function focusQuickActionField(tracker) {
   document.getElementById('th-titulo')?.focus();
 }
 
-function closeTrackerQuickActions() {
-  document.getElementById('tracker-quick-actions')?.classList.remove('open');
-  quickActionState = null;
-}
 
-function openTrackerQuickActions(event, tracker, itemId) {
-  event.preventDefault();
-  event.stopPropagation();
-  const item = getItemByTrackerId(tracker, itemId);
-  const menu = document.getElementById('tracker-quick-actions');
-  const title = document.getElementById('quick-actions-title');
-  const list = document.getElementById('quick-actions-list');
-  if (!item || !menu || !title || !list) return false;
-  quickActionState = { tracker, itemId };
-  title.textContent = item.titulo || 'Item';
-  list.innerHTML = [
-    `<button type="button" class="quick-action-btn" onclick="quickActionOpenEditor()">${getQuickActionPrimaryLabel(tracker, item)}</button>`,
-    `<button type="button" class="quick-action-btn" onclick="quickActionEditItem()">Editar</button>`,
-    `<button type="button" class="quick-action-btn" onclick="quickActionToggleFavorite()">${item.fav ? 'Remover dos favoritos' : 'Favoritar'}</button>`,
-    `<button type="button" class="quick-action-btn" onclick="quickActionMarkDone()">Concluir</button>`,
-    `<button type="button" class="quick-action-btn danger" onclick="quickActionDeleteItem()">Excluir</button>`
-  ].join('');
-  menu.classList.add('open');
-  const padding = 12;
-  const rect = menu.getBoundingClientRect();
-  const left = Math.min(event.clientX, window.innerWidth - rect.width - padding);
-  const top = Math.min(event.clientY, window.innerHeight - rect.height - padding);
-  menu.style.left = Math.max(padding, left) + 'px';
-  menu.style.top = Math.max(padding, top) + 'px';
-  return false;
-}
+
+
 
 function quickActionOpenEditor() {
   if (!quickActionState) return;
@@ -3867,65 +2004,13 @@ function quickActionOpenEditor() {
   setTimeout(() => focusQuickActionField(tracker), 220);
 }
 
-function quickActionEditItem() {
-  if (!quickActionState) return;
-  const { tracker, itemId } = quickActionState;
-  closeTrackerQuickActions();
-  thOpen(tracker, itemId);
-  thDrawerOpen();
-}
 
-function quickActionToggleFavorite() {
-  if (!quickActionState) return;
-  const { tracker, itemId } = quickActionState;
-  const item = getItemByTrackerId(tracker, itemId);
-  if (!item) return;
-  item.fav = !item.fav;
-  pushTimeline(item, item.fav ? 'Adicionado aos favoritos' : 'Removido dos favoritos', Date.now(), item.fav ? 'fav' : 'default');
-  save();
-  renderTracker(tracker);
-  if (thTracker === tracker && thItemId === itemId) thRender(item, TRACKER_CFG[tracker]);
-  closeTrackerQuickActions();
-}
 
-function quickActionMarkDone() {
-  if (!quickActionState) return;
-  const { tracker, itemId } = quickActionState;
-  const item = getItemByTrackerId(tracker, itemId);
-  if (!item) return;
-  const now = Date.now();
-  if (tracker === 'livros' && (+item.paginas || 0) > 0) item.atual = +item.paginas || 0;
-  if (tracker === 'mangas' && (+item.capTotal || 0) > 0) item.capAtual = +item.capTotal || 0;
-  if (tracker === 'cinema' && item.tipo === 'Série') {
-    if ((+item.temporadaTotal || 0) > 0) item.temporadaAtual = +item.temporadaTotal || 0;
-    if ((+item.episodioTotal || 0) > 0) item.episodioAtual = +item.episodioTotal || 0;
-  }
-  item.status = 'concluido';
-  item.finishedAt = item.finishedAt || now;
-  item.updatedAt = now;
-  pushTimeline(item, 'Marcado como concluído', now, 'done');
-  pushProgressHistory(tracker, item, now);
-  save();
-  renderTracker(tracker);
-  if (thTracker === tracker && thItemId === itemId) thRender(item, TRACKER_CFG[tracker]);
-  closeTrackerQuickActions();
-}
 
-function quickActionDeleteItem() {
-  if (!quickActionState) return;
-  const { tracker, itemId } = quickActionState;
-  const item = getItemByTrackerId(tracker, itemId);
-  if (!item) return;
-  if (!confirm('Excluir "' + item.titulo + '"?')) return;
-  S[tracker] = (S[tracker] || []).filter(entry => entry.id !== itemId);
-  save();
-  renderTracker(tracker);
-  if (thTracker === tracker && thItemId === itemId) {
-    thDrawerClose();
-    thClose();
-  }
-  closeTrackerQuickActions();
-}
+
+
+
+
 
 // ─── FILTER SYSTEM ────────────────────────────────────────────────────────
 const FILTER_PENDING = { livros:{}, cinema:{}, mangas:{} };
@@ -3938,31 +2023,9 @@ const QUICK_VIEW = {
   cinema: { tab: 'all', genre: 'all' },
   mangas: { tab: 'all', genre: 'all' }
 };
-function getCollectionVisibleItems(group) {
-  const items = group.items || [];
-  if (!items.length) return [];
-  const state = COLLECTION_STACK_STATE[group.id];
-  const start = (((state && state.index) || 0) % items.length + items.length) % items.length;
-  const count = Math.min(3, items.length);
-  return Array.from({ length: count }, (_, offset) => items[(start + offset) % items.length]).filter(Boolean);
-}
-function cycleCollection(event, tracker, groupId, direction) {
-  if (event) {
-    event.preventDefault();
-    event.stopPropagation();
-  }
-  const groups = getCollectionGroups(tracker, S[tracker] || []);
-  const group = groups.find(g => g.id === groupId);
-  if (!group || !group.items.length) return;
-  const current = (COLLECTION_STACK_STATE[groupId] && COLLECTION_STACK_STATE[groupId].index) || 0;
-  const next = (current + direction + group.items.length) % group.items.length;
-  COLLECTION_STACK_STATE[groupId] = { index: next, dir: direction > 0 ? 'next' : 'prev', stamp: Date.now() };
-  renderTracker(tracker);
-}
-function wheelCollection(event, tracker, groupId) {
-  const direction = event.deltaY > 0 ? 1 : -1;
-  cycleCollection(event, tracker, groupId, direction);
-}
+
+
+
 function openCollectionTop(event, tracker, groupId) {
   if (event) {
     event.preventDefault();
@@ -4171,292 +2234,30 @@ function handleTrackerDelegatedClick(event) {
   }
 }
 
-function getQuickTabsConfig(key) {
-  if (key === 'cinema') {
-    return [
-      { id: 'all', label: 'Todos' },
-      { id: 'collections', label: 'Coleções' },
-      { id: 'fav', label: 'Favoritos' },
-      { id: 'reading', label: 'Assistindo' },
-      { id: 'want', label: 'Quero ver' },
-      { id: 'done', label: 'Assistidos' },
-      { id: 'genres', label: 'Gêneros' },
-    ];
-  }
-  if (key === 'mangas') {
-    return [
-      { id: 'all', label: 'Todos' },
-      { id: 'collections', label: 'Coleções' },
-      { id: 'fav', label: 'Favoritos' },
-      { id: 'reading', label: 'Lendo' },
-      { id: 'want', label: 'Quero ler' },
-      { id: 'done', label: 'Lido' },
-      { id: 'genres', label: 'Gêneros' },
-    ];
-  }
-  return [
-    { id: 'all', label: 'Todos' },
-    { id: 'collections', label: 'Coleções' },
-    { id: 'fav', label: 'Favoritos' },
-    { id: 'reading', label: 'A ler' },
-    { id: 'want', label: 'Quero ler' },
-    { id: 'done', label: 'Lido' },
-    { id: 'genres', label: 'Gêneros' },
-  ];
-}
-function getReadingStatusByTracker(key) { return key === 'cinema' ? 'assistindo' : 'lendo'; }
-function splitGenres(raw) {
-  return String(raw || '')
-    .split(/[;,/|]/)
-    .map(s => s.trim())
-    .filter(Boolean);
-}
-function getTrackerGenres(key) {
-  const set = new Set();
-  (S[key] || []).forEach(item => splitGenres(item.genero).forEach(g => set.add(g)));
-  return Array.from(set).sort((a, b) => a.localeCompare(b, 'pt-BR'));
-}
-function setQuickTab(key, tab) {
-  QUICK_VIEW[key].tab = tab;
-  if (tab !== 'genres') QUICK_VIEW[key].genre = 'all';
-  renderTracker(key);
-}
-function setQuickGenre(key, genre) {
-  QUICK_VIEW[key].tab = 'genres';
-  QUICK_VIEW[key].genre = genre;
-  renderTracker(key);
-}
-function renderQuickControls(key) {
-  const pfx = PFX_MAP[key];
-  const tabsEl = document.getElementById(pfx + '-quick-tabs');
-  const stripEl = document.getElementById(pfx + '-genre-strip');
-  const chipsEl = document.getElementById(pfx + '-genre-chips');
-  if (!tabsEl || !stripEl || !chipsEl) return;
-  const state = QUICK_VIEW[key];
-  const tabs = getQuickTabsConfig(key);
-  tabsEl.innerHTML = tabs.map(t => `<button type="button" class="quick-tab ${state.tab===t.id?'active':''}" onclick="setQuickTab('${key}','${t.id}')">${t.label}</button>`).join('');
-  const genres = getTrackerGenres(key);
-  const showGenres = state.tab === 'genres';
-  stripEl.classList.toggle('open', showGenres);
-  if (!showGenres) return;
-  const allActive = state.genre === 'all';
-  chipsEl.innerHTML = [
-    `<button type="button" class="filter-chip genre-chip ${allActive?'active':''}" onclick="setQuickGenre('${key}','all')">Todos</button>`,
-    ...genres.map(g => `<button type="button" class="filter-chip genre-chip ${state.genre===g?'active':''}" onclick="setQuickGenre('${key}',${escJs(g)})">${esc(g)}</button>`)
-  ].join('');
-}
-function applyQuickView(key, items) {
-  const state = QUICK_VIEW[key];
-  if (!state) return items;
-  let out = items;
-  if (state.tab === 'fav') out = out.filter(i => !!i.fav);
-  else if (state.tab === 'reading') out = out.filter(i => i.status === getReadingStatusByTracker(key));
-  else if (state.tab === 'want') out = out.filter(i => i.status === 'quero');
-  else if (state.tab === 'done') out = out.filter(i => i.status === 'concluido');
-  else if (state.tab === 'genres' && state.genre !== 'all') out = out.filter(i => splitGenres(i.genero).includes(state.genre));
-  return out;
-}
 
-function toggleFilterPanel(key) {
-  const pfx = PFX_MAP[key];
-  const panel = document.getElementById(pfx+'-filter-panel');
-  const btn   = document.getElementById(pfx+'-filter-btn');
-  const isOpen = panel.classList.toggle('open');
-  btn.classList.toggle('open', isOpen);
-  if (isOpen) {
-    const close = (e) => {
-      const wrap = document.getElementById(pfx+'-filter-wrap');
-      if (!wrap.contains(e.target)) { panel.classList.remove('open'); btn.classList.remove('open'); document.removeEventListener('click', close); }
-    };
-    setTimeout(()=>document.addEventListener('click', close), 0);
-  }
-}
 
-function toggleFilterChip(key, chip) {
-  const f = chip.dataset.filter, v = chip.dataset.val;
-  FILTER_PENDING[key] = {};
-  // sync all chips into PENDING
-  const pfx = PFX_MAP[key];
-  if (f === 'sort') {
-    document.querySelectorAll(`#${pfx}-filter-panel .filter-chip[data-filter="sort"]`).forEach(c => c.classList.remove('selected'));
-    chip.classList.add('selected');
-  }
-  document.querySelectorAll(`#${pfx}-filter-panel .filter-chip`).forEach(c => {
-    if (c === chip && f !== 'sort') c.classList.toggle('selected');
-    if (c.classList.contains('selected')) {
-      const ff=c.dataset.filter, vv=c.dataset.val;
-      if (!FILTER_PENDING[key][ff]) FILTER_PENDING[key][ff] = [];
-      FILTER_PENDING[key][ff].push(vv);
-    }
-  });
-}
 
-function applyFilters(key) {
-  FILTER_APPLIED[key] = JSON.parse(JSON.stringify(FILTER_PENDING[key]));
-  const count = Object.values(FILTER_APPLIED[key]).flat().length;
-  const pfx = PFX_MAP[key];
-  const btn = document.getElementById(pfx+'-filter-btn');
-  const badge = document.getElementById(pfx+'-filter-badge');
-  btn.classList.toggle('active', count>0);
-  if(badge) badge.textContent = count;
-  document.getElementById(pfx+'-filter-panel').classList.remove('open');
-  btn.classList.remove('open');
-  renderTracker(key);
-}
 
-function clearFilters(key) {
-  FILTER_PENDING[key] = {}; FILTER_APPLIED[key] = {};
-  const pfx = PFX_MAP[key];
-  document.querySelectorAll(`#${pfx}-filter-panel .filter-chip`).forEach(c=>c.classList.remove('selected'));
-  const btn = document.getElementById(pfx+'-filter-btn');
-  btn.classList.remove('active','open');
-  const badge = document.getElementById(pfx+'-filter-badge');
-  if (badge) badge.textContent = '0';
-  document.getElementById(pfx+'-filter-panel').classList.remove('open');
-  renderTracker(key);
-}
 
-function applyFilterLogic(key, items) {
-  const af = FILTER_APPLIED[key]; if (!Object.keys(af).length) return items;
-  return items.filter(item => {
-    if (af.status?.length && !af.status.includes(item.status)) return false;
-    if (af.nota?.length   && item.nota < +af.nota[0]) return false;
-    if (af.fav?.length    && !item.fav) return false;
-    if (af.comImg?.length && !item.img) return false;
-    if (af.tipo?.length   && !af.tipo.includes(item.tipo)) return false;
-    return true;
-  });
-}
 
-function applySortLogic(key, items) {
-  const af = FILTER_APPLIED[key];
-  const sort = af.sort && af.sort[0];
-  if (!sort) return items;
-  const arr = items.slice();
-  const progressOf = (item) => {
-    const p = TRACKER_CFG[key].progressFn(item);
-    return (p === null || Number.isNaN(p)) ? -1 : p;
-  };
-  const pagesOf = (item) => {
-    if (key === 'livros') return +item.paginas || 0;
-    if (key === 'mangas') return +item.capTotal || 0;
-    if (key === 'cinema') return +item.episodioTotal || 0;
-    return 0;
-  };
-  const createdOf = (item) => +item.createdAt || +item.id || 0;
-  const finishedOf = (item) => +item.finishedAt || 0;
-  const durationOf = (item) => {
-    if (item.finishedAt && item.createdAt) return Math.max(0, (+item.finishedAt) - (+item.createdAt));
-    return 0;
-  };
-  const cmpStr = (a, b) => (a || '').localeCompare((b || ''), 'pt-BR');
-  switch (sort) {
-    case 'recent': arr.sort((a,b) => createdOf(b) - createdOf(a)); break;
-    case 'title_az': arr.sort((a,b) => cmpStr(a.titulo, b.titulo)); break;
-    case 'title_za': arr.sort((a,b) => cmpStr(b.titulo, a.titulo)); break;
-    case 'author_az': arr.sort((a,b) => cmpStr(a.autor, b.autor)); break;
-    case 'pages_asc': arr.sort((a,b) => pagesOf(a) - pagesOf(b)); break;
-    case 'pages_desc': arr.sort((a,b) => pagesOf(b) - pagesOf(a)); break;
-    case 'progress_desc': arr.sort((a,b) => progressOf(b) - progressOf(a)); break;
-    case 'start_recent': arr.sort((a,b) => createdOf(b) - createdOf(a)); break;
-    case 'start_old': arr.sort((a,b) => createdOf(a) - createdOf(b)); break;
-    case 'end_recent': arr.sort((a,b) => finishedOf(b) - finishedOf(a)); break;
-    case 'rating_desc': arr.sort((a,b) => (+b.nota||0) - (+a.nota||0)); break;
-    case 'read_duration': arr.sort((a,b) => durationOf(b) - durationOf(a)); break;
-    case 'mangas_first':
-      arr.sort((a,b) => {
-        const aM = ((a.genero || '').toLowerCase().includes('mangá') || (a.genero || '').toLowerCase().includes('manga')) ? 1 : 0;
-        const bM = ((b.genero || '').toLowerCase().includes('mangá') || (b.genero || '').toLowerCase().includes('manga')) ? 1 : 0;
-        if (aM !== bM) return bM - aM;
-        return cmpStr(a.titulo, b.titulo);
-      });
-      break;
-    default: break;
-  }
-  return arr;
-}
 
-// ─── RENDER TRACKER ───────────────────────────────────────────────────────
-function renderTracker(key) {
-  let changed = false;
-  S[key].forEach(item => {
-    const next = getAutoStatusForItem(key, item, item.status);
-    if (item.status !== next) {
-      item.status = next;
-      changed = true;
-    }
-  });
-  if (changed) save();
 
-  const cfg = TRACKER_CFG[key];
-  renderQuickControls(key);
-  const searchIds = { livros:'lv-search', cinema:'ci-search', mangas:'mg-search' };
-  const sq = (document.getElementById(searchIds[key])||{value:''}).value.toLowerCase();
-  let items = S[key].filter(x => !sq || x.titulo.toLowerCase().includes(sq) || (x.autor||'').toLowerCase().includes(sq) || (x.genero||'').toLowerCase().includes(sq));
-  items = applyFilterLogic(key, items);
-  const isCollectionTab = QUICK_VIEW[key]?.tab === 'collections';
-  if (!isCollectionTab) items = applyQuickView(key, items);
-  items = applySortLogic(key, items);
 
-  // Stats
-  if (key==='livros') {
-    document.getElementById('lv-total').textContent = S.livros.length;
-    document.getElementById('lv-lendo').textContent = S.livros.filter(x=>x.status==='lendo').length;
-    const done = S.livros.filter(x=>x.status==='concluido').length;
-    document.getElementById('lv-done').textContent  = done;
-    document.getElementById('lv-fav').textContent   = S.livros.filter(x=>x.fav).length;
-    updateGoalDisplay('lv', done, TRACKER_GOALS.livros);
-    const lbl=document.getElementById('lv-count-label'); if(lbl) lbl.textContent=`${items.length} ${items.length===1?'livro':'livros'}${sq?' encontrados':''}`;
-  }
-  if (key==='cinema') {
-    document.getElementById('ci-total').textContent = S.cinema.length;
-    document.getElementById('ci-watch').textContent = S.cinema.filter(x=>x.status==='assistindo').length;
-    const done = S.cinema.filter(x=>x.status==='concluido').length;
-    document.getElementById('ci-done').textContent  = done;
-    document.getElementById('ci-fav').textContent   = S.cinema.filter(x=>x.fav).length;
-    updateGoalDisplay('ci', done, TRACKER_GOALS.cinema);
-    const lbl=document.getElementById('ci-count-label'); if(lbl) lbl.textContent=`${items.length} ${items.length===1?'título':'títulos'}${sq?' encontrados':''}`;
-  }
-  if (key==='mangas') {
-    document.getElementById('mg-total').textContent = S.mangas.length;
-    document.getElementById('mg-lendo').textContent = S.mangas.filter(x=>x.status==='lendo').length;
-    const done = S.mangas.filter(x=>x.status==='concluido').length;
-    document.getElementById('mg-done').textContent  = done;
-    document.getElementById('mg-fav').textContent   = S.mangas.filter(x=>x.fav).length;
-    updateGoalDisplay('mg', done, TRACKER_GOALS.mangas);
-    const lbl=document.getElementById('mg-count-label'); if(lbl) lbl.textContent=`${items.length} ${items.length===1?'mangá':'mangás'}${sq?' encontrados':''}`;
-  }
 
-  const totalPages = Math.max(1, Math.ceil(items.length/PER_PAGE));
-  if (!TRACKER_PAGES[key]) TRACKER_PAGES[key]=1;
-  if (TRACKER_PAGES[key]>totalPages) TRACKER_PAGES[key]=totalPages;
-  const curPage = TRACKER_PAGES[key];
 
-  const tabsEl = document.getElementById(key+'-tabs');
-  const gridEl = document.getElementById(key+'-grid');
-  if (isCollectionTab) {
-    const groups = getCollectionGroups(key, items);
-    const countEl = document.getElementById(PFX_MAP[key] + '-count-label');
-    if (countEl) countEl.textContent = `${groups.length} ${groups.length === 1 ? 'coleção' : 'coleções'}`;
-    const collectionPages = Math.max(1, Math.ceil(groups.length / 12));
-    if (TRACKER_PAGES[key] > collectionPages) TRACKER_PAGES[key] = collectionPages;
-    tabsEl.innerHTML = collectionPages<=1 ? '' : Array.from({length:collectionPages},(_,i)=>`<button class="ttab ${TRACKER_PAGES[key]===i+1?'active':''}" onclick="goTrackerPage('${key}',${i+1})">Página ${i+1}</button>`).join('');
-    if (!groups.length) { gridEl.className = 'collection-grid'; gridEl.innerHTML=`<div class="empty" style="grid-column:span 4"><div class="empty-icon">${cfg.icon}</div>Nenhuma coleção formada ainda.</div>`; return; }
-    gridEl.className = 'collection-grid';
-    gridEl.innerHTML = groups.slice((TRACKER_PAGES[key]-1)*12, TRACKER_PAGES[key]*12).map(group => buildCollectionCard(key, group)).join('');
-    return;
-  }
-  tabsEl.innerHTML = totalPages<=1 ? '' : Array.from({length:totalPages},(_,i)=>{
-    const start=i*PER_PAGE+1, end=Math.min((i+1)*PER_PAGE,items.length);
-    return `<button class="ttab ${curPage===i+1?'active':''}" onclick="goTrackerPage('${key}',${i+1})">Página ${i+1} <span style="font-size:9px;opacity:.6">(${start}–${end})</span></button>`;
-  }).join('');
-  const pageItems = items.slice((curPage-1)*PER_PAGE, curPage*PER_PAGE);
-  gridEl.className = 'tracker-grid';
-  if (!items.length) { gridEl.innerHTML=`<div class="empty" style="grid-column:span 5"><div class="empty-icon">${cfg.icon}</div>${sq?'Nenhum resultado para "'+esc(sq)+'"':cfg.emptyMsg}</div>`; return; }
-  gridEl.innerHTML = pageItems.map(item => buildCard(item, cfg)).join('');
-}
 
-function goTrackerPage(key, page) { TRACKER_PAGES[key]=page; renderTracker(key); }
+
+
+
+
+
+
+
+
+
+
+
+
 
 // ─── BUILD CARD ───────────────────────────────────────────────────────────
 function buildCard(item, cfg) {
@@ -4511,76 +2312,13 @@ function buildCollectionCard(tracker, group) {
   </div>`;
 }
 
-// ─── RELATED ITEMS ────────────────────────────────────────────────────────
-function normalizeTitle(t) {
-  return (t || '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s*\([^)]*\)\s*$/g, ' ')
-    .replace(/[:\-–_#.,]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-function romanToInt(token) {
-  const map = { i: 1, v: 5, x: 10, l: 50, c: 100 };
-  const value = (token || '').toLowerCase();
-  if (!/^[ivxlc]+$/.test(value)) return NaN;
-  let total = 0;
-  let prev = 0;
-  for (let i = value.length - 1; i >= 0; i -= 1) {
-    const curr = map[value[i]] || 0;
-    total += curr < prev ? -curr : curr;
-    prev = curr;
-  }
-  return total;
-}
-function parseOrdinalToken(token) {
-  if (!token) return NaN;
-  const clean = String(token).toLowerCase().replace(/[º°ª.]/g, '').trim();
-  if (/^\d+$/.test(clean)) return Number(clean);
-  return romanToInt(clean);
-}
-function extractContinuationIndex(title) {
-  const normalized = normalizeTitle(title);
-  if (!normalized) return NaN;
-  const tagged = normalized.match(/\b(?:part|parte|vol|volume|livro|book|tomo|temporada|season|seasons?|cap|capitulo|capitulos|episodio|episodios|ep)\s+([ivxlc]+|\d+)\b/i);
-  if (tagged) return parseOrdinalToken(tagged[1]);
-  const trailing = normalized.match(/\b([ivxlc]+|\d+)\b$/i);
-  if (trailing && normalized.split(/\s+/).length > 1) return parseOrdinalToken(trailing[1]);
-  return NaN;
-}
-function extractSeriesBaseTitle(title) {
-  return normalizeTitle(title)
-    .replace(/\b(?:part|parte|vol|volume|livro|book|tomo|temporada|season|seasons?|cap|capitulo|capitulos|episodio|episodios|ep)\s+([ivxlc]+|\d+)\b.*$/i, '')
-    .replace(/\b([ivxlc]+|\d+)\b$/i, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-function titleSimilarity(a, b) {
-  const na = extractSeriesBaseTitle(a);
-  const nb = extractSeriesBaseTitle(b);
-  if (!na || !nb) return 0;
-  if (na === nb) return 1;
-  const wa = new Set(na.split(/\s+/).filter(Boolean));
-  const wb = new Set(nb.split(/\s+/).filter(Boolean));
-  const shared = [...wa].filter(w => wb.has(w)).length;
-  const union = new Set([...wa, ...wb]).size || 1;
-  return shared / union;
-}
-function authorSimilarity(a, b) {
-  if (!a || !b) return 0;
-  const na = normalizeTitle(a);
-  const nb = normalizeTitle(b);
-  if (na === nb) return 1;
-  const lastA = na.split(/\s+/).pop();
-  const lastB = nb.split(/\s+/).pop();
-  if (lastA && lastA.length > 2 && lastA === lastB) return 0.85;
-  const partsA = new Set(na.split(/\s+/).filter(p => p.length > 2));
-  const partsB = new Set(nb.split(/\s+/).filter(p => p.length > 2));
-  const shared = [...partsA].filter(p => partsB.has(p)).length;
-  return shared >= 2 ? 0.92 : 0;
-}
+
+
+
+
+
+
+
 function getRelatedItems(tracker, currentItem) {
   const results = [];
   const currentSaga = getSagaInfo(currentItem, tracker);
@@ -4622,34 +2360,7 @@ function getRelatedItems(tracker, currentItem) {
   });
   return results.sort((a, b) => b.score - a.score).slice(0, 20);
 }
-function renderModalRelated(tracker, currentItem) {
-  const related=getRelatedItems(tracker,currentItem);
-  const section=document.getElementById('modal-related');
-  const scroll =document.getElementById('modal-related-scroll');
-  const label  =document.getElementById('modal-related-label');
-  if(!related.length){section.style.display='none';return;}
-  const hasSeries=related.some(r=>r.reason==='série'||r.reason==='continuação');
-  const hasAuthor=related.some(r=>r.reason==='autor');
-  const hasContinuation=related.some(r=>r.reason==='continuação');
-  if(hasContinuation&&hasAuthor) label.textContent='Continuações & mesmo autor';
-  else if(hasContinuation) label.textContent='Continuações da obra';
-  else if(hasSeries&&hasAuthor) label.textContent='Da mesma série & autor';
-  else if(hasSeries) label.textContent='Outros da série';
-  else label.textContent='Do mesmo autor';
-  const cfg=TRACKER_CFG[tracker];
-  scroll.innerHTML=related.map(({item})=>{
-    const stars=item.nota?'★'.repeat(item.nota):'';
-    const statusColor=cfg.statusColors[item.status]||'#7a7590';
-    const thumb=item.img?`<img loading="lazy" decoding="async" src="${escUrl(item.img)}" alt="${esc(item.titulo)}">`:`<span style="font-size:24px;opacity:.5">${cfg.icon}</span>`;
-    return `<div class="rel-card" onclick="openModal('${tracker}',${escJs(item.id)})" title="${esc(item.titulo)}">
-      <div class="rel-thumb">${thumb}<div class="rel-status-bar" style="background:${statusColor}88"></div></div>
-      <div class="rel-name">${esc(item.titulo)}</div>
-      ${item.autor?`<div class="rel-meta">${esc(item.autor)}</div>`:''}
-      ${stars?`<div class="rel-stars">${stars}</div>`:''}
-    </div>`;
-  }).join('');
-  section.style.display='block';
-}
+
 
 // ─── STARFIELD CANVAS ─────────────────────────────────────────────────────
 // fundo de estrelas: js/starfield.js (compartilhado, com pausa e sem custo quadrático)
