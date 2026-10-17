@@ -128,6 +128,7 @@ window.SoterUtils = window.SoterUtils || (function () {
   var ownerChangeNavigating = false;
   var ownerChangeActivating = false;
   var authModalOpen = false;
+  var signInInProgress = false;
   // uid cujo logout (com limpeza) foi feito em alguma aba: as outras abas não regravam a cópia local
   var LOGOUT_PURGE_STORAGE_KEY = "soter_logout_purge_uid_v1";
   // marca, por conta, que este navegador já leu a nuvem dela pelo menos uma vez (schema 1)
@@ -277,6 +278,9 @@ window.SoterUtils = window.SoterUtils || (function () {
     var snapshot = compactStateForStorage(ensureStateShape(state));
     var useImageRefs = safeKey !== "__guest__" && isSyncV2Enabled();
     if (!safeKey) return;
+    // conta que saiu (com limpeza) em alguma aba: nenhuma aba recria a cópia local dela até ela
+    // entrar de novo (uma aba antiga ainda pode receber uma atualização da nuvem antes do logout)
+    if (safeKey !== "__guest__" && safeKey === readLogoutPurgeUid()) return;
     if (useImageRefs) {
       // schema 2: o localStorage guarda referências; as imagens ficam no IndexedDB
       snapshot = toImageRefsSync(snapshot);
@@ -421,6 +425,8 @@ window.SoterUtils = window.SoterUtils || (function () {
     } catch (err) {
       lastUid = "";
     }
+    // conta que saiu com limpeza: se alguma aba antiga recriou a cópia local dela, apaga
+    if (readLogoutPurgeUid() && readLogoutPurgeUid() !== lastUid) removeScopedStateForUser(readLogoutPurgeUid());
     runtimeStateOwner = "";
     runtimeHiddenUid = "";
     if (lastUid && getFirebaseRuntimeConfig()) {
@@ -1803,6 +1809,16 @@ window.SoterUtils = window.SoterUtils || (function () {
     try { return String(localStorage.getItem(LOGOUT_PURGE_STORAGE_KEY) || ""); } catch (err) { return ""; }
   }
 
+  // só um login feito pela pessoa (não um evento atrasado de outra aba) libera a cópia local da conta
+  function clearLogoutPurgeAfterSignIn(credential) {
+    var user = credential && credential.user ? credential.user : null;
+    signInInProgress = false;
+    try {
+      if (user && user.uid && readLogoutPurgeUid() === String(user.uid)) localStorage.removeItem(LOGOUT_PURGE_STORAGE_KEY);
+    } catch (err) { }
+    return credential;
+  }
+
   function reloadOnceAfterAuth(uid) {
     // só recarrega se o próximo carregamento já vai mostrar o estado certo (evita loop)
     try {
@@ -1929,6 +1945,9 @@ window.SoterUtils = window.SoterUtils || (function () {
         if (previousUser.uid !== firebasePendingDeletedUid && previousUser.uid !== firebaseLogoutPurgeUid
           && previousUser.uid !== readLogoutPurgeUid()) {
           saveScopedStateForUser(previousUser.uid, currentLocalState);
+        } else if (!user && previousUser.uid === readLogoutPurgeUid()) {
+          // logout com limpeza feito em outra aba: esta aba também apaga a cópia local da conta
+          removeScopedStateForUser(previousUser.uid);
         }
       } else if (previousOwner && previousOwner !== RUNTIME_OWNER_PENDING) {
         // cache da conta mostrado antes da confirmação: volta para a própria conta, nunca para o
@@ -1940,7 +1959,7 @@ window.SoterUtils = window.SoterUtils || (function () {
       firebaseCurrentUser = user || null;
       runtimeStateOwner = firebaseCurrentUser ? String(firebaseCurrentUser.uid || '') : '';
       rememberLastAuthUid(firebaseCurrentUser ? firebaseCurrentUser.uid : '');
-      if (firebaseCurrentUser && readLogoutPurgeUid() === runtimeStateOwner) {
+      if (signInInProgress && firebaseCurrentUser && readLogoutPurgeUid() === runtimeStateOwner) {
         try { localStorage.removeItem(LOGOUT_PURGE_STORAGE_KEY); } catch (err) { }
       }
       var ownerChangedMidSession = !isFirstAuthEvent && previousOwner !== runtimeStateOwner;
@@ -6726,7 +6745,11 @@ window.SoterUtils = window.SoterUtils || (function () {
         return initFirebaseSync().then(function () {
           return setFirebaseAuthPersistence(!!(options && options.remember)).then(function () {
             authRememberDefault = !!(options && options.remember);
-            return firebaseAuthInstance.signInWithEmailAndPassword(email, password);
+            signInInProgress = true;
+            return firebaseAuthInstance.signInWithEmailAndPassword(email, password).then(clearLogoutPurgeAfterSignIn, function (err) {
+              signInInProgress = false;
+              throw err;
+            });
           });
         });
       },
@@ -6736,7 +6759,11 @@ window.SoterUtils = window.SoterUtils || (function () {
           firebasePendingSignupProfileName = desiredName;
           return setFirebaseAuthPersistence(!!(options && options.remember)).then(function () {
             authRememberDefault = !!(options && options.remember);
+            signInInProgress = true;
             return firebaseAuthInstance.createUserWithEmailAndPassword(email, password);
+          }).then(clearLogoutPurgeAfterSignIn, function (err) {
+            signInInProgress = false;
+            throw err;
           }).then(function (credential) {
             var user = credential && credential.user ? credential.user : null;
             if (user && user.uid) {
@@ -6772,7 +6799,11 @@ window.SoterUtils = window.SoterUtils || (function () {
         return initFirebaseSync().then(function () {
           if (!getFirebaseAuthConfig().google) throw new Error('google_auth_disabled');
           var provider = new window.firebase.auth.GoogleAuthProvider();
-          return firebaseAuthInstance.signInWithPopup(provider);
+          signInInProgress = true;
+          return firebaseAuthInstance.signInWithPopup(provider).then(clearLogoutPurgeAfterSignIn, function (err) {
+            signInInProgress = false;
+            throw err;
+          });
         });
       },
       logoutFirebase: function () {
@@ -6794,6 +6825,8 @@ window.SoterUtils = window.SoterUtils || (function () {
         }).then(function () {
           return keepUnsyncedCopy ? false : clearFirestoreLocalCache();
         }).then(function () {
+          // segunda passada: alguma aba pode ter gravado a cópia de novo durante o logout
+          if (uid && !keepUnsyncedCopy) removeScopedStateForUser(uid);
           try { sessionStorage.removeItem("soter_allow_index"); } catch (err) { }
           window.location.href = 'apresentacao.html';
           return true;
