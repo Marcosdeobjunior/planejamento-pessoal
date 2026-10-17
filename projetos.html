@@ -2,6 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://apis.google.com https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://unpkg.com; font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.google.com https://nominatim.openstreetmap.org https://api.open-meteo.com https://geocoding-api.open-meteo.com; frame-src https://*.firebaseapp.com https://www.google.com https://recaptcha.google.com https://www.youtube.com https://player.vimeo.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
 <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
@@ -1024,7 +1025,14 @@ let pmenuEl=null,pmenuFresh=false,undoStack=[];
 
 const $=s=>document.querySelector(s);
 const uid=()=>Math.random().toString(36).slice(2,9);
-const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+/* endereço vindo do usuário: só http(s), relativo ou data:image (javascript: vira vazio) */
+const unesc=s=>String(s).replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&');
+const safeU=u=>window.SoterUtils?window.SoterUtils.safeUrl(u):String(u==null?'':u);
+/* o mesmo, já pronto para ficar dentro de url("…") no CSS */
+const cssQ=u=>safeU(u).replace(/["'()\\\s<>]/g,c=>'%'+c.charCodeAt(0).toString(16).padStart(2,'0'));
+/* ids e tipos guardados no estado só usam letras, números, _ e - */
+const ID_OK=/^[\w-]{1,64}$/;
 const slug=s=>String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
 const wc=t=>(String(t).match(/[\p{L}\p{N}'’-]+/gu)||[]).length;
 const pageText=p=>p.blocks.map(b=>b.text||'').join('\n');
@@ -1369,9 +1377,12 @@ function ico(v,tam){
   const t=tam||'1em';
   if(v.indexOf('img:')===0)
     return '<span class="icoimg" style="width:'+t+';height:'+t+
-      ';background-image:url(&quot;'+esc(v.slice(4))+'&quot;)"></span>';
-  if(v.indexOf('col:')===0)
-    return '<span class="icocol" style="width:'+t+';height:'+t+';background:'+esc(v.slice(4))+'"></span>';
+      ';background-image:url(&quot;'+esc(cssQ(v.slice(4)))+'&quot;)"></span>';
+  if(v.indexOf('col:')===0){
+    const cor=v.slice(4);
+    if(!/^[#\w\s,.%()+-]+$/.test(cor))return '📄';
+    return '<span class="icocol" style="width:'+t+';height:'+t+';background:'+esc(cor)+'"></span>';
+  }
   return esc(v);
 }
 function mkBlock(t,text){return{id:uid(),t:t||'p',text:text||'',checked:false,icon:'✦'}}
@@ -1448,6 +1459,7 @@ function seed(){
 function inline(t){
   let h=esc(t);
   h=h.replace(/\[\[([^\[\]\n]+)\]\]/g,(m,n)=>{
+    n=unesc(n);  /* h já está escapado; o título é comparado e escapado de novo como texto puro */
     const hit=findPage(n);
     return `<span class="wl${hit?'':' miss'}" data-wl="${esc(n)}">${esc(n)}</span>`;
   });
@@ -1527,18 +1539,18 @@ function midiaHTML(p,b){
   if(!u)return cai({image:'▣  escolher imagem',video:'▷  colar o endereço do vídeo',
     audio:'♪  colar o endereço do áudio',file:'⎙  apontar um arquivo',
     bookmark:'🔖  colar um endereço'}[b.t]);
-  if(b.t==='image')return `<figure class="mfig"><img src="${esc(u)}" alt="${esc(b.leg||'')}" loading="lazy">
+  if(b.t==='image')return `<figure class="mfig"><img src="${esc(safeU(u))}" alt="${esc(b.leg||'')}" loading="lazy">
     <figcaption contenteditable data-leg="${b.id}" data-ph="legenda">${esc(b.leg||'')}</figcaption></figure>`;
   if(b.t==='video'){
     const yt=u.match(/(?:youtu\.be\/|v=)([\w-]{6,})/),vm=u.match(/vimeo\.com\/(\d+)/);
     if(yt)return `<div class="mframe"><iframe src="https://www.youtube.com/embed/${esc(yt[1])}" allowfullscreen loading="lazy"></iframe></div>`;
     if(vm)return `<div class="mframe"><iframe src="https://player.vimeo.com/video/${esc(vm[1])}" allowfullscreen loading="lazy"></iframe></div>`;
-    return `<video class="mvid" src="${esc(u)}" controls preload="metadata"></video>`;
+    return `<video class="mvid" src="${esc(safeU(u))}" controls preload="metadata"></video>`;
   }
-  if(b.t==='audio')return `<audio class="maud" src="${esc(u)}" controls preload="none"></audio>`;
-  if(b.t==='file')return `<a class="mcard" href="${esc(u)}" target="_blank" rel="noopener">
+  if(b.t==='audio')return `<audio class="maud" src="${esc(safeU(u))}" controls preload="none"></audio>`;
+  if(b.t==='file')return `<a class="mcard" href="${esc(safeU(u))}" target="_blank" rel="noopener">
     <span class="mi">⎙</span><span class="mt"><b>${esc(b.leg||u.split('/').pop()||'arquivo')}</b><small>${esc(u)}</small></span></a>`;
-  return `<a class="mcard" href="${esc(u)}" target="_blank" rel="noopener">
+  return `<a class="mcard" href="${esc(safeU(u))}" target="_blank" rel="noopener">
     <span class="mi">🔖</span><span class="mt"><b>${esc(b.leg||u.replace(/^https?:\/\//,'').split('/')[0])}</b><small>${esc(u)}</small></span></a>`;
 }
 function tocHTML(p){
@@ -1605,20 +1617,20 @@ function blockHTML(p,b,i,list){
   if(b.t==='pagelink'){
     const alvo=S.pages[b.text];
     return `<div class="blk" data-t="pagelink" data-id="${b.id}">${gut(b.id)}
-      ${alvo?`<span class="pagelink" data-page="${b.text}">${ico(alvo.icon,'15px')} ${esc(alvo.title||'Sem título')}</span>`
+      ${alvo?`<span class="pagelink" data-page="${esc(b.text)}">${ico(alvo.icon,'15px')} ${esc(alvo.title||'Sem título')}</span>`
             :`<span class="pagelink vazio" data-escolhepg="${b.id}">↗  escolher uma página</span>`}</div>`;
   }
   if(b.t==='page'){
     const sub=S.pages[b.text];
     return `<div class="blk" data-t="page" data-id="${b.id}">${gut(b.id)}
-      <span class="pagelink" data-page="${b.text}">${sub?ico(sub.icon,'15px'):'📄'} ${sub?esc(sub.title||'Sem título'):'página removida'}${sub&&sub.trashed?' <small style="opacity:.6">(na lixeira)</small>':''}</span></div>`;
+      <span class="pagelink" data-page="${esc(b.text)}">${sub?ico(sub.icon,'15px'):'📄'} ${sub?esc(sub.title||'Sem título'):'página removida'}${sub&&sub.trashed?' <small style="opacity:.6">(na lixeira)</small>':''}</span></div>`;
   }
   if(ehVista(b.t))
     return `<div class="blk" data-t="${b.t}" data-id="${b.id}">${gut(b.id)}<div class="dbwrap">${dbHTML(p,b)}</div></div>`;
   if(b.t==='page'){
     const sub=S.pages[b.text];
     return `<div class="blk" data-t="page" data-id="${b.id}">${gut(b.id)}
-      <span class="pagelink" data-page="${b.text}">${sub?sub.icon:'📄'} ${sub?esc(sub.title||'Sem título'):'página removida'}${sub&&sub.trashed?' <small style="opacity:.6">(na lixeira)</small>':''}</span></div>`;
+      <span class="pagelink" data-page="${esc(b.text)}">${sub?ico(sub.icon,'15px'):'📄'} ${sub?esc(sub.title||'Sem título'):'página removida'}${sub&&sub.trashed?' <small style="opacity:.6">(na lixeira)</small>':''}</span></div>`;
   }
   const ph=b.t==='p'?"digite / para blocos, [[ para ligar, + para criar página":
     b.t.indexOf('h')===0?'título':b.t==='quote'?'citação':b.t==='code'?'código':
@@ -1627,7 +1639,7 @@ function blockHTML(p,b,i,list){
   if(b.t==='bullet')marker='<span class="marker">✦</span>';
   if(b.t==='num'){let n=1;for(let k=i-1;k>=0&&list[k].t==='num';k--)n++;marker=`<span class="marker">${n}.</span>`}
   if(b.t==='todo')marker=`<span class="marker" data-check="${b.id}">${b.checked?'☑':'☐'}</span>`;
-  if(b.t==='callout')marker=`<span class="marker" style="font-size:17px;padding-top:2px">${b.icon||'✦'}</span>`;
+  if(b.t==='callout')marker=`<span class="marker" style="font-size:17px;padding-top:2px">${esc(b.icon||'✦')}</span>`;
   if(b.t==='toggle'||b.t.indexOf('th')===0)
     marker=`<span class="marker dobra ${b.dobrado?'':'aberta'}" data-dobra="${b.id}">›</span>`;
   if(b.t==='equation')marker='<span class="marker" style="opacity:.5">∑</span>';
@@ -1798,16 +1810,17 @@ function dbHTML(p,b){
 function backHTML(p){
   const bl=backlinks(p),out=outLinks(p);
   const rx=new RegExp('\\[\\['+p.title.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\]\\]','i');
+  const rxE=new RegExp(esc('[['+p.title+']]').replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i');
   return `<div class="backl" data-back>
     <h4>↩ Retrolinks · ${bl.length}</h4>
     ${bl.map(q=>{
       const line=q.blocks.map(b=>b.text).filter(t=>t&&rx.test(t))[0]||'';
-      const hl=esc(line).replace(rx,'<mark>'+esc(p.title)+'</mark>');
+      const hl=esc(line).replace(rxE,'<mark>'+esc(p.title)+'</mark>');
       return `<div class="blitem" data-page="${q.id}"><b>${ico(q.icon,'15px')} ${esc(q.title||'Sem título')}</b><span>${hl}</span></div>`;
     }).join('')||'<div class="nada">nenhuma página aponta para esta ainda</div>'}
     <h4 style="margin-top:24px">↪ Ligações desta página · ${out.length}</h4>
     ${out.map(l=>{const t=findPage(l);
-      return `<div class="blitem" ${t?`data-page="${t.id}"`:`data-create="${esc(l)}"`}><b>${t?t.icon+' '+esc(l):'＋ criar “'+esc(l)+'”'}</b></div>`}).join('')
+      return `<div class="blitem" ${t?`data-page="${t.id}"`:`data-create="${esc(l)}"`}><b>${t?ico(t.icon,'15px')+' '+esc(l):'＋ criar “'+esc(l)+'”'}</b></div>`}).join('')
       ||'<div class="nada">use [[ no texto para ligar páginas</div>'}</div>`;
 }
 
@@ -1815,7 +1828,7 @@ function surfaceHTML(p){
   const wide=cfg(p,'largura')==='total';
   const trava=cfg(p,'travada');
   return `<div class="surface ${trava?'locked':''}" data-pid="${p.id}" style="${styleOf(p)}">
-    ${p.cover?`<div class="cover" style="background:${p.cover}"><button class="swap" data-cover>trocar capa</button></div>`:''}
+    ${p.cover?`<div class="cover" style="background:${esc(p.cover)}"><button class="swap" data-cover>trocar capa</button></div>`:''}
     <div class="page ${p.cover?'has-cover':''} ${wide?'wide':''}">
       <div class="pico" data-pico>${ico(p.icon,'56px')}</div>
       ${trava?'<div class="lockbadge">⚿ página travada</div>':''}
@@ -1999,7 +2012,7 @@ function renderMap(sc){
       <span class="mapdica">${m.img?'clique no mapa para adicionar um marcador · arraste um marcador para movê-lo':''}</span>
     </div>
     <div class="mapstage ${m.img?'':'vazio-stage'}">
-      ${m.img?`<img class="mapimg" src="${esc(m.img)}" draggable="false">${marcs}`
+      ${m.img?`<img class="mapimg" src="${esc(safeU(m.img))}" alt="" draggable="false">${marcs}`
         :`<div class="vazio" data-mapimg="${m.id}" style="margin:40px auto;max-width:320px;text-align:center">▣  escolher imagem de fundo</div>`}
     </div>
   </div>`;
@@ -2259,7 +2272,7 @@ function reduzImagem(file,maxL,qual){
     fr.readAsDataURL(file);
   });
 }
-const cssUrl=u=>"url('"+String(u).replace(/'/g,"\\'")+"') center/cover no-repeat";
+const cssUrl=u=>"url('"+cssQ(u)+"') center/cover no-repeat";
 const ehUrl=u=>/^(https?:)?\/\//i.test(String(u).trim())||/^data:image\//i.test(String(u).trim());
 
 function abrePicker(tipo,valorAtual,aplicar){
@@ -2682,7 +2695,7 @@ function suggest(ct){
     if(!title)return closeMenu();
     const ja=findPage(title);
     const items=ja&&ja.id!==p.id
-      ? [{label:'Ligar a “'+ja.title+'”',ic:ja.icon,sub:'esta página já existe',
+      ? [{label:'Ligar a “'+ja.title+'”',ic:ico(ja.icon,'15px'),sub:'esta página já existe',
           run:()=>fromPlus(host,ct,b,plus[1],false)},
          {label:'Abrir “'+ja.title+'”',ic:'⤢',sub:'ligar e abrir',
           run:()=>fromPlus(host,ct,b,plus[1],true)}]
@@ -3555,7 +3568,7 @@ async function menuAreas(anchor){
       {label:'renomear espaço',ic:'✎',run:()=>{
         const n=prompt('Nome do espaço:',at.nome);
         if(n&&n.trim()){at.nome=n.trim();save();renderArea()}}},
-      {label:'trocar o ícone',ic:at.icone||'✦',run:()=>
+      {label:'trocar o ícone',ic:ico(at.icone||'✦','15px'),run:()=>
         abrePicker('icone',at.icone,v=>{at.icone=v||'✦';save();renderArea()})},
       {label:'exportar este espaço',ic:'↧',run:exportMD}
     ].concat(S.areas.length>1?[{label:'excluir espaço',ic:'✕',run:()=>{
@@ -3596,10 +3609,10 @@ function spotlight(pre){
     const pages=daArea().filter(p=>!p.trashed)
       .filter(p=>slug(p.title).indexOf(s)>=0||(s.length>2&&slug(pageText(p)).indexOf(s)>=0))
       .slice(0,8)
-      .map(p=>({label:p.title||'Sem título',ic:p.icon,
+      .map(p=>({label:p.title||'Sem título',ic:ico(p.icon,'15px'),
         kind:p.parentId&&S.pages[p.parentId]?'em '+(S.pages[p.parentId].title||'…'):'raiz',run:()=>go(p.id)}));
     items=q?pages.concat(cmds.filter(c=>slug(c.label).indexOf(s)>=0))
-      :cmds.concat(daArea().filter(p=>!p.trashed).slice(0,6).map(p=>({label:p.title||'Sem título',ic:p.icon,kind:'',run:()=>go(p.id)})));
+      :cmds.concat(daArea().filter(p=>!p.trashed).slice(0,6).map(p=>({label:p.title||'Sem título',ic:ico(p.icon,'15px'),kind:'',run:()=>go(p.id)})));
     sel=0;paint();
   };
   const paint=()=>{$('#sr').innerHTML=items.map((it,i)=>
@@ -3745,6 +3758,26 @@ $('#btnSync').onclick=async e=>{
       }}
   ],'Sincronização');
 };
+/* backup restaurado: ids, tipos e chaves de página entram em atributos do HTML,
+   então só aceitamos valores simples (letras, números, _ e -) */
+function backupValido(d){
+  if(!d||typeof d!=='object'||!d.pages||typeof d.pages!=='object'||Array.isArray(d.pages))return false;
+  const CHAVES={id:1,parentId:1,ws:1,t:1,colg:1,coli:1,av:1,activeId:1,peekId:1,areaAtiva:1};
+  let ok=true,n=0;
+  const simples=x=>x==null||x===''||(typeof x==='number'&&isFinite(x))||(typeof x==='string'&&ID_OK.test(x));
+  const anda=(v,fundo)=>{
+    if(!ok)return;
+    if(fundo>40||++n>500000){ok=false;return}
+    if(Array.isArray(v)){v.forEach(x=>anda(x,fundo+1));return}
+    if(v&&typeof v==='object')Object.keys(v).forEach(k=>{
+      if(CHAVES[k]&&!simples(v[k]))ok=false;
+      anda(v[k],fundo+1);
+    });
+  };
+  Object.keys(d.pages).forEach(k=>{if(!ID_OK.test(k))ok=false});
+  anda(d,0);
+  return ok;
+}
 $('#btnBackup').onclick=e=>{
   const r=e.currentTarget.getBoundingClientRect();
   openMenu(r.left,r.top-100,[
@@ -3752,7 +3785,7 @@ $('#btnBackup').onclick=e=>{
     {label:'restaurar de um arquivo',ic:'↥',run:()=>{
       const i=document.createElement('input');i.type='file';i.accept='.json';
       i.onchange=()=>{const f=i.files[0];if(!f)return;const rd=new FileReader();
-        rd.onload=()=>{try{const d=JSON.parse(rd.result);if(!d.pages)throw 0;S=d;save();render();toast('restaurado')}
+        rd.onload=()=>{try{const d=JSON.parse(rd.result);if(!backupValido(d))throw 0;S=d;save();render();toast('restaurado')}
           catch(err){toast('arquivo inválido')}};rd.readAsText(f)};
       i.click()}}
   ],'Backup');

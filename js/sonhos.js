@@ -433,8 +433,8 @@ function hubRender(s) {
   // Hero image
   const hero = document.getElementById('hub-hero');
   const heroImg = document.getElementById('hub-hero-img');
-  heroImg.src = s.img || '';
-  hero.classList.toggle('has-img', !!s.img);
+  heroImg.src = snSafeImg(s.img);
+  hero.classList.toggle('has-img', !!snSafeImg(s.img));
 
   // Icon & title
   document.getElementById('hub-icon').textContent  = s.icon || '🌙';

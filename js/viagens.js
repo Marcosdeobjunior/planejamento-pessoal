@@ -4,11 +4,12 @@
   var storage = window.SoterStorage || null;
   var state = storage ? storage.getState() : null;
   var STORAGE_KEY = "viagens";
+  // os dois espelhos servem o arquivo do pacote npm; o hash (SRI) é o publicado pelo Leaflet
   var LEAFLET_SRCS = [
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js",
-    "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js",
-    "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js",
+    "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
   ];
+  var LEAFLET_SRI = "sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=";
   var T = [];
   var lmap = null;
   var MKS = [];
@@ -229,7 +230,7 @@
         '<div style="font-size:10px;color:#5ec4a8">' + esc(bud) + "</div>" +
         "</div>"
       );
-      m.bindTooltip(t.destination, { direction: "top", offset: [0, -36], className: "" });
+      m.bindTooltip(esc(t.destination), { direction: "top", offset: [0, -36], className: "" });
       m.on("click", function () { openEdit(i); });
       MKS.push({ m: m, i: i });
       done && done();
@@ -357,7 +358,7 @@
       div.innerHTML =
         '<div class="vcbar" style="background:' + ac(gi) + '"></div>' +
         '<div class="vcb">' +
-        '<div class="vct">' + (cover ? '<img src="' + cover.replace(/"/g, "%22") + '" alt="" loading="lazy">' : em(t.category, t.destination)) + "</div>" +
+        '<div class="vct">' + (cover ? '<img src="' + esc(window.SoterUtils.safeUrl(cover)) + '" alt="" loading="lazy">' : em(t.category, t.destination)) + "</div>" +
         '<div class="vci">' +
         '<div class="vcd">' + esc(t.destination) + (flag ? " " + flag : "") + "</div>" +
         '<div class="vcm">' +
@@ -713,6 +714,8 @@
       if (idx >= LEAFLET_SRCS.length) { boot(true); return; }
       s = document.createElement("script");
       s.src = LEAFLET_SRCS[idx];
+      s.integrity = LEAFLET_SRI;
+      s.crossOrigin = "anonymous";
       idx += 1;
       s.onload = function () { boot(false); };
       s.onerror = function () { s.remove(); tryNext(); };
