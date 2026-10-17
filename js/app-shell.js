@@ -3118,14 +3118,17 @@ window.SoterUtils = window.SoterUtils || (function () {
     });
   }
 
+  // SDK compat servido pelo próprio site (cópia do pacote npm firebase@10.12.5), sem CDN de terceiros
+  var FIREBASE_SDK_BASE = 'js/vendor/firebasejs/10.12.5/';
+
   function initFirebaseSync() {
     var config = getFirebaseRuntimeConfig();
     if (!config) return Promise.resolve(null);
     if (firebaseReadyPromise) return firebaseReadyPromise;
     firebaseReadyPromise = Promise.resolve()
-      .then(function () { return loadScript('https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js'); })
-      .then(function () { return loadScript('https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js'); })
-      .then(function () { return loadScript('https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js'); })
+      .then(function () { return loadScript(FIREBASE_SDK_BASE + 'firebase-app-compat.js'); })
+      .then(function () { return loadScript(FIREBASE_SDK_BASE + 'firebase-firestore-compat.js'); })
+      .then(function () { return loadScript(FIREBASE_SDK_BASE + 'firebase-auth-compat.js'); })
       .then(function () {
         if (!window.firebase || !window.firebase.initializeApp) throw new Error('firebase_unavailable');
         var appName = config.appName || 'soter-app';
@@ -3985,8 +3988,14 @@ window.SoterUtils = window.SoterUtils || (function () {
       label: String(source.label || defaults.label || "Sistema"),
       tone: String(source.tone || defaults.tone || "info"),
       cycle: String(source.cycle || defaults.cycle || "persist"),
-      href: String(source.href || defaults.href || "")
+      href: safeNotificationHref(source.href || defaults.href || "")
     };
+  }
+
+  // notificações só levam a páginas do próprio site ("tarefas.html", "rpg.html#x")
+  function safeNotificationHref(value) {
+    var href = String(value || "").trim();
+    return /^[a-z0-9_-]+\.html(?:[?#][\w=&%.-]*)?$/i.test(href) ? href : "";
   }
 
   function createNotification(id, text, meta) {
@@ -6365,7 +6374,7 @@ window.SoterUtils = window.SoterUtils || (function () {
       var href;
       if (!btn) {
         item = event.target.closest(".hn-notif-item[data-notif-href]");
-        href = item ? String(item.getAttribute("data-notif-href") || "").trim() : "";
+        href = item ? safeNotificationHref(item.getAttribute("data-notif-href")) : "";
         if (href) window.location.href = href;
         return;
       }
@@ -6391,7 +6400,7 @@ window.SoterUtils = window.SoterUtils || (function () {
       if (event.target.closest(".hn-notif-remove")) return;
       item = event.target.closest(".hn-notif-item[data-notif-href]");
       if (!item) return;
-      href = String(item.getAttribute("data-notif-href") || "").trim();
+      href = safeNotificationHref(item.getAttribute("data-notif-href"));
       if (!href) return;
       event.preventDefault();
       window.location.href = href;

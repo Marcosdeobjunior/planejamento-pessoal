@@ -223,8 +223,8 @@
 
   function fmtD(dateStr) {
     if (!dateStr) return "";
-    var parts = dateStr.split("-");
-    return parts[2] + "/" + parts[1] + "/" + parts[0];
+    var parts = String(dateStr).split("-");
+    return esc(parts[2] + "/" + parts[1] + "/" + parts[0]);
   }
 
   // Escapa texto digitado pelo usuário antes de inseri-lo em HTML (evita injeção de scripts).
@@ -2195,7 +2195,7 @@
       card.innerHTML =
         '<div class="fin-recurring-card-title">' + esc(rule.name) + '</div>' +
         '<div class="fin-recurring-card-meta">' + fmtR(rule.value) + ' · ' + esc(rule.category) + '</div>' +
-        '<div class="fin-recurring-card-sub">' + (rule.pattern === "fixed_day" ? ("Dia " + rule.day + " com ajuste") : (rule.nth + "º dia útil com sábado contando")) + '</div>';
+        '<div class="fin-recurring-card-sub">' + (rule.pattern === "fixed_day" ? ("Dia " + esc(rule.day) + " com ajuste") : (esc(rule.nth) + "º dia útil com sábado contando")) + '</div>';
       card.addEventListener("click", function () {
         fillRuleForm(rule.id);
         renderRuleList();

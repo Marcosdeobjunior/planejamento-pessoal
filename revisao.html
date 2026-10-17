@@ -2,6 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://apis.google.com https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://unpkg.com; font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.google.com https://nominatim.openstreetmap.org https://api.open-meteo.com https://geocoding-api.open-meteo.com; frame-src https://*.firebaseapp.com https://www.google.com https://recaptcha.google.com https://www.youtube.com https://player.vimeo.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
 <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
@@ -9,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.0.0-beta3/css/all.min.css" integrity="sha384-5e2ESR8Ycmos6g3gAKr1Jvwye8sW4U1u/cAKulfVJnkakCcMqhOudbtPnvJ+nbv7" crossorigin="anonymous">
 <link rel="stylesheet" href="css/design-system.css">
 <link rel="stylesheet" href="css/components.css">
 <link rel="stylesheet" href="css/app-shell.css">
@@ -774,7 +775,7 @@ function afterReviewOwnerKnown(cb){
 // ── SUBDECKS (hierarquia via deck.parentId; cards continuam com deckId) ──
 var MAX_DECK_DEPTH = 5; // níveis máximos (deck raiz = nível 1)
 
-function escHtml(t){ return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escHtml(t){ return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function findDeck(id){ return decks.find(function(d){return d.id===id;}); }
 function childrenOf(id){
   return decks.filter(function(d){ return (d.parentId||null)===(id||null); });
@@ -815,6 +816,8 @@ function flatDeckTree(excludeIds){
 function normalizeDecks(){
   var ids={}; decks.forEach(function(d){ids[d.id]=1;});
   decks.forEach(function(d){
+    // a cor entra em atributos style: só #rrggbb
+    if(!/^#[0-9a-f]{6}$/i.test(String(d.color||''))) d.color='#c8a96e';
     if(!d.parentId || !ids[d.parentId] || d.parentId===d.id) d.parentId=null;
   });
   // quebra ciclos eventuais
@@ -1026,7 +1029,7 @@ function renderUpcoming(){
     var deck=decks.find(function(d){return d.id===c.deckId;})||{name:'?',color:'#7a7590'};
     var el=document.createElement('div');el.className='uitem';
     el.innerHTML='<span class="uitem-deck" style="background:rgba('+hexToRgb(deck.color)+',.15);color:'+deck.color+'">'+escHtml(deck.id?deckPath(deck):deck.name)+'</span>'+
-      '<span class="uitem-q">'+c.front+'</span><span class="uitem-due overdue">Atrasado</span>';
+      '<span class="uitem-q">'+escHtml(c.front)+'</span><span class="uitem-due overdue">Atrasado</span>';
     list.appendChild(el);
   });
   upcoming.slice(0,8).forEach(function(c){
@@ -1036,7 +1039,7 @@ function renderUpcoming(){
     var cls=days===0?'today':'';
     var el=document.createElement('div');el.className='uitem';
     el.innerHTML='<span class="uitem-deck" style="background:rgba('+hexToRgb(deck.color)+',.15);color:'+deck.color+'">'+escHtml(deck.id?deckPath(deck):deck.name)+'</span>'+
-      '<span class="uitem-q">'+c.front+'</span><span class="uitem-due '+cls+'">'+dLabel+'</span>';
+      '<span class="uitem-q">'+escHtml(c.front)+'</span><span class="uitem-due '+cls+'">'+dLabel+'</span>';
     list.appendChild(el);
   });
   if(list.children.length===0) list.innerHTML='<div class="empty"><i class="fas fa-check-double"></i><p>Nenhuma revisão pendente!</p></div>';
@@ -1105,7 +1108,7 @@ function renderDeckDist(){
     var pct=Math.round(cnt/total*100);
     var row=document.createElement('div');
     row.style.cssText='display:flex;align-items:center;gap:10px;padding-left:'+(node.depth*18)+'px;';
-    row.innerHTML='<span style="font-size:16px">'+d.icon+'</span>'+
+    row.innerHTML='<span style="font-size:16px">'+escHtml(d.icon)+'</span>'+
       '<span style="flex:1;font-size:12px;font-weight:'+(node.depth?500:600)+'">'+escHtml(d.name)+'</span>'+
       '<div style="flex:1.5;height:5px;background:rgba(255,255,255,.07);border-radius:5px;overflow:hidden">'+
         '<div style="height:100%;width:'+pct+'%;background:'+d.color+';border-radius:5px;transition:width .6s"></div>'+
@@ -1166,7 +1169,7 @@ function buildDeckCard(deck){
     '<div style="position:absolute;top:0;left:0;right:0;height:3px;background:'+deck.color+';border-radius:var(--r) var(--r) 0 0"></div>'+
     (dueC.length+newQ.length>0?'<div class="deck-due-badge">'+(dueC.length+newQ.length)+'</div>':'')+
     '<div class="deck-top" style="margin-top:6px">'+
-      '<div class="deck-icon">'+deck.icon+'</div>'+
+      '<div class="deck-icon">'+escHtml(deck.icon)+'</div>'+
       '<div class="deck-actions">'+
         (deckDepth(deck)<MAX_DECK_DEPTH?'<button class="deck-menu-btn" data-addsub="'+deck.id+'" title="Novo subdeck"><i class="fas fa-folder-plus"></i></button>':'')+
         '<button class="deck-menu-btn" data-deck="'+deck.id+'" title="Editar deck"><i class="fas fa-pen"></i></button>'+
@@ -1229,7 +1232,7 @@ function renderCardsList(){
   var toggleLbl=document.getElementById('sub-toggle-lbl');
   var backBtn=document.getElementById('btn-back-decks');
 
-  titleEl.innerHTML=deck?deck.icon+' <em>'+escHtml(deck.name)+'</em>':'Deck';
+  titleEl.innerHTML=deck?escHtml(deck.icon)+' <em>'+escHtml(deck.name)+'</em>':'Deck';
 
   // breadcrumb + botão voltar
   crumbs.innerHTML='';
@@ -1285,8 +1288,8 @@ function renderCardsList(){
       ?'<span class="ctrow-deck" style="background:rgba('+hexToRgb(cd.color)+',.15);color:'+cd.color+'">'+escHtml(cd.name)+'</span>':'';
     var row=document.createElement('div');row.className='ctrow';
     row.innerHTML=
-      '<div class="ctrow-front">'+c.front+tag+'</div>'+
-      '<div class="ctrow-back">'+c.back+'</div>'+
+      '<div class="ctrow-front">'+escHtml(c.front)+tag+'</div>'+
+      '<div class="ctrow-back">'+escHtml(c.back)+'</div>'+
       '<div class="ctrow-meta">'+
         '<span class="ctrow-state '+stateCls(state)+'">'+stateLabel(state)+'</span>'+
         '<span class="ctrow-int">Int: '+intLbl+'</span>'+
@@ -1383,17 +1386,17 @@ function renderReviewCard(){
     '<div class="flashcard-area">'+
       '<div class="flashcard" id="fc">'+
         '<div class="fc-face fc-front">'+
-          '<span class="fc-deck-tag" style="background:rgba('+hexToRgb(deck.color)+',.15);color:'+deck.color+'">'+deck.icon+' '+escHtml(deck.id?deckPath(deck):deck.name)+'</span>'+
+          '<span class="fc-deck-tag" style="background:rgba('+hexToRgb(deck.color)+',.15);color:'+deck.color+'">'+escHtml(deck.icon)+' '+escHtml(deck.id?deckPath(deck):deck.name)+'</span>'+
           '<span class="fc-label">Pergunta</span>'+
-          '<div class="fc-content">'+card.front+'</div>'+
-          (card.note?'<div class="fc-note">💡 '+card.note+'</div>':'')+
+          '<div class="fc-content">'+escHtml(card.front)+'</div>'+
+          (card.note?'<div class="fc-note">💡 '+escHtml(card.note)+'</div>':'')+
           '<div class="fc-hint"><i class="fas fa-hand-pointer"></i> Clique para revelar a resposta</div>'+
         '</div>'+
         '<div class="fc-face fc-back">'+
-          '<span class="fc-deck-tag" style="background:rgba('+hexToRgb(deck.color)+',.15);color:'+deck.color+'">'+deck.icon+' '+escHtml(deck.id?deckPath(deck):deck.name)+'</span>'+
+          '<span class="fc-deck-tag" style="background:rgba('+hexToRgb(deck.color)+',.15);color:'+deck.color+'">'+escHtml(deck.icon)+' '+escHtml(deck.id?deckPath(deck):deck.name)+'</span>'+
           '<span class="fc-label">Resposta</span>'+
-          '<div class="fc-content">'+card.back+'</div>'+
-          (card.note?'<div class="fc-note">💡 '+card.note+'</div>':'')+
+          '<div class="fc-content">'+escHtml(card.back)+'</div>'+
+          (card.note?'<div class="fc-note">💡 '+escHtml(card.note)+'</div>':'')+
         '</div>'+
       '</div>'+
     '</div>'+
@@ -1564,7 +1567,7 @@ function renderIntervalList(){
     var avg=Math.round(dc.reduce(function(s,c){return s+c.interval;},0)/dc.length);
     var maxI=60;
     var row=document.createElement('div');row.className='rbar-item';
-    row.innerHTML='<span class="rbar-lbl">'+deck.icon+' '+escHtml(deck.id?deckPath(deck):deck.name)+'</span>'+
+    row.innerHTML='<span class="rbar-lbl">'+escHtml(deck.icon)+' '+escHtml(deck.id?deckPath(deck):deck.name)+'</span>'+
       '<div class="rbar-bg"><div class="rbar-fill" style="width:'+Math.min(100,avg/maxI*100)+'%;background:'+deck.color+'"></div></div>'+
       '<span class="rbar-pct">'+avg+'d</span>';
     el.appendChild(row);

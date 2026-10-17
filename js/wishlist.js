@@ -657,7 +657,7 @@
         editIndex: index,
         stockLabel: "Estoque: " + item.stock,
         footerPrice: item.price ? money(item.price, true) : "&ndash;",
-        footerExtra: item.link ? '<a class="ws-card-link" href="' + esc(item.link) + '" target="_blank" rel="noopener" data-stop-click="true">Ver produto &rarr;</a>' : "",
+        footerExtra: window.SoterUtils.safeUrl(item.link) ? '<a class="ws-card-link" href="' + esc(window.SoterUtils.safeUrl(item.link)) + '" target="_blank" rel="noopener" data-stop-click="true">Ver produto &rarr;</a>' : "",
         actionButton: '<button class="ws-card-check" type="button" title="Registrar aquisicao" data-toggle-index="' + index + '">' +
           '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>' +
           "</button>"

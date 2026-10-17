@@ -2,6 +2,8 @@
 
 // Dados do usuário escapados antes de entrar em innerHTML (SoterUtils vem do js/app-shell.js).
 const esc = value => window.SoterUtils.esc(value);
+// argumento de handler inline (onclick="f(...)"): literal JS escapado para o atributo
+const tkJs = value => esc(JSON.stringify(value));
 
 var appState = null;
 var S = {};
@@ -661,7 +663,7 @@ function tkMigrate() {
     if (!t.subtarefas) t.subtarefas = [];
     if (typeof t.data === 'undefined' || t.data === null) t.data = tkToday();
     if (typeof t.dataFim === 'undefined' || t.dataFim === null) t.dataFim = '';
-    if (!t.cor)  t.cor  = TK_COLORS[0];
+    t.cor = tkNormalizeHexColor(t.cor, TK_COLORS[0]); // a cor entra em atributos style
     if (!t.nota) t.nota = '';
     if (!t.hora) t.hora = '';
     if (!t.recurrence) t.recurrence = 'none';
@@ -785,7 +787,7 @@ function tkRenderFocus() {
     const sPct  = subs.length ? Math.round(sDone/subs.length*100) : (t.done ? 100 : 0);
     if (t.kind === 'gym') {
       return `<div class="tk-focus-card ${t.done?'done-card':''}" style="--tk-color:${color}"
-          onclick="tkOpenGymDay('${t.data}')">
+          onclick="tkOpenGymDay(${tkJs(t.data)})">
         <div class="tk-focus-card-top">
           <div class="tk-focus-card-check ${t.done?'checked':''}">${t.done?'✓':''}</div>
           <div class="tk-focus-card-nome">${esc(t.nome)}</div>
@@ -800,11 +802,11 @@ function tkRenderFocus() {
       </div>`;
     }
     return `<div class="tk-focus-card ${t.done?'done-card':''}" style="--tk-color:${color}"
-        oncontextmenu="return tkQuickActionsOpen(event, ${t.id})"
-        onclick="taskHubOpen(${t.id})">
+        oncontextmenu="return tkQuickActionsOpen(event, ${tkJs(t.id)})"
+        onclick="taskHubOpen(${tkJs(t.id)})">
       <div class="tk-focus-card-top">
         <div class="tk-focus-card-check ${t.done?'checked':''}"
-          onclick="event.stopPropagation();tkQuickToggle(${t.id})">
+          onclick="event.stopPropagation();tkQuickToggle(${tkJs(t.id)})">
           ${t.done?'✓':''}
         </div>
         <div class="tk-focus-card-nome">${esc(t.nome)}</div>
@@ -932,9 +934,9 @@ function tkRenderList() {
       const dateCls = diff===null?'': diff<0?'late': diff===0?'today-date':'';
       const dateLbl = diff===null?'Sem data': diff===0?'Hoje': diff===1?'Amanhã': diff===-1?'Ontem':
                       diff<0?`${Math.abs(diff)}d atrás`:`em ${diff}d`;
-      return `<div class="tk-task-card tk-dream-card" onclick="tkOpenDreamDeadline('${String(t.id)}')">
+      return `<div class="tk-task-card tk-dream-card" onclick="tkOpenDreamDeadline(${tkJs(String(t.id))})">
         <div class="tk-task-card-top">
-          <div class="tk-task-card-dream-icon">${t.icon}</div>
+          <div class="tk-task-card-dream-icon">${esc(t.icon)}</div>
           <div class="tk-task-card-nome">${esc(t.nome)}</div>
         </div>
         ${t.nota ? `<div class="tk-task-card-nota">${esc(t.nota)}</div>` : ''}
@@ -952,7 +954,7 @@ function tkRenderList() {
                       diff<0?`${Math.abs(diff)}d atrás`:`em ${diff}d`;
       return `<div class="tk-task-card tk-review-card" onclick="tkOpenReviewPlanner()">
         <div class="tk-task-card-top">
-          <div class="tk-task-card-review-icon">${t.icon}</div>
+          <div class="tk-task-card-review-icon">${esc(t.icon)}</div>
           <div class="tk-task-card-nome">${esc(t.nome)}</div>
         </div>
         ${t.nota ? `<div class="tk-task-card-nota">${esc(t.nota)}</div>` : ''}
@@ -973,11 +975,11 @@ function tkRenderList() {
       const dateLbl = diff===null?'Sem data': diff===0?'Hoje': diff===1?'Amanhã': diff===-1?'Ontem':
                       diff<0?`${Math.abs(diff)}d atrás`:`em ${diff}d`;
       return `<div class="tk-task-card ${t.done?'done-card':''}" style="--tk-color:${color}"
-          onclick="tkOpenGymDay('${t.data}')">
+          onclick="tkOpenGymDay(${tkJs(t.data)})">
         <div class="tk-task-card-top">
           <div class="tk-task-card-check ${t.done?'checked':''}">${t.done?'✓':''}</div>
           <div class="tk-task-card-nome">${esc(t.nome)}</div>
-          <button type="button" class="tk-gym-delete-btn" onclick="event.stopPropagation();tkRequestDeleteGymWorkout('${t.data}')" title="Excluir treino">
+          <button type="button" class="tk-gym-delete-btn" onclick="event.stopPropagation();tkRequestDeleteGymWorkout(${tkJs(t.data)})" title="Excluir treino">
             🗑
           </button>
         </div>
@@ -1005,11 +1007,11 @@ function tkRenderList() {
     const dateLbl = diff===null?'Sem data': diff===0?'Hoje': diff===1?'Amanhã': diff===-1?'Ontem':
                     diff<0?`${Math.abs(diff)}d atrás`:`em ${diff}d`;
     return `<div class="tk-task-card ${t.done?'done-card':''}" style="--tk-color:${color}"
-        oncontextmenu="return tkQuickActionsOpen(event, ${t.id})"
-        onclick="taskHubOpen(${t.id})">
+        oncontextmenu="return tkQuickActionsOpen(event, ${tkJs(t.id)})"
+        onclick="taskHubOpen(${tkJs(t.id)})">
       <div class="tk-task-card-top">
         <div class="tk-task-card-check ${t.done?'checked':''}"
-          onclick="event.stopPropagation();tkQuickToggle(${t.id})">
+          onclick="event.stopPropagation();tkQuickToggle(${tkJs(t.id)})">
           ${t.done?'✓':''}
         </div>
         <div class="tk-task-card-nome">${esc(t.nome)}</div>
@@ -1089,8 +1091,8 @@ function tkCalRender() {
       const col = t.cor || TK_PRIOR_COLOR[t.prior] || '#c8a96e';
       return `<div class="tk-cal-task-card ${t.done ? 'done-mini' : ''}"
           style="--tk-color:${col}"
-          oncontextmenu="return tkQuickActionsOpen(event, ${t.id})"
-          onclick="event.stopPropagation();taskHubOpen(${t.id})"
+          oncontextmenu="return tkQuickActionsOpen(event, ${tkJs(t.id)})"
+          onclick="event.stopPropagation();taskHubOpen(${tkJs(t.id)})"
           title="${esc(t.nome)}">
         ${t.hora ? `<span style="opacity:.6;margin-right:3px">${esc(t.hora)}</span>` : ''}${esc(t.nome)}
       </div>`;
@@ -1413,7 +1415,7 @@ function tkRenderAnalytics() {
                 const urgColor = diff === 0 ? '#e8864a' : diff <= 2 ? '#e06b8b' : '#5ec4a8';
                 const urgLabel = diff === 0 ? 'Hoje' : diff === 1 ? 'Amanhã' : `em ${diff}d`;
                 const pColor = TK_PRIOR_COLOR[t.prior] || '#c8a96e';
-                return `<div class="san-rank-item" onclick="taskHubOpen(${t.id})" style="cursor:pointer">
+                return `<div class="san-rank-item" onclick="taskHubOpen(${tkJs(t.id)})" style="cursor:pointer">
                   <div class="san-rank-pos" style="background:${t.cor || pColor}22;color:${t.cor || pColor}">${i + 1}</div>
                   <div class="san-rank-info">
                     <div class="san-rank-name">${esc(t.nome)}</div>
@@ -1438,7 +1440,7 @@ function tkRenderAnalytics() {
                 const subT = complexity.totalItems;
                 const sp = Math.round(subD / subT * 100);
                 const col = t.cor || TK_PRIOR_COLOR[t.prior] || '#c8a96e';
-                return `<div class="san-rank-item" onclick="taskHubOpen(${t.id})" style="cursor:pointer">
+                return `<div class="san-rank-item" onclick="taskHubOpen(${tkJs(t.id)})" style="cursor:pointer">
                   <div class="san-rank-pos" style="background:${col}22;color:${col}">${i + 1}</div>
                   <div class="san-rank-info">
                     <div class="san-rank-name">${esc(t.nome)}</div>
@@ -1463,7 +1465,7 @@ function tkRenderAnalytics() {
               ${vencTasks.map(t => {
                 const diff = Math.abs(tkDaysFromNow(t.data));
                 const col = TK_PRIOR_COLOR[t.prior] || '#e06b8b';
-                return `<div class="san-rank-item" onclick="taskHubOpen(${t.id})" style="cursor:pointer">
+                return `<div class="san-rank-item" onclick="taskHubOpen(${tkJs(t.id)})" style="cursor:pointer">
                   <div class="san-rank-pos" style="background:${col}22;color:${col}">!</div>
                   <div class="san-rank-info">
                     <div class="san-rank-name">${esc(t.nome)}</div>
@@ -2701,23 +2703,23 @@ tkCalRender = function () {
         return (a.hora || '99:99').localeCompare(b.hora || '99:99');
       }).map(function (task) {
         if (task.isHoliday) {
-          return `<div class="tk-cal-task-card tk-cal-holiday-card" onclick="event.stopPropagation()" title="${task.holidayType}: ${esc(task.nome)}"><span class="tk-cal-holiday-icon">${task.icon}</span>${esc(task.nome)}</div>`;
+          return `<div class="tk-cal-task-card tk-cal-holiday-card" onclick="event.stopPropagation()" title="${esc(task.holidayType)}: ${esc(task.nome)}"><span class="tk-cal-holiday-icon">${esc(task.icon)}</span>${esc(task.nome)}</div>`;
         }
         if (task.isDream) {
-          return `<div class="tk-cal-task-card tk-cal-dream-card" style="--tk-color:#7c6fcd" onclick="event.stopPropagation();tkOpenDreamDeadline('${String(task.id)}')" title="Prazo do sonho: ${esc(task.nome)}"><span class="tk-cal-dream-icon">${task.icon}</span>${esc(task.nome)}</div>`;
+          return `<div class="tk-cal-task-card tk-cal-dream-card" style="--tk-color:#7c6fcd" onclick="event.stopPropagation();tkOpenDreamDeadline(${tkJs(String(task.id))})" title="Prazo do sonho: ${esc(task.nome)}"><span class="tk-cal-dream-icon">${esc(task.icon)}</span>${esc(task.nome)}</div>`;
         }
         if (task.isReview) {
-          return `<div class="tk-cal-task-card tk-cal-review-card" onclick="event.stopPropagation();tkOpenReviewPlanner()" title="Revisão agendada: ${esc(task.nome)}"><span class="tk-cal-review-icon">${task.icon}</span>${esc(task.nome)}</div>`;
+          return `<div class="tk-cal-task-card tk-cal-review-card" onclick="event.stopPropagation();tkOpenReviewPlanner()" title="Revisão agendada: ${esc(task.nome)}"><span class="tk-cal-review-icon">${esc(task.icon)}</span>${esc(task.nome)}</div>`;
         }
         const col = task.cor || TK_PRIOR_COLOR[task.prior] || '#c8a96e';
         if (task.isGym) {
-          return `<div class="tk-cal-task-card ${task.done ? 'done-mini' : ''}" style="--tk-color:${col}" onclick="event.stopPropagation();tkOpenGymDay('${task.data}')" title="Treino programado">🏋️ ${esc(task.nome)}</div>`;
+          return `<div class="tk-cal-task-card ${task.done ? 'done-mini' : ''}" style="--tk-color:${col}" onclick="event.stopPropagation();tkOpenGymDay(${tkJs(task.data)})" title="Treino programado">🏋️ ${esc(task.nome)}</div>`;
         }
         return `<div class="tk-cal-task-card ${task.done ? 'done-mini' : ''} ${tkSelectionHas(task.id) ? 'selected' : ''}"
             data-task-id="${task.id}" data-date="${task.data}" style="--tk-color:${col}"
-            oncontextmenu="return tkQuickActionsOpen(event, ${task.id})"
-            onclick="tkCalCardActivate(event, ${task.id})"
-            onpointerdown="tkCalCardPointerDown(event, ${task.id})" title="${esc(task.nome)}">
+            oncontextmenu="return tkQuickActionsOpen(event, ${tkJs(task.id)})"
+            onclick="tkCalCardActivate(event, ${tkJs(task.id)})"
+            onpointerdown="tkCalCardPointerDown(event, ${tkJs(task.id)})" title="${esc(task.nome)}">
           ${task.hora ? `<span style="opacity:.6;margin-right:3px">${esc(task.hora)}</span>` : ''}${esc(task.nome)}
         </div>`;
       }).join('');
@@ -2744,9 +2746,9 @@ tkCalRender = function () {
       const timeLabel = segment.isStart && task.hora ? `<span class="tk-cal-span-time">${esc(task.hora)}</span>` : '';
       return `<div class="${classes}" data-task-id="${task.id}" data-span-start="${segment.segmentStartDate}"
           style="--tk-color:${col};grid-column:${segment.startCol + 1}/span ${segment.endCol - segment.startCol + 1};grid-row:${segment.lane + 1}"
-          oncontextmenu="return tkQuickActionsOpen(event, ${task.id})"
-          onclick="tkCalCardActivate(event, ${task.id})"
-          onpointerdown="tkCalCardPointerDown(event, ${task.id})"
+          oncontextmenu="return tkQuickActionsOpen(event, ${tkJs(task.id)})"
+          onclick="tkCalCardActivate(event, ${tkJs(task.id)})"
+          onpointerdown="tkCalCardPointerDown(event, ${tkJs(task.id)})"
           title="${titleText} · ${tkFmtDate(task.data)} – ${tkFmtDate(task.dataFim)}">${timeLabel}${shownName}</div>`;
     }).join('');
 
@@ -2820,7 +2822,7 @@ function taskHubRenderLinks(task) {
   var parent = task.parentId ? S.tasks.find(function (item) { return item.id === task.parentId; }) : null;
   var child = tkGetChildren(task.id)[0] || null;
   lane.innerHTML = `
-    ${parent ? `<button class="taskh-link-node parent" type="button" onclick="taskHubOpen(${parent.id})">
+    ${parent ? `<button class="taskh-link-node parent" type="button" onclick="taskHubOpen(${tkJs(parent.id)})">
       <span class="taskh-link-role">Tarefa mãe</span>
       <span class="taskh-link-title">${esc(parent.nome)}</span>
     </button>` : `<div class="taskh-link-empty">Sem tarefa mãe</div>`}
@@ -2830,7 +2832,7 @@ function taskHubRenderLinks(task) {
       <span class="taskh-link-title">${esc(task.nome)}</span>
     </div>
     <div class="taskh-link-connector"></div>
-    ${child ? `<button class="taskh-link-node child" type="button" onclick="taskHubOpen(${child.id})">
+    ${child ? `<button class="taskh-link-node child" type="button" onclick="taskHubOpen(${tkJs(child.id)})">
       <span class="taskh-link-role">Tarefa filha</span>
       <span class="taskh-link-title">${esc(child.nome)}</span>
     </button>` : `<div class="taskh-link-empty">Sem tarefa filha</div>`}
@@ -2920,7 +2922,7 @@ function taskHubLinkPickerRender() {
     return (a.nome || '').localeCompare(b.nome || '');
   });
   list.innerHTML = items.length ? items.map(function (item) {
-    return `<button class="taskh-link-picker-item" type="button" onclick="taskHubLinkTasks('${taskLinkPickerState.kind}', ${item.id})">
+    return `<button class="taskh-link-picker-item" type="button" onclick="taskHubLinkTasks('${taskLinkPickerState.kind}', ${tkJs(item.id)})">
       <span class="taskh-link-picker-item-main">
         <span class="taskh-link-picker-item-title">${esc(item.nome)}</span>
         <span class="taskh-link-picker-item-meta">${esc(item.cat || 'Sem categoria')} · ${item.data ? tkFmtDate(item.data) : 'Sem data'}</span>
@@ -3062,7 +3064,7 @@ taskHubRenderSubs = function (task) {
   }).join('');
   const childMarkup = childTasks.map(function (child) {
     return `
-      <button class="taskh-sub-item taskh-sub-item-linked" type="button" onclick="taskHubOpen(${child.id})">
+      <button class="taskh-sub-item taskh-sub-item-linked" type="button" onclick="taskHubOpen(${tkJs(child.id)})">
         <div class="taskh-sub-check ${child.done ? 'done' : ''}">
           ${child.done ? '\u2713' : '\u2192'}
         </div>

@@ -4,6 +4,11 @@ O site usa **Firebase Authentication** (email/senha; Google opcional) e **Cloud 
 pelo SDK *compat* 10.12.5 carregado em `js/app-shell.js`. Não usa Realtime Database nem
 Firebase Storage.
 
+O SDK fica no próprio repositório, em `js/vendor/firebasejs/10.12.5/` (cópia dos arquivos
+`firebase-*-compat.js` do pacote npm `firebase@10.12.5`), em vez de vir do CDN `gstatic.com`.
+Para atualizar a versão, copie os três arquivos do pacote npm novo para uma pasta com o número
+da versão e troque `FIREBASE_SDK_BASE` em `js/app-shell.js`.
+
 Sem login, tudo fica só no navegador (`localStorage`). Com login, cada usuário tem os próprios
 dados em `users/{uid}/…`.
 
@@ -102,6 +107,14 @@ window.SOTER_FIREBASE_CONFIG = {
 
 `storageBucket` é preenchido porque faz parte das credenciais, mas o Firebase Storage não é usado.
 
+### Content-Security-Policy
+
+Cada página tem um `<meta http-equiv="Content-Security-Policy">` que limita de onde vêm scripts,
+estilos e fontes e para onde o site pode fazer requisições (`connect-src`: Firebase em
+`*.googleapis.com`, Nominatim e Open-Meteo). Se o projeto usar um `authDomain` próprio (fora de
+`*.firebaseapp.com`) ou outro serviço externo, acrescente o domínio no `frame-src` ou no
+`connect-src` de todas as páginas.
+
 ## Testar localmente com o Firebase Emulator Suite
 
 `SOTER_FIREBASE_CONFIG` aceita `emulators`, que **só deve ser usado em testes locais**:
@@ -112,3 +125,5 @@ emulators: { firestore: "127.0.0.1:8085", auth: "http://127.0.0.1:9099" }
 
 Com `firebase emulators:start --only auth,firestore` (firebase-tools) e um `projectId` de
 demonstração (por exemplo `demo-soter`), o site conversa com os emuladores em vez do projeto real.
+A CSP das páginas não libera `127.0.0.1`: nos testes, desligue a CSP no navegador de teste (no
+Playwright, `bypassCSP: true`).

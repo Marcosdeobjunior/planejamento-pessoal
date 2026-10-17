@@ -18,31 +18,37 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == uid;
     }
 
+    // Só as coleções que o site usa. Qualquer outra é negada, para a conta não virar
+    // depósito de dados arbitrários.
+    function knownCollection(collection) {
+      return collection in ['private', 'modules', 'images', 'meta', 'rubrica'];
+    }
+
     // Limites por documento (além do limite de 1 MiB que o próprio Firestore impõe):
     // - no máximo 40 campos no nível de cima;
     // - images: o data URL em "data" com no máximo 950.000 caracteres;
-    // - modules: schema 2, "rev" inteiro e "data" como mapa.
+    // - modules: schema 2, "rev" inteiro e "data" como mapa;
+    // - rubrica: só "p" (página) ou "s" (configuração, no __meta), como mapa, e "em".
     function validWrite(collection) {
       let d = request.resource.data;
       return d.keys().size() <= 40
         && (collection != 'images' || (d.data is string && d.data.size() <= 950000))
-        && (collection != 'modules' || (d.schema == 2 && d.rev is int && d.data is map));
+        && (collection != 'modules' || (d.schema == 2 && d.rev is int && d.data is map))
+        && (collection != 'rubrica' || (d.keys().hasOnly(['p', 's', 'em'])
+              && (!('p' in d) || d.p is map) && (!('s' in d) || d.s is map)));
     }
 
+    // O documento users/{uid} em si não é usado pelo site: só leitura.
     match /users/{uid} {
-      allow read, write: if isOwner(uid);
+      allow read: if isOwner(uid);
     }
 
     match /users/{uid}/{collection}/{docId} {
       allow read, delete: if isOwner(uid);
-      allow create, update: if isOwner(uid) && validWrite(collection);
+      allow create, update: if isOwner(uid) && knownCollection(collection) && validWrite(collection);
     }
 
-    // subcoleções mais fundas (hoje não usadas): só o dono. O "{sub}" garante pelo menos um
-    // segmento a mais: "{rest=**}" sozinho também casaria com o próprio documento e anularia
-    // os limites acima (as regras do Firestore são combinadas com OU).
-    match /users/{uid}/{collection}/{docId}/{sub}/{rest=**} {
-      allow read, write: if isOwner(uid);
-    }
+    // Subcoleções mais fundas não são usadas: nenhuma regra as libera (tudo o que não casa
+    // com uma regra é negado).
   }
 }
