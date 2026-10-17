@@ -115,6 +115,7 @@ html > body {
   right: 0;
   width: min(360px, calc(100vw - 28px));
   height: 100vh;
+  height: 100dvh; /* celular: não fica atrás da barra do navegador */
   padding: 18px 16px 24px;
   background: rgba(8, 7, 20, 0.96);
   backdrop-filter: blur(24px);

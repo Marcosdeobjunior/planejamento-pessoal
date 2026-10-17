@@ -477,7 +477,7 @@ body {
     font-size: 10px; font-family: var(--font-mono); font-weight: 700; letter-spacing: 1px;
     padding: 5px 12px; border-radius: 8px; cursor: pointer;
     background: rgba(200,169,110,.08); border: 1px solid rgba(200,169,110,.2);
-    color: rgba(200,169,110,.7); transition: all .18s;
+    color: #968159; transition: all .18s; /* contraste AA */
   }
   .tk-cal-today-btn:hover { background: rgba(200,169,110,.18); color: var(--accent1); }
 
@@ -486,7 +486,7 @@ body {
   }
   .tk-cal-dow {
     text-align: center; font-size: 9px; font-family: var(--font-mono); font-weight: 800;
-    letter-spacing: 1.8px; text-transform: uppercase; color: rgba(122,117,144,.45);
+    letter-spacing: 1.8px; text-transform: uppercase; color: #7c7a86; /* contraste AA (era .45 de alfa) */
     padding-bottom: 10px;
   }
   .tk-cal-days { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; }

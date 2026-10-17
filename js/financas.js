@@ -59,7 +59,7 @@
     "Roupas": "#f5c2e7",
     "Eletr\u00f4nicos": "#7c6fcd",
     "Poupan\u00e7a": "#c8a96e",
-    "Outros": "#7a7590"
+    "Outros": "#858099"
   };
 
   var CAT_ICONS = {
@@ -1676,7 +1676,7 @@
     filtered.forEach(function (tx) {
       var fut = isFuture(tx);
       var div = document.createElement("div");
-      var catClr = CAT_COLORS[tx.category] || "#7a7590";
+      var catClr = CAT_COLORS[tx.category] || "#858099";
       var catIco = CAT_ICONS[tx.category] || "\uD83D\uDCCC";
       var txClass = getTxClass(tx.type);
       div.className = "fin-tx-item" + (fut ? " fin-tx-future" : "");
@@ -1717,7 +1717,7 @@
 
     list.innerHTML = "";
     entries.slice(0, 6).forEach(function (entry) {
-      var clr = CAT_COLORS[entry.name] || "#7a7590";
+      var clr = CAT_COLORS[entry.name] || "#858099";
       var pct = Math.round((entry.val / total) * 100);
       var row = document.createElement("div");
       row.className = "fin-cat-item";

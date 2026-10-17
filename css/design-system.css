@@ -6,7 +6,7 @@
 
   --border: rgba(255, 255, 255, 0.07);
   --text: #e8e4f0;
-  --muted: #7a7590;
+  --muted: #858099;
 
   --accent1: #c8a96e;
   --accent2: #7c6fcd;
@@ -75,7 +75,7 @@
   --ds-border-hover: rgba(255, 255, 255, 0.14);
   --ds-input-bg: rgba(6, 6, 16, 0.8);
 
-  /* Cores. --ds-muted é mais claro que o #6b6882 da Revisão para dar contraste
+  /* Cores. --ds-muted é mais claro que o #848297 da Revisão para dar contraste
      de pelo menos 4.5:1 com texto pequeno sobre o fundo e os cards. */
   --ds-bg: #04040c;
   --ds-text: #e8e4f0;
@@ -122,4 +122,38 @@ html::-webkit-scrollbar-thumb {
 body::-webkit-scrollbar-thumb:hover,
 html::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(180deg, rgba(224, 194, 132, 0.82), rgba(200, 169, 110, 0.56));
+}
+
+/* ── Acessibilidade global ─────────────────────────────────────────────── */
+/* controles nativos (select, data, barras de rolagem) no tema escuro */
+:root { color-scheme: dark; }
+
+/* foco visível ao navegar pelo teclado (as páginas tiravam o contorno) */
+a:focus-visible, button:focus-visible, summary:focus-visible,
+[tabindex]:focus-visible, [role="button"]:focus-visible, [role="tab"]:focus-visible {
+  outline: 2px solid var(--ds-gold, #c8a96e) !important;
+  outline-offset: 2px !important;
+}
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 1px solid rgba(200, 169, 110, .75) !important;
+  outline-offset: 0 !important;
+}
+
+/* link "pular para o conteúdo" (criado pelo app-shell): só aparece com o foco */
+.skip-link {
+  position: fixed; left: 12px; top: -60px; z-index: 100000;
+  padding: 10px 16px; border-radius: 10px;
+  background: #c8a96e; color: #0d0d12; font: 700 13px/1 var(--ds-font-ui, sans-serif);
+  text-decoration: none; transition: top .15s;
+}
+.skip-link:focus { top: 12px; }
+
+/* movimento reduzido: vale também para as animações e transições CSS das páginas */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

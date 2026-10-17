@@ -493,7 +493,7 @@ function updateModalStatusPill() {
   const pill = document.getElementById('modal-status-pill');
   const row  = document.getElementById('modal-status-row');
   if (!sel||!pill||!row) return;
-  const color = cfg.statusColors[sel.value]||'#7a7590';
+  const color = cfg.statusColors[sel.value]||'#858099';
   pill.textContent = cfg.statusLabels[sel.value]||sel.value;
   pill.style.color = color;
   pill.style.borderColor = color+'44';
@@ -1281,7 +1281,7 @@ function renderModalRelated(tracker, currentItem) {
   const cfg=TRACKER_CFG[tracker];
   scroll.innerHTML=related.map(({item})=>{
     const stars=item.nota?'★'.repeat(item.nota):'';
-    const statusColor=cfg.statusColors[item.status]||'#7a7590';
+    const statusColor=cfg.statusColors[item.status]||'#858099';
     const thumb=item.img?`<img loading="lazy" decoding="async" src="${escUrl(item.img)}" alt="${esc(item.titulo)}">`:`<span style="font-size:24px;opacity:.5">${cfg.icon}</span>`;
     return `<div class="rel-card" onclick="openModal('${tracker}',${escJs(item.id)})" title="${esc(item.titulo)}">
       <div class="rel-thumb">${thumb}<div class="rel-status-bar" style="background:${statusColor}88"></div></div>

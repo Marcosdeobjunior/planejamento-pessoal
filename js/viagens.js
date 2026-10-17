@@ -169,7 +169,7 @@
 
   function initMap(noMap) {
     if (noMap || typeof window.L === "undefined") {
-      document.getElementById("map").innerHTML = '<div style="height:500px;display:flex;align-items:center;justify-content:center;color:#7a7590;font-family:DM Mono,monospace;font-size:11px;flex-direction:column;gap:8px"><span>Mapa indisponivel - sem conexao</span></div>';
+      document.getElementById("map").innerHTML = '<div style="height:500px;display:flex;align-items:center;justify-content:center;color:#858099;font-family:DM Mono,monospace;font-size:11px;flex-direction:column;gap:8px"><span>Mapa indisponivel - sem conexao</span></div>';
       return;
     }
     lmap = window.L.map("map", { worldCopyJump: true, minZoom: 2, maxZoom: 18, zoomControl: true }).setView([-14, -51], 3);
@@ -247,8 +247,8 @@
       m.bindPopup(
         '<div style="font-family:Syne,sans-serif;min-width:165px">' +
         '<div style="font-weight:700;font-size:13px;margin-bottom:7px;color:#e8e4f0">' + esc(t.destination) + "</div>" +
-        '<div style="font-size:10px;color:#7a7590;margin-bottom:2px">' + esc(t.category || "Local") + "</div>" +
-        '<div style="font-size:10px;color:#7a7590;margin-bottom:2px">' + esc(ds) + "</div>" +
+        '<div style="font-size:10px;color:#858099;margin-bottom:2px">' + esc(t.category || "Local") + "</div>" +
+        '<div style="font-size:10px;color:#858099;margin-bottom:2px">' + esc(ds) + "</div>" +
         '<div style="font-size:10px;color:#5ec4a8">' + esc(bud) + "</div>" +
         "</div>"
       );
