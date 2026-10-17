@@ -38,7 +38,7 @@ function normalizeCategory(cat) {
 function load() {
   const app = getAppState();
   const raw = app.data && app.data[DATA_KEY];
-  if (!raw || typeof raw !== "object") return;
+  if (!raw || typeof raw !== "object") { S.sonhos = []; return; } // nada desta conta: começa vazio
 
   if (Array.isArray(raw.sonhos) && raw.sonhos.length && Array.isArray(raw.sonhos[0].metas)) {
     S.sonhos = raw.sonhos;
@@ -156,7 +156,9 @@ function snMigrateData() {
     if (typeof s.acumulado !== "number") s.acumulado = num(s.acumulado);
     if (!Array.isArray(s.financeHistory)) s.financeHistory = [];
     s.financeHistory = s.financeHistory
-      .map(function (h) { return { id: h.id || Date.now(), mes: String(h.mes || ""), valor: num(h.valor) }; })
+      // depósitos antigos sem id: um id diferente para cada um (antes todos ficavam com o mesmo
+      // Date.now() e excluir um apagava todos)
+      .map(function (h, i) { return { id: h.id || (s.id + "_dep_" + i + "_" + String(h.mes || "") + "_" + num(h.valor)), mes: String(h.mes || ""), valor: num(h.valor) }; })
       .filter(function (h) { return h.mes && h.valor > 0; });
     if (!s.realizadoAt) s.realizadoAt = '';
     s.metas = s.metas.map(m => {
@@ -794,6 +796,7 @@ function hubAddDeposito() {
 
 function hubDelDeposito(depId) {
   const s = S.sonhos.find(x => String(x.id) === String(hubSonhoId)); if (!s) return;
+  if (!confirm('Excluir este depósito?')) return;
   s.financeHistory = (s.financeHistory || []).filter(function (d) { return String(d.id) !== String(depId); });
   save(); hubRenderFinance(s); renderSonhos();
 }
@@ -1842,6 +1845,11 @@ function snInitInteractions() {
   load();
   renderSonhos();
   snInitInteractions();
+  // dados da nuvem chegaram depois da abertura: relê para não regravar a lista antiga
+  window.addEventListener('soter:remote-state-applied', function () {
+    load();
+    renderSonhos();
+  });
 
   const pendingDreamId = sessionStorage.getItem(DREAM_OPEN_KEY);
   if (pendingDreamId) {

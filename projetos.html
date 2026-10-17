@@ -933,10 +933,17 @@ function fixaChave(){KEY=chaveLocal();return KEY}
 function migraChaveLocal(){
   try{
     const antigo=localStorage.getItem(KEY_BASE);
-    if(antigo&&!localStorage.getItem(KEY)){
-      localStorage.setItem(KEY,antigo);
+    if(!antigo)return;
+    const f=fb();
+    if(!f||!f.uid)return;             /* visitante: o balde antigo pode ser de uma conta; espera */
+    let outra=false;
+    for(let i=0;i<localStorage.length;i++){
+      const k=String(localStorage.key(i)||'');
+      if(k.indexOf('soter_state_cache_v2_')===0&&k!=='soter_state_cache_v2_guest'&&k!=='soter_state_cache_v2_'+f.uid)outra=true;
     }
-    if(antigo)localStorage.removeItem(KEY_BASE);
+    /* outra conta já usou este navegador: não dá para saber de quem é — descarta */
+    if(!outra&&!localStorage.getItem(KEY))localStorage.setItem(KEY,antigo);
+    localStorage.removeItem(KEY_BASE);
   }catch(e){}
 }
 /* tipo · nome · ícone · descrição · grupo · sinônimos para a busca */
@@ -1020,7 +1027,9 @@ function styleOf(p){
 }
 function effMode(p){const m=cfg(p,'modo');return m==='herdar'?S.openMode:m}
 
-let S=null,saveT=null,memOnly=false,menuEl=null,dragging=null,anim=null;
+let S=null,saveT=null,memOnly=false,menuEl=null,dragging=null,anim=null,trocandoConta=false;
+/* a conta logada não é mais a dona do S em memória (ou está trocando): não grava nada */
+const contaMudou=()=>trocandoConta||KEY!==chaveLocal();
 let pmenuEl=null,pmenuFresh=false,undoStack=[];
 
 const $=s=>document.querySelector(s);
@@ -1245,29 +1254,36 @@ async function nuvemCarregar(){
 /* ---- gravação incremental ---- */
 let gravando=false,pendente=false;
 async function nuvemGravar(){
+  if(contaMudou())return;
   if(gravando){pendente=true;return}
   if(S&&S.semente)return;          /* só exemplo: não ocupa a conta */
   const f=fb();if(!f)return;
   gravando=true;
   try{
-    const resto=Object.assign({},S);delete resto.pages;
+    /* JSON tira os campos undefined (o Firestore recusa o lote inteiro por causa de um só,
+       por exemplo activeId numa conta ainda sem páginas) */
+    const resto=JSON.parse(JSON.stringify(Object.assign({},S,{pages:undefined})));
     const lote=f.db.batch();let ops=0;
+    const gravadas=[],apagadas=[];   /* só marcadas como sincronizadas depois do commit */
     for(const id in S.pages){
       const j=JSON.stringify(S.pages[id]);
       if(sincronizado.get(id)===j)continue;
       if(j.length>900000){toast('a página “'+(S.pages[id].title||'sem título')+'” está perto do limite de 1 MB');continue}
-      lote.set(f.raiz.doc(id),{p:S.pages[id],em:new Date().toISOString()});
-      sincronizado.set(id,j);ops++;
-      if(ops>=400)break;
+      if(ops>=400){pendente=true;break}   /* o resto vai no próximo lote */
+      lote.set(f.raiz.doc(id),{p:JSON.parse(j),em:new Date().toISOString()});
+      gravadas.push([id,j]);ops++;
     }
     for(const id of Array.from(sincronizado.keys())){
       if(S.pages[id])continue;
-      lote.delete(f.raiz.doc(id));sincronizado.delete(id);ops++;
+      if(ops>=450){pendente=true;break}
+      lote.delete(f.raiz.doc(id));apagadas.push(id);ops++;
     }
     lote.set(f.raiz.doc(META),{s:resto,em:new Date().toISOString()});ops++;
     await lote.commit();
+    gravadas.forEach(([id,j])=>sincronizado.set(id,j));
+    apagadas.forEach(id=>sincronizado.delete(id));
     nuvemOk=true;nuvemErro=false;
-  }catch(e){avisaNuvem(e)}
+  }catch(e){pendente=false;avisaNuvem(e)}   /* sem repetição imediata em erro: o próximo save tenta de novo */
   finally{
     gravando=false;
     if(pendente){pendente=false;setTimeout(nuvemGravar,400)}
@@ -1316,6 +1332,7 @@ async function load(){
 function save(){
   clearTimeout(saveT);
   saveT=setTimeout(()=>{
+    if(contaMudou())return;
     const serial=JSON.stringify(S);
     try{
       const prev=localStorage.getItem(KEY);
@@ -1327,11 +1344,19 @@ function save(){
   },500);
 }
 
-/* ao entrar na conta em outro aparelho, traz o que está na nuvem */
+/* ao entrar na conta em outro aparelho, traz o que está na nuvem.
+   Enquanto troca de conta, nada é gravado (contaMudou): o S em memória
+   ainda é da conta anterior e não pode ir para o balde nem para a nuvem
+   da conta nova. */
 window.addEventListener('soter:firebase-auth-changed',async function(){
+  trocandoConta=true;clearTimeout(saveT);undoStack=[];
+  try{await trocaDeConta()}finally{trocandoConta=false}
+});
+async function trocaDeConta(){
   sincronizado=new Map();
   const chaveAntes=KEY;
   fixaChave();                       /* o usuário mudou: o balde local também muda */
+  migraChaveLocal();
   let d=null;
   try{d=await nuvemCarregar()}catch(e){}
   if(!d||d.vazio||!d.pages||typeof d.pages!=='object'||!Object.keys(d.pages).length){
@@ -1352,13 +1377,15 @@ window.addEventListener('soter:firebase-auth-changed',async function(){
     return;
   }
   if(JSON.stringify(d.pages)===JSON.stringify(S.pages))return;
-  if(document.querySelector('.ct:focus,[data-title]:focus'))return;
+  /* mesma conta e alguém digitando: não atropela; conta diferente troca sempre */
+  if(KEY===chaveAntes&&document.querySelector('.ct:focus,[data-title]:focus'))return;
   S=d;garanteAreas();
   if(!S.pages[S.activeId])S.activeId=Object.keys(S.pages)[0]||null;
   S.peekId=null;if(S.view==='graph'||S.view==='trash')S.view='page';
   render();toast('sincronizado com a sua conta');
-});
+}
 function undo(){
+  if(contaMudou())return;
   if(!undoStack.length){toast('nada para desfazer');return}
   const snap=undoStack.pop();
   let d=null;try{d=JSON.parse(snap)}catch(e){return}

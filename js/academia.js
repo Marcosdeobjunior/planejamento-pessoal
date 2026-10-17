@@ -12,6 +12,16 @@
   var exerciseHistory = {};
   var diet = { breakfast: [], lunch: [], snack: [], dinner: [] };
   var todayDone = {};
+  var todayDoneDate = "";
+  // a página pode ficar aberta depois da meia-noite: "todayDone" é sempre o do dia de hoje
+  function ensureTodayDone() {
+    var key = todayStr();
+    if (todayDoneDate !== key) {
+      todayDone = Object.assign({}, doneByDate[key] || {});
+      todayDoneDate = key;
+    }
+    return todayDone;
+  }
   var doneByDate = {};
   var skippedByDate = {};
   var exFilter = "all";
@@ -79,7 +89,7 @@
   function resumeTrainingDay(dateStr) {
     delete skippedByDate[dateStr];
     if (!doneByDate[dateStr]) doneByDate[dateStr] = {};
-    if (dateStr === todayStr()) todayDone = Object.assign({}, doneByDate[dateStr]);
+    if (dateStr === todayStr()) { todayDone = Object.assign({}, doneByDate[dateStr]); todayDoneDate = dateStr; }
     save();
     syncStorageNow();
   }
@@ -111,10 +121,13 @@
   }
   function getTrainingStreak(referenceDate) {
     var trainingDays = getTrainingDaysUntil(referenceDate);
+    var referenceKey = formatDateLocal(referenceDate);
     var streak = 0;
     for (var i = 0; i < trainingDays.length; i += 1) {
       if (isTrainingDayCompleted(trainingDays[i])) streak += 1;
       else if (isTrainingDaySkipped(trainingDays[i])) continue;
+      else if (trainingDays[i] === referenceKey) continue; // hoje ainda pode ser feito: não zera
+      else if (!getExercisesForDate(trainingDays[i]).length) continue; // dia marcado sem exercícios
       else break;
     }
     return streak;
@@ -373,6 +386,7 @@
       diet: diet,
       skippedByDate: skippedByDate,
       todayDoneByDate: (function () {
+        ensureTodayDone();
         doneByDate[todayStr()] = todayDone;
         return Object.assign({}, doneByDate);
       }())
@@ -394,6 +408,7 @@
       skippedByDate = data[DATA_KEY].skippedByDate && typeof data[DATA_KEY].skippedByDate === "object" ? Object.assign({}, data[DATA_KEY].skippedByDate) : {};
       doneByDate = data[DATA_KEY].todayDoneByDate && typeof data[DATA_KEY].todayDoneByDate === "object" ? Object.assign({}, data[DATA_KEY].todayDoneByDate) : {};
       todayDone = doneByDate[todayStr()] ? Object.assign({}, doneByDate[todayStr()]) : {};
+      todayDoneDate = todayStr();
     }
 
     if (isSyntheticWeightSeed(weightLog)) weightLog = [];
@@ -815,6 +830,7 @@
     var list = document.createElement("div");
     list.className = "day-ex-list";
     var done = 0;
+    ensureTodayDone();
     dayExs.forEach(function (ex) {
       var isDone = !!todayDone[ex.id];
       if (isDone) done += 1;
@@ -853,6 +869,9 @@
       btn.addEventListener("click", function (e) {
         e.stopPropagation();
         var id = this.dataset.id;
+        // a lista foi desenhada antes da meia-noite: redesenha com o dia novo em vez de marcar
+        if (dateKey !== todayStr()) { renderDayWorkout(); return; }
+        ensureTodayDone();
         delete skippedByDate[dateKey];
         todayDone[id] = !todayDone[id];
         doneByDate[dateKey] = Object.assign({}, todayDone);
@@ -1154,6 +1173,11 @@
 
   window.addEventListener("pageshow", function (event) {
     if (!event.persisted) return;
+    loadAll();
+    renderAll();
+  });
+  // dados da nuvem chegaram depois da abertura: relê para não regravar a lista antiga
+  window.addEventListener("soter:remote-state-applied", function () {
     loadAll();
     renderAll();
   });

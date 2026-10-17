@@ -55,6 +55,19 @@ Toda string que começa com `data:image/` (capas, fotos, avatar) é guardada uma
 `images/{sha256}`; no módulo fica `"soterimg:{sha256}"`. Ao carregar, o app-shell troca a
 referência de volta pelo data URL antes de entregar o estado às páginas.
 
+## Isolamento entre contas
+
+- Os dados ficam no navegador separados por conta (`soter_state_cache_v2_<uid>`) e o visitante
+  tem a própria cópia (`soter_state_cache_v2_guest`).
+- Se a conta muda com uma página aberta (login pelo modal, logout ou troca de conta em outra aba),
+  a página para de gravar na hora e recarrega depois da primeira leitura da nuvem da conta nova.
+  Assim o que estava na tela (da conta anterior ou do visitante) nunca é gravado na conta nova.
+- Logout com limpeza marca a conta (`soter_logout_purge_uid_v1`): as outras abas abertas não
+  recriam a cópia local dela.
+- Schema 1: enquanto este navegador nunca leu a nuvem de uma conta
+  (`soter_firebase_hydrated_v1_<uid>`), o estado local dela é só o estado inicial e não sobrescreve
+  a nuvem; na primeira leitura, a nuvem vence.
+
 ## Ativar o schema 2
 
 - **Num navegador só** (para testar): no console do navegador, já no site,

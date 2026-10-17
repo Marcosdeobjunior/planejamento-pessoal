@@ -298,6 +298,18 @@ function tkGetNationalHolidayEntries(year, month) {
   });
 }
 
+// id numérico único: os clones de recorrência usavam Date.now() + aleatório (ids "do futuro") e
+// uma tarefa criada logo depois podia receber o mesmo id
+var tkLastId = 0;
+function tkNewId() {
+  var used = {};
+  (S.tasks || []).forEach(function (item) { used[item.id] = true; });
+  var id = Math.max(Date.now(), tkLastId + 1);
+  while (used[id]) id += 1;
+  tkLastId = id;
+  return id;
+}
+
 function tkAddDays(ds, amount) {
   const date = tkParseDate(ds);
   if (!date) return ds;
@@ -566,6 +578,8 @@ function tkSyncRecurringSeries(masterId) {
   var cloneByIndex = {};
   existingClones.forEach(function (item) {
     cloneByIndex[item.recurrenceIndex] = item;
+    // ids novos nunca repetem os dos clones que serão reaproveitados abaixo
+    if (Number(item.id) > tkLastId) tkLastId = Number(item.id);
   });
   S.tasks = S.tasks.filter(function (item) {
     return !(item.isRecurringClone && item.recurrenceMasterId === masterId);
@@ -573,17 +587,28 @@ function tkSyncRecurringSeries(masterId) {
   var limit = TK_RECURRENCE_LIMIT[master.recurrence] || 0;
   if (!master.recurrence || master.recurrence === 'none' || !limit) return;
   var seedDate = master.recurrenceSeedDate || master.data;
+  if (!seedDate) return; // sem data não há como repetir (geraria clones sem data)
   var exceptions = new Set(master.recurrenceExceptions || []);
   var masterIndex = tkGetNextRecurringIndex(seedDate, master.recurrence, exceptions, 0);
   master.data = tkAdvanceRecurrence(seedDate, master.recurrence, masterIndex);
   master.recurrenceIndex = masterIndex;
   master.recurrenceMasterId = master.id;
-  var nextIndex = masterIndex + 1;
-  for (var i = 0; i < limit; i++) {
+  // A janela de ocorrências acompanha o dia de hoje: até "limit" ocorrências passadas e "limit"
+  // futuras. Antes ela partia sempre da semente e uma série diária acabava depois de um mês.
+  var today = tkToday();
+  var todayIndex = masterIndex + 1;
+  while (todayIndex < masterIndex + 5000 && tkAdvanceRecurrence(seedDate, master.recurrence, todayIndex) < today) todayIndex++;
+  var nextIndex = Math.max(masterIndex + 1, todayIndex - limit);
+  var total = (todayIndex - nextIndex) + limit;
+  // ocorrências concluídas que ficaram antes da janela continuam como estavam (histórico)
+  existingClones.forEach(function (item) {
+    if (item.done && item.recurrenceIndex < nextIndex) S.tasks.push(item);
+  });
+  for (var i = 0; i < total; i++) {
     var occurrenceIndex = tkGetNextRecurringIndex(seedDate, master.recurrence, exceptions, nextIndex);
     var existing = cloneByIndex[occurrenceIndex];
     S.tasks.push({
-      id: existing ? existing.id : Date.now() + Math.floor(Math.random() * 100000) + i + 1,
+      id: existing ? existing.id : tkNewId(),
       nome: master.nome,
       nota: master.nota,
       prior: master.prior,
@@ -624,7 +649,13 @@ function tkApplyRecurringEdits(taskId, updates) {
   var nextRecurrence = hasNextRecurrence ? updates.recurrence : (task.recurrence || master.recurrence || 'none');
   var nextDate = hasNextDate ? updates.data : (task.data || master.data);
   var nextMasterDate = nextDate;
-  if (task.recurrenceIndex) {
+  var dateChanged = hasNextDate && updates.data !== task.data;
+  var recurrenceChanged = nextRecurrence !== (task.recurrence || master.recurrence || 'none');
+  if (!dateChanged && !recurrenceChanged && (master.recurrenceSeedDate || master.data)) {
+    // data e recorrência iguais: a semente fica (voltar do dia 28/02 para janeiro mudaria a série
+    // inteira do dia 31 para o dia 28)
+    nextMasterDate = master.recurrenceSeedDate || master.data;
+  } else if (task.recurrenceIndex) {
     nextMasterDate = tkRewindRecurrence(nextDate, nextRecurrence, task.recurrenceIndex);
   }
   var nextEndDate = Object.prototype.hasOwnProperty.call(updates, 'dataFim') ? updates.dataFim : (task.dataFim || master.dataFim || '');
@@ -648,11 +679,31 @@ function tkApplyRecurringEdits(taskId, updates) {
 function tkMoveTaskSeries(ids, dayDelta) {
   if (!dayDelta || !ids.length) return;
   var normalizedIds = ids.map(function (id) { return Number(id); });
+  var movedMasters = {};
+  var plain = [];
   S.tasks.forEach(function (task) {
-    if (normalizedIds.indexOf(Number(task.id)) >= 0 && task.data) {
-      task.data = tkAddDays(task.data, dayDelta);
-      if (task.dataFim) task.dataFim = tkAddDays(task.dataFim, dayDelta);
+    if (normalizedIds.indexOf(Number(task.id)) < 0 || !task.data) return;
+    if (task.recurrence && task.recurrence !== 'none') {
+      // recorrente: a série é refeita a partir da semente, então é ela que se move
+      movedMasters[task.isRecurringClone ? task.recurrenceMasterId : task.id] = true;
+    } else {
+      plain.push(task);
     }
+  });
+  plain.forEach(function (task) {
+    task.data = tkAddDays(task.data, dayDelta);
+    if (task.dataFim) task.dataFim = tkAddDays(task.dataFim, dayDelta);
+  });
+  Object.keys(movedMasters).forEach(function (key) {
+    var master = S.tasks.find(function (item) { return String(item.id) === key && !item.isRecurringClone; });
+    if (!master) return;
+    var seed = master.recurrenceSeedDate || master.data;
+    if (!seed) return;
+    master.recurrenceSeedDate = tkAddDays(seed, dayDelta);
+    master.data = tkAddDays(master.data || seed, dayDelta);
+    if (master.dataFim) master.dataFim = tkAddDays(master.dataFim, dayDelta);
+    master.recurrenceExceptions = (master.recurrenceExceptions || []).map(function (ds) { return tkAddDays(ds, dayDelta); });
+    tkSyncRecurringSeries(master.id);
   });
 }
 
@@ -1598,7 +1649,7 @@ function tkTaskHasDateRange(task) {
 function tkDuplicateTaskAtDate(taskId, targetDate) {
   var original = S.tasks.find(function (item) { return Number(item.id) === Number(taskId); });
   if (!original || !targetDate) return false;
-  var newId = Date.now() + Math.floor(Math.random() * 1000000) + 1;
+  var newId = tkNewId();
   var duration = tkTaskHasDateRange(original) ? tkDiffDays(original.data, original.dataFim) : 0;
   var copy = Object.assign({}, original, {
     id: newId,
@@ -1663,7 +1714,7 @@ function tkModalSave() {
   const selectedDate = document.getElementById('tkm-data').value;
   tkModalSetDate(selectedDate);
   const task = {
-    id:         Date.now(),
+    id:         tkNewId(),
     nome,
     nota:       document.getElementById('tkm-nota').value.trim(),
     prior:      document.getElementById('tkm-prior').value,
@@ -1888,7 +1939,7 @@ function tkRequestDeleteTask(task, onChoice) {
 function tkDuplicateTask(id) {
   const original = tkGetTaskById(id);
   if (!original) return null;
-  const copyId = Date.now();
+  const copyId = tkNewId();
   const duplicated = {
     id: copyId,
     nome: (original.nome || 'Tarefa') + ' (cópia)',
@@ -3087,8 +3138,13 @@ tkModalSave = function () {
   tkModalSetDate(selectedDate);
   const endDate = tkReadEndDate('tkm', selectedDate);
   if (endDate === null) return;
+  const recurrenceValue = document.getElementById('tkm-recorrencia').value;
+  if (recurrenceValue !== 'none' && !selectedDate) {
+    alert('Defina a data de início para repetir a tarefa.');
+    return;
+  }
   const task = {
-    id: Date.now(),
+    id: tkNewId(),
     nome: nome,
     nota: document.getElementById('tkm-nota').value.trim(),
     prior: document.getElementById('tkm-prior').value,
@@ -3127,6 +3183,10 @@ taskHubDrawerSalvar = function () {
   const idx = S.tasks.findIndex(function (item) { return item.id === taskHubState.id; });
   if (idx < 0) return;
   const startDate = document.getElementById('tkd-data').value;
+  if (document.getElementById('tkd-recorrencia').value !== 'none' && !startDate) {
+    alert('Defina a data de início para repetir a tarefa.');
+    return;
+  }
   const endDate = tkReadEndDate('tkd', startDate);
   if (endDate === null) return;
   const savedTask = tkApplyRecurringEdits(taskHubState.id, {
@@ -3174,6 +3234,11 @@ window.addEventListener('resize', tkQuickActionsClose);
 window.addEventListener('resize', taskHubClampBoardPosition);
 window.addEventListener('pageshow', function (event) {
   if (!event.persisted) return;
+  load();
+  renderTasks();
+});
+// dados da nuvem chegaram depois da abertura: relê para não regravar a lista antiga
+window.addEventListener('soter:remote-state-applied', function () {
   load();
   renderTasks();
 });
