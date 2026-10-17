@@ -3229,7 +3229,12 @@ window.addEventListener('keydown', function (event) {
     tkQuickActionsClose();
   }
 });
-window.addEventListener('resize', tkRenderList);
+// redesenhar a lista inteira a cada evento de resize travava a rotação/redimensionamento:
+// no máximo um redesenho por quadro
+var tkResizeRaf = 0;
+window.addEventListener('resize', function () {
+  if (!tkResizeRaf) tkResizeRaf = requestAnimationFrame(function () { tkResizeRaf = 0; tkRenderList(); });
+});
 window.addEventListener('resize', tkQuickActionsClose);
 window.addEventListener('resize', taskHubClampBoardPosition);
 window.addEventListener('pageshow', function (event) {

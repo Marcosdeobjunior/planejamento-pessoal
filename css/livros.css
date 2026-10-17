@@ -1,4 +1,4 @@
-@import url("./biblioteca-tracker.css");
+/* base comum: css/biblioteca-tracker.css, carregado por <link> antes deste arquivo */
 
 body[data-page="livros"] {
   --tracker-accent: #dabb79;

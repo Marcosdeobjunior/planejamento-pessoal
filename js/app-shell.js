@@ -131,6 +131,7 @@ window.SoterUtils = window.SoterUtils || (function () {
   var signInInProgress = false;
   // uid cujo logout (com limpeza) foi feito em alguma aba: as outras abas não regravam a cópia local
   var LOGOUT_PURGE_STORAGE_KEY = "soter_logout_purge_uid_v1";
+  var FIREBASE_SYNC_DEBOUNCE_MS = 800;
   // marca, por conta, que este navegador já leu a nuvem dela pelo menos uma vez (schema 1)
   var FIREBASE_HYDRATED_STORAGE_PREFIX = "soter_firebase_hydrated_v1_";
 
@@ -3343,10 +3344,12 @@ window.SoterUtils = window.SoterUtils || (function () {
     }
     firebasePendingState = compactStateForStorage(ensureStateShape(state));
     if (firebaseSyncTimer) clearTimeout(firebaseSyncTimer);
+    // agrupa salvamentos seguidos num envio só (sair da página, ocultar a aba e o logout
+    // descarregam o pendente na hora: flushFirebaseNowOnLeave / settleFirebaseBeforeLogout)
     firebaseSyncTimer = setTimeout(function () {
       firebaseSyncTimer = null;
       flushFirebaseSync().catch(function () { });
-    }, 0);
+    }, FIREBASE_SYNC_DEBOUNCE_MS);
   }
 
   function flushFirebaseNowOnLeave() {
@@ -6919,15 +6922,22 @@ window.SoterUtils = window.SoterUtils || (function () {
   renderHeader();
   renderFooter();
   syncScrollbarCompensation();
-  window.addEventListener("resize", syncScrollbarCompensation);
+  var scrollbarRaf = 0; // um cálculo por quadro (ele força layout)
+  window.addEventListener("resize", function () {
+    if (!scrollbarRaf) scrollbarRaf = requestAnimationFrame(function () { scrollbarRaf = 0; syncScrollbarCompensation(); });
+  });
   wireIndexNavigation();
   highlightCurrentPage();
   wireHeaderMenus();
   hydrateRuntimeStateFromCache();
   if (isSyncV2Enabled()) syncV2PageSeen = ensureStateShape(deepClone(runtimeState));
 
+  var loadedState = loadState(); // cópia separada só para comparar (a preparação pode alterar o objeto)
   var siteState = prepareStateForApp(loadState(), loadState());
-  saveState(siteState);
+  // só grava ao abrir a página se a preparação mudou algo (missões do dia, notificações...)
+  if (JSON.stringify(compactStateForStorage(siteState)) !== JSON.stringify(compactStateForStorage(loadedState))) {
+    saveState(siteState);
+  }
   applyProfileToUI(siteState);
   renderNotifications(siteState);
   wireNotifications(siteState);
@@ -6961,6 +6971,10 @@ window.createLiquidBar = function (canvas, opts) {
   var bubbles = [];
   var lw = 0, lh = 0;
   var raf = null, active = false;
+  // desempenho: pausa com a aba oculta ou a barra fora da tela; parada (sem bolhas nem
+  // balanço) desenha a 30 quadros por segundo; com movimento reduzido, para depois de assentar
+  var visible = true, lastDraw = 0;
+  var reducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
   // 4-component wave system — freq, base-amp, speed, phase
   var WF = [0.030, 0.058, 0.108, 0.016];
@@ -7018,9 +7032,22 @@ window.createLiquidBar = function (canvas, opts) {
     ctx.closePath();
   }
 
-  function tick() {
+  function settled() {
+    return !bubbles.length && slosh === 0 && Math.abs(target - current) < 0.05;
+  }
+
+  function schedule() {
+    raf = (document.hidden || !visible) ? null : requestAnimationFrame(tick);
+  }
+
+  function tick(now) {
     if (!lw || !lh) resize();
-    t += 0.022;
+    var calm = settled();
+    if (calm && reducedMotion && lastDraw) { raf = null; return; }
+    if (calm && now && now - lastDraw < 32) { schedule(); return; }
+    var step = calm && lastDraw ? Math.min(2, Math.max(1, (now - lastDraw) / 16.7)) : 1;
+    lastDraw = now || 1;
+    t += 0.022 * step;
     current += (target - current) * 0.045;
 
     // Spring-damped slosh oscillator
@@ -7041,7 +7068,7 @@ window.createLiquidBar = function (canvas, opts) {
     var dpr = window.devicePixelRatio || 1;
     var W = lw, H = lh;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (!W || !H) { raf = requestAnimationFrame(tick); return; }
+    if (!W || !H) { schedule(); return; }
 
     ctx.save();
     ctx.scale(dpr, dpr);
@@ -7133,7 +7160,11 @@ window.createLiquidBar = function (canvas, opts) {
     }
 
     ctx.restore();
-    raf = requestAnimationFrame(tick);
+    schedule();
+  }
+
+  function resume() {
+    if (active && !raf && !document.hidden && visible) raf = requestAnimationFrame(tick);
   }
 
   function start() {
@@ -7142,6 +7173,13 @@ window.createLiquidBar = function (canvas, opts) {
     resize();
     raf = requestAnimationFrame(tick);
     window.addEventListener('resize', resize);
+    document.addEventListener('visibilitychange', resume);
+    if (window.IntersectionObserver) {
+      new IntersectionObserver(function (entries) {
+        visible = entries[entries.length - 1].isIntersecting;
+        resume();
+      }).observe(canvas);
+    }
   }
 
   return {
@@ -7154,6 +7192,7 @@ window.createLiquidBar = function (canvas, opts) {
       }
       target = pct;
       if (!active) start();
+      else resume();
     },
     start: start
   };
