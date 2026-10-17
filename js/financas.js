@@ -110,8 +110,11 @@
       persist();
       return;
     }
-    categorySets = normalizeCategorySets(categorySets);
-    recurrenceRules = normalizeRecurrenceRules(recurrenceRules);
+    // conta (ou visitante) sem finanças: começa vazio — nunca herda o que estava na tela
+    txs = [];
+    savingsGoal = 0;
+    categorySets = normalizeCategorySets();
+    recurrenceRules = normalizeRecurrenceRules();
   }
 
   function persist() {
@@ -188,6 +191,11 @@
 
   function isSavingsType(type) {
     return type === "save" || type === "save_withdraw";
+  }
+
+  // dinheiro em reais com 2 casas: soma de floats (0,70 + 0,10 = 0,7999…) não pode decidir comparação
+  function cents(value) {
+    return Math.round(Number(value || 0) * 100) / 100;
   }
 
   function getSavingsDelta(tx) {
@@ -324,26 +332,47 @@
     return rule.pattern === "fixed_day" ? buildFixedDay(rule, year, month) : buildNthCountedDay(rule, year, month);
   }
 
+  // O ajuste para dia útil pode jogar a ocorrência para o mês vizinho (dia 1 num sábado com "dia
+  // útil anterior" cai no fim do mês anterior). Por isso olha as ocorrências do mês anterior, do
+  // próprio mês e do seguinte e fica só com as que caem neste mês.
+  function getRuleDatesInMonth(rule, year, month) {
+    var monthKey = getMonthDateStr(year, month, 1).slice(0, 7);
+    var dates = [];
+    [-1, 0, 1].forEach(function (offset) {
+      var ref = new Date(year, month + offset, 1);
+      var date = buildRuleDate(rule, ref.getFullYear(), ref.getMonth());
+      if (date.slice(0, 7) === monthKey && dates.indexOf(date) < 0) dates.push(date);
+    });
+    return dates;
+  }
+
   function getRuleOccurrencesForMonth(year, month) {
-    return recurrenceRules.filter(function (rule) {
+    var occurrences = [];
+    recurrenceRules.filter(function (rule) {
       return !!rule && Number(rule.value) > 0;
-    }).map(function (rule) {
-      var date = buildRuleDate(rule, year, month);
-      if (date < rule.startDate) return null;
-      return {
-        id: rule.id + "_rule_" + date,
-        _ruleId: rule.id,
-        _source: "rule",
-        date: date,
-        type: rule.type,
-        description: rule.description || rule.name,
-        value: Number(rule.value),
-        category: rule.category || (isSavingsType(rule.type) ? "Poupança" : "Outros"),
-        recurrence: "rule",
-        future: date > today(),
-        note: rule.note || ""
-      };
-    }).filter(Boolean);
+    }).forEach(function (rule) {
+      getRuleDatesInMonth(rule, year, month).forEach(function (date) {
+        if (date < rule.startDate) return;
+        occurrences.push(buildRuleOccurrence(rule, date));
+      });
+    });
+    return occurrences;
+  }
+
+  function buildRuleOccurrence(rule, date) {
+    return {
+      id: rule.id + "_rule_" + date,
+      _ruleId: rule.id,
+      _source: "rule",
+      date: date,
+      type: rule.type,
+      description: rule.description || rule.name,
+      value: Number(rule.value),
+      category: rule.category || (isSavingsType(rule.type) ? "Poupança" : "Outros"),
+      recurrence: "rule",
+      future: date > today(),
+      note: rule.note || ""
+    };
   }
 
   function getRuleOccurrencesUntil(endDate) {
@@ -440,7 +469,7 @@
       } else if (tx.recurrence === "weekly") {
         var cur = new Date(tx.date + "T12:00:00");
         var firstOfMonth = new Date(year, month, 1);
-        var lastOfMonth = new Date(year, month + 1, 0);
+        var lastOfMonth = new Date(year, month + 1, 0, 23, 59, 59); // cur fica às 12h: o último dia conta
         while (cur < firstOfMonth) cur.setDate(cur.getDate() + 7);
         while (cur <= lastOfMonth) {
           var weeklyDate = cur.getFullYear() + "-" + String(cur.getMonth() + 1).padStart(2, "0") + "-" + String(cur.getDate()).padStart(2, "0");
@@ -483,7 +512,7 @@
     getRuleOccurrencesUntil(dateStr).forEach(function (tx) {
       if (isSavingsType(tx.type)) balance += getSavingsDelta(tx);
     });
-    return balance;
+    return cents(balance);
   }
 
   // Projeção da meta com base nos lançamentos já cadastrados no sistema:
@@ -545,7 +574,7 @@
       sim.plannedCount += 1;
       sim.monthEnd[d.slice(0, 7)] = sim.running;
       sim.lastEventDate = d;
-      if (sim.running >= goal) { sim.etaDate = d; break; }
+      if (cents(sim.running) >= cents(goal)) { sim.etaDate = d; break; }
     }
     return sim;
   }
@@ -553,14 +582,14 @@
   function getSavingsProjection(reserve, goal) {
     reserve = Number(reserve || 0);
     goal = Number(goal || 0);
-    var missing = Math.max(0, goal - reserve);
+    var missing = Math.max(0, cents(goal - reserve));
     var result = {
       mode: "none", missing: missing, monthlyRate: 0, monthsToGoal: null,
       etaDate: null, daysToGoal: null, plannedTotal: 0, plannedCount: 0,
       lastEventDate: null, finalBalance: reserve, series: [], endless: false
     };
     if (goal <= 0) return result;
-    if (reserve >= goal) {
+    if (cents(reserve) >= cents(goal)) {
       result.mode = "reached";
       result.etaDate = today();
       result.daysToGoal = 0;
@@ -644,7 +673,7 @@
     if (goal <= 0) {
       return { summary: "Defina uma meta para calcular a estimativa.", metaLeft: "Meta atual" };
     }
-    if (Math.max(0, goal - reserve) <= 0) {
+    if (cents(goal - reserve) <= 0) {
       return { summary: "Objetivo concluído. A meta já foi atingida.", metaLeft: "Meta atingida" };
     }
     var p = getSavingsProjection(reserve, goal);
@@ -698,7 +727,7 @@
         });
       } else if (tx.recurrence === "weekly") {
         var weeklyCur = new Date(tx.date + "T12:00:00");
-        var nowWeekly = new Date();
+        var nowWeekly = new Date(today() + "T12:00:00"); // mesma hora de weeklyCur: a ocorrência de hoje conta
         while (weeklyCur <= nowWeekly) {
           saldo += getTxDelta(tx);
           savingsTotal += getSavingsDelta(tx);
@@ -748,7 +777,7 @@
         });
       } else if (tx.recurrence === "weekly") {
         var weeklyCur = new Date(tx.date + "T12:00:00");
-        var nowWeeklyHistory = new Date();
+        var nowWeeklyHistory = new Date(today() + "T12:00:00");
         while (weeklyCur <= nowWeeklyHistory) {
           reserveHistory.push({ date: getMonthDateStr(weeklyCur.getFullYear(), weeklyCur.getMonth(), weeklyCur.getDate()), value: getSavingsDelta(tx) });
           weeklyCur.setDate(weeklyCur.getDate() + 7);
@@ -770,7 +799,7 @@
     });
     var reserveMonths = Object.keys(reserveMonthsMap);
     reserveMonths.sort();
-    var reserveMissing = Math.max(0, Number(savingsGoal || 0) - reserve);
+    var reserveMissing = Math.max(0, cents(Number(savingsGoal || 0) - reserve));
     var reserveMonthSeries = reserveMonths.map(function (key) {
       return { key: key, value: reserveMonthsMap[key] };
     });
@@ -971,7 +1000,7 @@
         });
       } else if (tx.recurrence === "weekly") {
         var weeklyCur = new Date(tx.date + "T12:00:00");
-        var nowWeekly = new Date();
+        var nowWeekly = new Date(today() + "T12:00:00"); // mesma hora de weeklyCur: a ocorrência de hoje conta
         while (weeklyCur <= nowWeekly) {
           baseSaldo += getTxDelta(tx);
           weeklyCur.setDate(weeklyCur.getDate() + 7);
@@ -2411,7 +2440,7 @@
 
     document.getElementById("mtx-save").addEventListener("click", function () {
       var desc = document.getElementById("mtx-desc").value.trim();
-      var value = parseFloat(document.getElementById("mtx-val").value);
+      var value = cents(parseFloat(document.getElementById("mtx-val").value));
       var date = document.getElementById("mtx-date").value;
       if (!desc || !value || value <= 0 || !date) {
         toast("Preencha descrição, valor e data.", "err");

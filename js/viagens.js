@@ -13,6 +13,8 @@
   var T = [];
   var lmap = null;
   var MKS = [];
+  var mapGen = 0;
+  var coordsChanged = false;
   var GCC = {};
   var edit = false;
   var editIdx = -1;
@@ -84,9 +86,25 @@
     ) || 0;
   }
 
+  // id estável: viagens antigas (sem id) recebem um id derivado do conteúdo, igual em todos os
+  // aparelhos; sem isso a sincronização não sabe que é a mesma viagem
+  function travelId(item) {
+    var key = [item && (item.destination || item.destino || item.titulo || item.nome), item && item.startDate,
+      item && item.endDate, item && item.createdAt].map(norm).join("|");
+    var h = 5381;
+    var i;
+    for (i = 0; i < key.length; i += 1) h = ((h * 33) ^ key.charCodeAt(i)) >>> 0;
+    return "v" + h.toString(36);
+  }
+
+  function newTravelId() {
+    return "v" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+
   function ensureTravelShape(item) {
     var image = norm(item && (item.image || item.imagem));
     return {
+      id: norm(item && item.id) || travelId(item),
       destination: norm(item && (item.destination || item.destino || item.titulo || item.nome)),
       startDate: norm(item && item.startDate),
       endDate: norm(item && item.endDate),
@@ -108,7 +126,8 @@
 
   function readStore() {
     var saved;
-    if (state && state.data) {
+    if (storage) {
+      state = storage.getState(); // estado atual (o lido ao abrir a página pode estar velho)
       state.data.lastVisitedPage = "viagens";
       state.data.lastVisitedAt = new Date().toISOString();
       storage.save(state);
@@ -116,6 +135,8 @@
     saved = storage ? storage.getData(STORAGE_KEY) : null;
     if (Array.isArray(saved)) {
       T = saved.map(ensureTravelShape);
+      // viagens antigas sem id: grava uma vez com o id estável (a sincronização mescla por id)
+      if (saved.some(function (item) { return !item || !item.id; })) save();
       return;
     }
     T = [];
@@ -202,15 +223,16 @@
     return { color: "#3b82f6", r: 9 };
   }
 
-  function addMark(t, i, done) {
+  function addMark(t, i, done, gen) {
     function place(c) {
+      if (gen !== mapGen) return;
       var s;
       var icon;
       var m;
       var bud;
       var ds;
       if (!c || !lmap) { done && done(); return; }
-      if (!t.coords) t.coords = c;
+      if (!t.coords) { t.coords = c; coordsChanged = true; }
       s = mstyle(t.category, t.destination);
       icon = window.L.divIcon({
         html: '<svg width="28" height="36" viewBox="0 0 28 36" xmlns="http://www.w3.org/2000/svg"><path d="M14 0C6.27 0 0 6.27 0 14c0 10.5 14 22 14 22S28 24.5 28 14C28 6.27 21.73 0 14 0z" fill="' + s.color + '" stroke="rgba(0,0,0,.3)" stroke-width="1"/><circle cx="14" cy="14" r="6" fill="rgba(255,255,255,.9)"/></svg>',
@@ -245,13 +267,16 @@
 
   function updateMap() {
     var i = 0;
+    var gen;
     if (!lmap) { document.getElementById("m-cnt").textContent = "0 pins"; return; }
     lmap.invalidateSize();
     clearMarks();
+    gen = ++mapGen; // um render novo cancela a cadeia de geocodificação anterior (pins duplicados)
     function nx() {
       var g;
+      if (gen !== mapGen) return;
       if (i >= T.length) {
-        save();
+        if (coordsChanged) { coordsChanged = false; save(); }
         document.getElementById("m-cnt").textContent = MKS.length + " " + (MKS.length === 1 ? "pin" : "pins");
         if (MKS.length > 1) {
           g = window.L.featureGroup(MKS.map(function (x) { return x.m; }));
@@ -261,13 +286,17 @@
         }
         return;
       }
-      addMark(T[i], i, function () { i += 1; nx(); });
+      addMark(T[i], i, function () { i += 1; nx(); }, gen);
     }
     nx();
   }
 
   function fmt(s) {
+    var m;
     if (!s) return "";
+    // "AAAA-MM-DD" é data local; new Date() leria como UTC e mostraria o dia anterior
+    m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+    if (m) return m[3] + "/" + m[2] + "/" + m[1];
     return new Date(s).toLocaleDateString("pt-BR");
   }
 
@@ -538,6 +567,7 @@
       function go(img) {
         weather(dest, function (w) {
           var td = ensureTravelShape({
+            id: edit ? T[editIdx].id : newTravelId(),
             destination: dest,
             startDate: sv,
             endDate: ev,
@@ -577,6 +607,7 @@
   function bindUi() {
     document.getElementById("btn-del").addEventListener("click", function () {
       if (!edit || editIdx === -1) return;
+      if (!window.confirm("Excluir esta viagem?")) return;
       T.splice(editIdx, 1);
       page = 1;
       save();
@@ -665,6 +696,7 @@
         try {
           d = JSON.parse(ev.target.result);
           if (d.travels && Array.isArray(d.travels)) {
+            if (T.length && !window.confirm("Importar substitui as " + T.length + " viagens atuais. Continuar?")) return;
             T = d.travels.map(ensureTravelShape);
             page = 1;
             save();
@@ -684,6 +716,12 @@
     window.addEventListener("resize", function () {
       scheduleListViewportUpdate();
       if (lmap) lmap.invalidateSize();
+    });
+    // dados da nuvem chegaram depois da abertura: relê para não regravar a lista antiga
+    window.addEventListener("soter:remote-state-applied", function () {
+      var saved = storage ? storage.getData(STORAGE_KEY) : null;
+      T = Array.isArray(saved) ? saved.map(ensureTravelShape) : [];
+      render();
     });
   }
 

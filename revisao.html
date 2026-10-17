@@ -669,6 +669,12 @@ var decks = [];   // {id, name, desc, icon, color, dailyLimit, createdAt}
 var cards = [];   // {id, deckId, front, back, note, tag, ef, rep, interval, nextDue, state, createdAt}
 var log   = {};   // {YYYY-MM-DD: count} — daily review counts
 var todaySessionDone = 0;
+var todaySessionDate = '';
+// a página pode ficar aberta depois da meia-noite: o contador é sempre o do dia de hoje
+function ensureTodaySession(){
+  var k=todayStr();
+  if(todaySessionDate!==k){ todaySessionDone=parseInt(doneByDate[k],10)||0; todaySessionDate=k; }
+}
 var doneByDate = {};
 var ratingLog = {};
 
@@ -691,6 +697,7 @@ function syncReviewPlannerState(){
 }
 
 function saveAll(){
+  ensureTodaySession();
   doneByDate[todayStr()] = todaySessionDone;
   syncReviewPlannerState();
 }
@@ -709,6 +716,7 @@ function loadAll(){
         ratingLog = planner.ratingLog && typeof planner.ratingLog === 'object' ? planner.ratingLog : {};
         doneByDate = planner.doneByDate && typeof planner.doneByDate === 'object' ? planner.doneByDate : {};
         todaySessionDone = parseInt(doneByDate[todayStr()], 10) || 0;
+        todaySessionDate = todayStr();
         normalizeDecks();
         return;
       }
@@ -751,6 +759,7 @@ function migrateLegacyReviewKeys(currentUid){
         if(keys[i].indexOf('srs-done-')===0) doneByDate[keys[i].slice(9)]=parseInt(localStorage.getItem(keys[i]),10)||0;
       }
       todaySessionDone=parseInt(doneByDate[todayStr()],10)||0;
+      todaySessionDate=todayStr();
       normalizeDecks();
       syncReviewPlannerState();
       imported=true;
@@ -925,6 +934,7 @@ function renderDash(){
   var newC = getNewCards(null);
   var total = cards.length;
   var streak = getStreak();
+  ensureTodaySession();
   var done = todaySessionDone;
 
   // Date label
@@ -1457,6 +1467,7 @@ function rateCard(quality){
   var qNames=['again','again','hard','good','good','easy'];
   var qn=qNames[quality]||'good';
   sessionStats[qn]++;
+  ensureTodaySession();
   todaySessionDone++;
   log[todayStr()]=(log[todayStr()]||0)+1;
 
@@ -1849,6 +1860,12 @@ window.addEventListener('resize',function(){
 // ══════════════════════════════════════════════
 loadAll();
 showView('dash');
+// dados da nuvem chegaram depois da abertura: relê (menos no meio de uma sessão de revisão)
+window.addEventListener('soter:remote-state-applied', function(){
+  if(currentView==='review') return;
+  loadAll();
+  showView(currentView);
+});
 afterReviewOwnerKnown(function(currentUid){
   if(currentView==='review') return; // não troca os arrays no meio de uma sessão
   var before=JSON.stringify([decks,cards,log,ratingLog,doneByDate]);

@@ -121,6 +121,17 @@ window.SoterUtils = window.SoterUtils || (function () {
   var runtimeHiddenUid = "";
   var firebaseAuthFirstEventSeen = false;
   var firebaseLogoutPurgeUid = "";
+  // logout/exclusão desta aba em andamento: a própria rotina navega para fora da página
+  var authExitInProgress = false;
+  // a conta mudou com a página aberta: nada mais desta página pode ser gravado (ver reloadAfterOwnerChange)
+  var ownerChangeReloadPending = false;
+  var ownerChangeNavigating = false;
+  var ownerChangeActivating = false;
+  var authModalOpen = false;
+  // uid cujo logout (com limpeza) foi feito em alguma aba: as outras abas não regravam a cópia local
+  var LOGOUT_PURGE_STORAGE_KEY = "soter_logout_purge_uid_v1";
+  // marca, por conta, que este navegador já leu a nuvem dela pelo menos uma vez (schema 1)
+  var FIREBASE_HYDRATED_STORAGE_PREFIX = "soter_firebase_hydrated_v1_";
 
   function currentPage() {
     var explicit = document.body.getAttribute("data-page");
@@ -1055,6 +1066,7 @@ window.SoterUtils = window.SoterUtils || (function () {
     }
     var redirect = consumeAuthRedirect();
     setTimeout(function () {
+      if (redirect) ownerChangeNavigating = true;
       closeAuthModal();
       if (redirect) window.location.href = redirect;
     }, 350);
@@ -1551,6 +1563,7 @@ window.SoterUtils = window.SoterUtils || (function () {
     if (!modal) return;
     modal.hidden = false;
     document.body.classList.add('auth-modal-open');
+    authModalOpen = true;
     authSkyState.signin = 'night';
     authSkyState.signup = 'night';
     syncAuthSky();
@@ -1575,6 +1588,12 @@ window.SoterUtils = window.SoterUtils || (function () {
   function closeAuthModal() {
     var modal = document.getElementById('firebase-auth-modal');
     var shell = document.getElementById('login-modal');
+    authModalOpen = false;
+    // troca de conta pelo modal: recarrega agora, ou assim que a leitura da nuvem terminar
+    if (ownerChangeReloadPending && !ownerChangeNavigating && !authExitInProgress && !ownerChangeActivating) {
+      window.location.reload();
+      return;
+    }
     if (!modal) return;
     if (shell) {
       shell.style.opacity = '0';
@@ -1662,9 +1681,21 @@ window.SoterUtils = window.SoterUtils || (function () {
     });
   }
 
+  // Este navegador já leu a nuvem desta conta alguma vez? Se não, o estado local é só o estado
+  // inicial (montado antes da primeira leitura) e nunca pode sobrescrever a nuvem.
+  function hasHydratedBefore(uid) {
+    var meta;
+    if (!uid) return false;
+    try { if (localStorage.getItem(FIREBASE_HYDRATED_STORAGE_PREFIX + uid) === '1') return true; } catch (err) { }
+    // navegadores que já sincronizavam antes desta marca existir
+    meta = ensureStateShape(loadState()).data.firebaseSync || {};
+    return meta.userUid === uid && !!(meta.lastSyncAt || meta.lastRemoteAt);
+  }
+
   function hydrateFirebaseDocument() {
     if (!firebaseDocRef) return Promise.resolve(true);
     if (!firebaseDirty) firebaseDirty = readPersistedDirty();
+    var hydratingUid = firebaseCurrentUser ? String(firebaseCurrentUser.uid || '') : '';
     return firebaseDocRef.get().then(function (docSnap) {
       var hasRemote = !!(docSnap && docSnap.exists && docSnap.data() && docSnap.data().state);
       if (!hasRemote) {
@@ -1675,10 +1706,13 @@ window.SoterUtils = window.SoterUtils || (function () {
           source: location.pathname || 'site'
         }).then(function () { setFirebaseDirty(false); return true; });
       }
-      if (firebaseDirty || firebasePendingState) {
+      if ((firebaseDirty || firebasePendingState) && hasHydratedBefore(hydratingUid)) {
         if (!firebasePendingState) firebasePendingState = compactStateForStorage(ensureStateShape(loadState()));
         return true;
       }
+      // primeira leitura neste navegador: a nuvem vence o estado inicial local
+      firebasePendingState = null;
+      if (firebaseDirty) setFirebaseDirty(false);
       firebaseIsApplyingRemote = true;
       try {
         applySiteState(mergeAuthProfileIntoState(ensureStateShape(docSnap.data().state), firebaseCurrentUser), loadState());
@@ -1689,6 +1723,9 @@ window.SoterUtils = window.SoterUtils || (function () {
       return true;
     }).then(function () {
       firebaseIsHydrated = true;
+      if (hydratingUid) {
+        try { localStorage.setItem(FIREBASE_HYDRATED_STORAGE_PREFIX + hydratingUid, '1'); } catch (err) { }
+      }
       updateFirebaseMeta({ hydrated: true, lastError: '' });
       if (firebasePendingState) flushFirebaseSync().catch(function () { });
       return true;
@@ -1746,6 +1783,24 @@ window.SoterUtils = window.SoterUtils || (function () {
       connectFirebaseRealtime();
       return hydrateFirebaseDocument();
     });
+  }
+
+  // A conta mudou com a página já aberta (login pelo modal, logout ou troca de conta em outra aba).
+  // As páginas guardam em memória o estado que leram ao abrir: se gravassem agora, os dados da conta
+  // anterior (ou do visitante) iriam para a conta nova. Então nada desta página é gravado
+  // (applySiteState recusa) e ela recarrega já lendo o estado da conta certa. Com o modal de login
+  // aberto, a recarga espera o fim do fluxo (finishAuthFlow/closeAuthModal); logout e exclusão de
+  // conta desta aba já navegam para outra página.
+  function reloadAfterOwnerChange() {
+    ownerChangeReloadPending = true;
+    ownerChangeActivating = false;
+    if (authExitInProgress || ownerChangeNavigating) return;
+    if (authModalOpen) return;
+    window.location.reload();
+  }
+
+  function readLogoutPurgeUid() {
+    try { return String(localStorage.getItem(LOGOUT_PURGE_STORAGE_KEY) || ""); } catch (err) { return ""; }
   }
 
   function reloadOnceAfterAuth(uid) {
@@ -1817,6 +1872,7 @@ window.SoterUtils = window.SoterUtils || (function () {
       keys.push(TASK_TIME_ALERTS_STORAGE_PREFIX + uid);
       if (!keepUnsyncedCopy) {
         keys.push(FIREBASE_DIRTY_STORAGE_PREFIX + uid);
+        keys.push(FIREBASE_HYDRATED_STORAGE_PREFIX + uid);
         keys.push(RUBRICA_STORAGE_PREFIX + uid);
         keys.push(SYNC_V2_BASE_PREFIX + uid);
         keys.push(SYNC_V2_DIRTY_PREFIX + uid);
@@ -1870,7 +1926,8 @@ window.SoterUtils = window.SoterUtils || (function () {
       var currentLocalState = ensureStateShape(loadState());
       firebaseAuthFirstEventSeen = true;
       if (previousUser && previousUser.uid) {
-        if (previousUser.uid !== firebasePendingDeletedUid && previousUser.uid !== firebaseLogoutPurgeUid) {
+        if (previousUser.uid !== firebasePendingDeletedUid && previousUser.uid !== firebaseLogoutPurgeUid
+          && previousUser.uid !== readLogoutPurgeUid()) {
           saveScopedStateForUser(previousUser.uid, currentLocalState);
         }
       } else if (previousOwner && previousOwner !== RUNTIME_OWNER_PENDING) {
@@ -1883,6 +1940,10 @@ window.SoterUtils = window.SoterUtils || (function () {
       firebaseCurrentUser = user || null;
       runtimeStateOwner = firebaseCurrentUser ? String(firebaseCurrentUser.uid || '') : '';
       rememberLastAuthUid(firebaseCurrentUser ? firebaseCurrentUser.uid : '');
+      if (firebaseCurrentUser && readLogoutPurgeUid() === runtimeStateOwner) {
+        try { localStorage.removeItem(LOGOUT_PURGE_STORAGE_KEY); } catch (err) { }
+      }
+      var ownerChangedMidSession = !isFirstAuthEvent && previousOwner !== runtimeStateOwner;
       rememberAuthPersistence(firebaseCurrentUser);
       // as páginas guardam o estado lido no carregamento; se o que foi mostrado antes do auth não era
       // desta conta, recarrega uma vez para ninguém gravar estado alheio
@@ -1923,6 +1984,7 @@ window.SoterUtils = window.SoterUtils || (function () {
           lastError: ''
         });
         if (reloadAfterAuth) reloadOnceAfterAuth('');
+        if (ownerChangedMidSession) reloadAfterOwnerChange();
         return;
       }
       if (previousUser && previousUser.uid && previousUser.uid !== firebaseCurrentUser.uid) {
@@ -1944,6 +2006,15 @@ window.SoterUtils = window.SoterUtils || (function () {
       replaceLocalStateSnapshot(nextState, currentLocalState);
       if (pendingSignupName) firebasePendingSignupProfileName = '';
       if (reloadAfterAuth && reloadOnceAfterAuth(firebaseCurrentUser.uid)) return;
+      if (ownerChangedMidSession) {
+        // bloqueia as gravações da página já, mas só recarrega depois de ler a nuvem da conta nova:
+        // recarregar antes deixaria no navegador um estado vazio desta conta
+        ownerChangeReloadPending = true;
+        ownerChangeActivating = true;
+        promiseWithTimeout(activateFirebaseForCurrentUser(), 15000)
+          .then(reloadAfterOwnerChange, reloadAfterOwnerChange);
+        return;
+      }
       activateFirebaseForCurrentUser().catch(function (err) {
         firebaseLastError = String((err && err.message) || err || 'firebase_user_sync_failed');
         updateFirebaseMeta({ enabled: true, hydrated: false, lastError: firebaseLastError });
@@ -5934,6 +6005,9 @@ window.SoterUtils = window.SoterUtils || (function () {
   }
 
   function applySiteState(nextState, previousState) {
+    // depois de uma troca de conta, só a leitura da nuvem da conta nova grava; o que vem da página
+    // (estado lido da conta anterior) é recusado
+    if (ownerChangeReloadPending && !firebaseIsApplyingRemote) return ensureStateShape(loadState());
     var state = prepareStateForApp(nextState, previousState);
     saveState(state);
     applyProfileToUI(state);
@@ -6710,6 +6784,10 @@ window.SoterUtils = window.SoterUtils || (function () {
         }).then(function (allSynced) {
           keepUnsyncedCopy = !allSynced;
           firebaseLogoutPurgeUid = keepUnsyncedCopy ? '' : uid;
+          authExitInProgress = true;
+          if (uid && !keepUnsyncedCopy) {
+            try { localStorage.setItem(LOGOUT_PURGE_STORAGE_KEY, uid); } catch (err) { }
+          }
           return firebaseAuthInstance.signOut();
         }).then(function () {
           return removeLocalAccountData(uid, keepUnsyncedCopy);
@@ -6721,6 +6799,7 @@ window.SoterUtils = window.SoterUtils || (function () {
           return true;
         }, function (err) {
           firebaseLogoutPurgeUid = '';
+          authExitInProgress = false;
           throw err;
         });
       },
@@ -6749,6 +6828,8 @@ window.SoterUtils = window.SoterUtils || (function () {
 
           return reauthPromise.then(function () {
             firebasePendingDeletedUid = uid;
+            authExitInProgress = true;
+            try { localStorage.setItem(LOGOUT_PURGE_STORAGE_KEY, uid); } catch (err) { }
             syncV2Reset();
             return Promise.resolve(syncV2SiteStateRef(uid).delete())
               .catch(function () { return null; })
@@ -6767,6 +6848,8 @@ window.SoterUtils = window.SoterUtils || (function () {
               })
               .catch(function (err) {
                 firebasePendingDeletedUid = '';
+                authExitInProgress = false;
+                try { if (readLogoutPurgeUid() === uid) localStorage.removeItem(LOGOUT_PURGE_STORAGE_KEY); } catch (e) { }
                 throw err;
               });
           });

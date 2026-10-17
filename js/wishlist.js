@@ -1282,6 +1282,11 @@
   bindHistoryFilters();
   renderAll();
   wireEvents();
+  // dados da nuvem chegaram depois da abertura: relê para não regravar a lista antiga
+  window.addEventListener("soter:remote-state-applied", function () {
+    load();
+    renderAll();
+  });
 
   window.acquireOne = acquireOne;
   window.openEdit = openEdit;

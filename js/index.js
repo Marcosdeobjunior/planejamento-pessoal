@@ -888,6 +888,7 @@
     ensureAnimationLoop();
   });
   window.addEventListener("soter:notifications-changed", hydrateSummary);
+  window.addEventListener("soter:remote-state-applied", hydrateSummary);
   window.addEventListener("storage", hydrateSummary);
   window.setMood = setMood;
   window.saveNote = saveNote;
