@@ -6302,7 +6302,7 @@ window.SoterUtils = window.SoterUtils || (function () {
       '  </div>',
       '</header>',
       '<div class="header-mobile-backdrop" id="header-mobile-backdrop"></div>',
-      '<aside class="header-mobile-drawer" id="header-mobile-drawer" aria-hidden="true">',
+      '<aside class="header-mobile-drawer" id="header-mobile-drawer" aria-hidden="true" inert>',
       '  <div class="header-mobile-drawer-head">',
       '    <div class="header-mobile-profile">',
       '      <div class="profile-avatar header-mobile-avatar" id="mobile-avatar">',
@@ -6518,6 +6518,8 @@ window.SoterUtils = window.SoterUtils || (function () {
       mobileDrawer.classList.toggle("is-open", shouldOpen);
       mobileBackdrop.classList.toggle("is-open", shouldOpen);
       mobileDrawer.setAttribute("aria-hidden", shouldOpen ? "false" : "true");
+      // fechado: os links também saem da navegação por teclado (não só do leitor de tela)
+      if (shouldOpen) mobileDrawer.removeAttribute("inert"); else mobileDrawer.setAttribute("inert", "");
       mobileToggle.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
       document.body.classList.toggle("mobile-drawer-open", shouldOpen);
     }
@@ -6665,6 +6667,151 @@ window.SoterUtils = window.SoterUtils || (function () {
       var ddE = document.getElementById("dd-estudos");
       if (ddE) ddE.classList.add("has-active");
     }
+  }
+
+  // =====================================================================
+  // Acessibilidade (etapa 10), para todas as páginas e para o que elas desenham depois:
+  // - link "pular para o conteúdo" e região principal com id;
+  // - nome acessível para botões só com ícone (title ou símbolo conhecido);
+  // - div/span/li clicáveis (onclick) viram role="button", entram no Tab e respondem a Enter/Espaço;
+  // - <label> sem "for" ligado ao campo logo depois dele; campo só com placeholder ganha aria-label;
+  // - Esc fecha o diálogo aberto (role="dialog" aria-modal="true" com a classe "open").
+  // =====================================================================
+  var A11Y_GLYPH_LABELS = {
+    "✕": "Fechar", "×": "Fechar", "✖": "Fechar", "✗": "Fechar",
+    "✎": "Editar", "✏": "Editar", "✏️": "Editar",
+    "‹": "Anterior", "›": "Próximo", "←": "Voltar", "→": "Avançar",
+    "❮": "Anterior", "❯": "Próximo", "⟨": "Anterior", "⟩": "Próximo",
+    "☰": "Menu", "+": "Adicionar", "＋": "Adicionar", "⋯": "Mais opções",
+    "…": "Mais opções", "⠇": "Mais opções", "⠿": "Mover",
+    "🗑": "Excluir", "🗑️": "Excluir", "⭐": "Favorito"
+  };
+  var a11yFieldSeq = 0;
+
+  function a11yHasText(text) {
+    return /[A-Za-z0-9À-ɏ]/.test(text);
+  }
+
+  function a11yNameControl(el) {
+    if (el.getAttribute("aria-label") || el.getAttribute("aria-labelledby")) return;
+    var text = String(el.textContent || "").replace(/\s+/g, " ").trim();
+    if (a11yHasText(text)) return;
+    if (el.querySelector && el.querySelector("img[alt]:not([alt=''])")) return;
+    var title = String(el.getAttribute("title") || "").trim();
+    var star = el.getAttribute("data-v") || el.getAttribute("data-value");
+    var label = title || (/^[★☆]$/.test(text) && star ? star + (star === "1" ? " estrela" : " estrelas") : A11Y_GLYPH_LABELS[text]);
+    if (label) el.setAttribute("aria-label", label);
+  }
+
+  // o próprio nó inserido também conta (as páginas trocam listas inteiras via innerHTML)
+  function a11yQueryAll(root, selector) {
+    var list = Array.prototype.slice.call(root.querySelectorAll(selector));
+    if (root.matches && root.matches(selector)) list.unshift(root);
+    return list;
+  }
+
+  function a11yEnhance(root) {
+    if (!root || root.nodeType !== 1) return;
+    var list;
+    var i;
+    list = a11yQueryAll(root, "button, a[href], [role='button']");
+    for (i = 0; i < list.length; i++) a11yNameControl(list[i]);
+    // clicáveis que não são botões
+    list = a11yQueryAll(root, "div[onclick], span[onclick], li[onclick], img[onclick], td[onclick]");
+    for (i = 0; i < list.length; i++) {
+      var el = list[i];
+      if (el.getAttribute("role") || el.closest("button, a[href]")) continue;
+      // diálogos e fundos de modal (fecham ao clicar fora) não são controles
+      if (el.matches("[role='dialog'], [class*='overlay'], [class*='backdrop'], [class*='modal'], [id*='modal'], [id*='overlay'], .mo, .ws-mo")) continue;
+      // onclick que só barra a propagação não é uma ação
+      if (/^\s*event\.stopPropagation\(\);?\s*$/.test(el.getAttribute("onclick") || "")) continue;
+      // com outros clicáveis dentro (ex.: cartão com botões): entra no Tab e responde a Enter,
+      // mas sem role="button" (botão dentro de botão confunde leitores de tela)
+      if (el.querySelector("[onclick], button, a[href]")) {
+        if (!el.hasAttribute("tabindex")) el.setAttribute("tabindex", "0");
+        el.setAttribute("data-a11y-click", "");
+        continue;
+      }
+      if (el.querySelector("input, select, textarea")) continue;
+      a11yNameControl(el);
+      // sem nome (ex.: fundo escurecido de um modal): não vira parada do Tab
+      if (!el.getAttribute("aria-label") && !a11yHasText(String(el.textContent || "")) && !el.querySelector("img[alt]:not([alt=''])")) continue;
+      el.setAttribute("role", "button");
+      if (!el.hasAttribute("tabindex")) el.setAttribute("tabindex", "0");
+    }
+    // rótulos e campos
+    list = a11yQueryAll(root, "label:not([for])");
+    for (i = 0; i < list.length; i++) {
+      var lab = list[i];
+      if (lab.querySelector("input, select, textarea")) continue;
+      var next = lab.nextElementSibling;
+      if (!next || !/^(INPUT|SELECT|TEXTAREA)$/.test(next.tagName)) continue;
+      if (!next.id) next.id = "a11y-campo-" + (++a11yFieldSeq);
+      lab.htmlFor = next.id;
+    }
+    list = a11yQueryAll(root, "input:not([type='hidden']):not([aria-label]):not([aria-labelledby]), textarea:not([aria-label]):not([aria-labelledby]), select:not([aria-label]):not([aria-labelledby])");
+    for (i = 0; i < list.length; i++) {
+      var field = list[i];
+      if (field.labels && field.labels.length) continue;
+      var name = field.getAttribute("placeholder") || field.getAttribute("title");
+      if (name) field.setAttribute("aria-label", name);
+    }
+  }
+
+  function initA11y() {
+    if (!document.body) return;
+    var main = document.querySelector("main, [role='main'], .app-content");
+    if (main) {
+      if (!main.id) main.id = "conteudo-principal";
+      if (!main.hasAttribute("tabindex")) main.setAttribute("tabindex", "-1");
+      var skip = document.createElement("a");
+      skip.className = "skip-link";
+      skip.href = "#" + main.id;
+      skip.textContent = "Pular para o conteúdo";
+      document.body.insertBefore(skip, document.body.firstChild);
+    }
+    a11yEnhance(document.body);
+    // conteúdo desenhado depois (listas, modais): processa só o que entrou, uma vez por quadro
+    var pending = [];
+    var scheduled = false;
+    if (window.MutationObserver) {
+      new MutationObserver(function (records) {
+        for (var r = 0; r < records.length; r++) {
+          for (var n = 0; n < records[r].addedNodes.length; n++) {
+            if (records[r].addedNodes[n].nodeType === 1) pending.push(records[r].addedNodes[n]);
+          }
+        }
+        if (scheduled || !pending.length) return;
+        scheduled = true;
+        requestAnimationFrame(function () {
+          var batch = pending;
+          pending = [];
+          scheduled = false;
+          for (var k = 0; k < batch.length; k++) if (batch[k].isConnected) a11yEnhance(batch[k]);
+        });
+      }).observe(document.body, { childList: true, subtree: true });
+    }
+    document.addEventListener("keydown", function (event) {
+      var target = event.target;
+      if ((event.key === "Enter" || event.key === " ") && target && target.getAttribute &&
+          (target.getAttribute("role") === "button" || target.hasAttribute("data-a11y-click")) &&
+          !/^(BUTTON|A|INPUT|SELECT|TEXTAREA)$/.test(target.tagName)) {
+        event.preventDefault();
+        target.click();
+        return;
+      }
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      var open = Array.prototype.filter.call(document.querySelectorAll("[role='dialog'][aria-modal='true'].open"), function (d) {
+        return d.offsetParent !== null || getComputedStyle(d).position === "fixed";
+      });
+      if (!open.length) return;
+      var dialog = open[open.length - 1];
+      var closeBtn = dialog.querySelector("[data-close], [id$='-close'], .rpg-reading-close, .san-back-btn, .gym-hub-back-btn");
+      if (closeBtn) {
+        event.preventDefault();
+        closeBtn.click();
+      }
+    });
   }
 
   function wireIndexNavigation() {
@@ -6929,6 +7076,7 @@ window.SoterUtils = window.SoterUtils || (function () {
   wireIndexNavigation();
   highlightCurrentPage();
   wireHeaderMenus();
+  initA11y();
   hydrateRuntimeStateFromCache();
   if (isSyncV2Enabled()) syncV2PageSeen = ensureStateShape(deepClone(runtimeState));
 

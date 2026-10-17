@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://apis.google.com https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://unpkg.com; font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.google.com https://nominatim.openstreetmap.org https://api.open-meteo.com https://geocoding-api.open-meteo.com; frame-src https://*.firebaseapp.com https://www.google.com https://recaptcha.google.com https://www.youtube.com https://player.vimeo.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#04040c">
   <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
   <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
   <title>Sol de Sóter · Cinema</title>
@@ -978,7 +979,7 @@ const TRACKER_CFG = {
     key: 'livros', icon: '📚', emptyMsg: 'Adicione seu primeiro livro!',
     statusOpts: ['lendo','relendo','concluido','quero','pausado','abandonado'],
     statusLabels: { lendo:'Lendo', relendo:'Relendo', concluido:'Concluído', quero:'Quero ler', pausado:'Pausado', abandonado:'Abandonado' },
-    statusColors: { lendo:'#c8a96e', relendo:'#f0bf6b', concluido:'#5ec4a8', quero:'#7c6fcd', pausado:'#7a7590', abandonado:'#d66d6d' },
+    statusColors: { lendo:'#c8a96e', relendo:'#f0bf6b', concluido:'#5ec4a8', quero:'#7c6fcd', pausado:'#858099', abandonado:'#d66d6d' },
     ribbonColors: { lendo:'rgba(200,169,110,.8)', relendo:'rgba(240,191,107,.84)', concluido:'rgba(94,196,168,.8)', quero:'rgba(124,111,205,.8)', pausado:'rgba(122,117,144,.6)', abandonado:'rgba(214,109,109,.7)' },
     progressFn: (item) => item.paginas ? Math.round((item.atual||0)/item.paginas*100) : null,
     progressLabel: (item) => item.paginas ? `Pág. ${item.atual||0}/${item.paginas}` : null,
@@ -987,7 +988,7 @@ const TRACKER_CFG = {
     key: 'cinema', icon: '🎬', emptyMsg: 'Adicione um filme ou série!',
     statusOpts: ['assistindo','reassistindo','concluido','quero','pausado','abandonado'],
     statusLabels: { assistindo:'Assistindo', reassistindo:'Reassistindo', concluido:'Concluído', quero:'Quero ver', pausado:'Pausado', abandonado:'Abandonado' },
-    statusColors: { assistindo:'#e8864a', reassistindo:'#f0bf6b', concluido:'#5ec4a8', quero:'#4ab0e8', pausado:'#7a7590', abandonado:'#d66d6d' },
+    statusColors: { assistindo:'#e8864a', reassistindo:'#f0bf6b', concluido:'#5ec4a8', quero:'#4ab0e8', pausado:'#858099', abandonado:'#d66d6d' },
     ribbonColors: { assistindo:'rgba(232,134,74,.8)', reassistindo:'rgba(240,191,107,.84)', concluido:'rgba(94,196,168,.8)', quero:'rgba(74,176,232,.8)', pausado:'rgba(122,117,144,.6)', abandonado:'rgba(214,109,109,.7)' },
     progressFn: (item) => {
       if (item.tipo !== 'Série') return null;
@@ -1016,7 +1017,7 @@ const TRACKER_CFG = {
     key: 'mangas', icon: '📖', emptyMsg: 'Adicione seu primeiro mangá!',
     statusOpts: ['lendo','relendo','concluido','pausado','quero','abandonado'],
     statusLabels: { lendo:'Lendo', relendo:'Relendo', concluido:'Concluído', pausado:'Pausado', quero:'Quero ler', abandonado:'Abandonado' },
-    statusColors: { lendo:'#e06b8b', relendo:'#f0bf6b', concluido:'#5ec4a8', pausado:'#7a7590', quero:'#7c6fcd', abandonado:'#d66d6d' },
+    statusColors: { lendo:'#e06b8b', relendo:'#f0bf6b', concluido:'#5ec4a8', pausado:'#858099', quero:'#7c6fcd', abandonado:'#d66d6d' },
     ribbonColors: { lendo:'rgba(224,107,139,.8)', relendo:'rgba(240,191,107,.84)', concluido:'rgba(94,196,168,.8)', pausado:'rgba(122,117,144,.6)', quero:'rgba(124,111,205,.8)', abandonado:'rgba(214,109,109,.7)' },
     progressFn: (item) => item.capTotal ? Math.round((item.capAtual||0)/item.capTotal*100) : null,
     progressLabel: (item) => item.capTotal ? `Cap. ${item.capAtual||0}/${item.capTotal}` : (item.capAtual ? `Cap. ${item.capAtual}` : null),
@@ -1333,7 +1334,7 @@ function renderHubAdaptations(tracker, item) {
 }
 
 function thRender(item, cfg) {
-  const statusColor = cfg.statusColors[item.status] || '#7a7590';
+  const statusColor = cfg.statusColors[item.status] || '#858099';
   const statusLabel = cfg.statusLabels[item.status] || item.status;
   const heroImg = document.getElementById('th-hero-img');
   const hero    = document.getElementById('th-hero');
@@ -1448,7 +1449,7 @@ function thRenderRelated(tracker, item) {
   const cfg = TRACKER_CFG[tracker];
   scroll.innerHTML = related.map(({ item: r }) => {
     const stars = r.nota ? '★'.repeat(r.nota) : '';
-    const statusColor = cfg.statusColors[r.status] || '#7a7590';
+    const statusColor = cfg.statusColors[r.status] || '#858099';
     return `<div class="rel-card" onclick="thOpen('${tracker}', ${escJs(r.id)})" title="${esc(r.titulo)}"><div class="rel-thumb">${r.img ? `<img loading="lazy" decoding="async" src="${escUrl(r.img)}" alt="${esc(r.titulo)}">` : `<span style="font-size:24px;opacity:.5">${cfg.icon}</span>`}<div class="rel-status-bar" style="background:${statusColor}88"></div></div><div class="rel-name">${esc(r.titulo)}</div>${r.autor ? `<div class="rel-meta">${esc(r.autor)}</div>` : ''}${stars ? `<div class="rel-stars">${stars}</div>` : ''}</div>`;
   }).join('');
 }
@@ -1697,7 +1698,7 @@ function openCollectionTop(event, tracker, groupId) {
 function buildCard(item, cfg) {
   const pct = cfg.progressFn(item);
   const progressLabel = cfg.progressLabel(item);
-  const statusColor = cfg.statusColors[item.status]||'#7a7590';
+  const statusColor = cfg.statusColors[item.status]||'#858099';
   const ribbonColor = cfg.ribbonColors[item.status]||'rgba(122,117,144,.6)';
   const statusLabel = cfg.statusLabels[item.status]||item.status;
   const stars = item.nota ? '★'.repeat(item.nota)+'☆'.repeat(5-item.nota) : '';

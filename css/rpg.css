@@ -485,7 +485,7 @@ body {
   font-weight: 800;
   letter-spacing: 2px;
   text-transform: uppercase;
-  color: rgba(212, 175, 106, .6);
+  color: #907b58; /* contraste AA (era rgba(212, 175, 106, .6)) */
   margin-top: 3px;
 }
 
@@ -543,7 +543,7 @@ body {
   font-family: var(--font-mono);
   letter-spacing: 1.5px;
   text-transform: uppercase;
-  color: rgba(212, 175, 106, .5);
+  color: #877860; /* contraste AA (era rgba(212, 175, 106, .5)) */
 }
 
 .rpg-xp-val {
@@ -598,7 +598,7 @@ canvas.rpg-xp-bar {
 .rpg-xp-next {
   font-size: 9px;
   font-family: var(--font-mono);
-  color: rgba(255, 255, 255, .25);
+  color: #7b7a80; /* contraste AA (era rgba(255, 255, 255, .25)) */
   margin-top: 5px;
   text-align: right;
 }
@@ -636,7 +636,7 @@ canvas.rpg-xp-bar {
   font-weight: 700;
   letter-spacing: 1.2px;
   text-transform: uppercase;
-  color: rgba(212, 175, 106, .55);
+  color: #8a785b; /* contraste AA (era rgba(212, 175, 106, .55)) */
 }
 
 .rpg-attr-bar-wrap {
@@ -671,7 +671,7 @@ canvas.rpg-xp-bar {
   font-weight: 800;
   letter-spacing: 2px;
   text-transform: uppercase;
-  color: rgba(212, 175, 106, .4);
+  color: #847868; /* contraste AA (era rgba(212, 175, 106, .4)) */
   margin-bottom: 9px;
   display: block;
 }
@@ -809,7 +809,7 @@ canvas.rpg-xp-bar {
 .rpg-qs-lbl {
   font-size: 8.5px;
   font-family: var(--font-mono);
-  color: rgba(255, 255, 255, .3);
+  color: #7e7d84; /* contraste AA (era rgba(255, 255, 255, .3)) */
   margin-top: 3px;
   letter-spacing: .5px;
 }

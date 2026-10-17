@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://apis.google.com https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://unpkg.com; font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.google.com https://nominatim.openstreetmap.org https://api.open-meteo.com https://geocoding-api.open-meteo.com; frame-src https://*.firebaseapp.com https://www.google.com https://recaptcha.google.com https://www.youtube.com https://player.vimeo.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#04040c">
 <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
 <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
 <title>Revisão — Sol de Sóter</title>
@@ -24,7 +25,7 @@
   --bord:  rgba(255,255,255,0.07);
   --bord2: rgba(255,255,255,0.14);
   --text:  #e8e4f0;
-  --muted: #6b6882;
+  --muted: #848297;
   --mut2:  #9693aa;
   --gold:  #c8a96e;
   --gold2: #e8c987;
@@ -40,7 +41,7 @@
   --fm: 'DM Mono', monospace;
   --border: var(--bord);
   --text: #e8e4f0;
-  --muted: #6b6882;
+  --muted: #848297;
   --accent1: #c8a96e;
   --accent2: #7c6fcd;
   --accent3: #5ec4a8;
@@ -388,7 +389,7 @@ canvas.achart{width:100%;display:block;}
 <canvas id="bgc"></canvas>
 <div data-app-header></div>
 
-<div class="main">
+<div class="main" role="main">
 
   <!-- TABS -->
   <nav class="tabs">
@@ -1036,14 +1037,14 @@ function renderUpcoming(){
 
   list.innerHTML='';
   due2.slice(0,4).forEach(function(c){
-    var deck=decks.find(function(d){return d.id===c.deckId;})||{name:'?',color:'#7a7590'};
+    var deck=decks.find(function(d){return d.id===c.deckId;})||{name:'?',color:'#858099'};
     var el=document.createElement('div');el.className='uitem';
     el.innerHTML='<span class="uitem-deck" style="background:rgba('+hexToRgb(deck.color)+',.15);color:'+deck.color+'">'+escHtml(deck.id?deckPath(deck):deck.name)+'</span>'+
       '<span class="uitem-q">'+escHtml(c.front)+'</span><span class="uitem-due overdue">Atrasado</span>';
     list.appendChild(el);
   });
   upcoming.slice(0,8).forEach(function(c){
-    var deck=decks.find(function(d){return d.id===c.deckId;})||{name:'?',color:'#7a7590'};
+    var deck=decks.find(function(d){return d.id===c.deckId;})||{name:'?',color:'#858099'};
     var days=Math.round((parseLocalISO(c.nextDue)-parseLocalISO(today))/(86400000));
     var dLabel=days===0?'Hoje':days===1?'Amanhã':'em '+days+'d';
     var cls=days===0?'today':'';
@@ -1381,7 +1382,7 @@ function renderReviewCard(){
   }
 
   var card=sessionQueue[sessionIdx];
-  var deck=decks.find(function(d){return d.id===card.deckId;})||{name:'Deck',color:'#7a7590'};
+  var deck=decks.find(function(d){return d.id===card.deckId;})||{name:'Deck',color:'#858099'};
   var pct=Math.round(sessionIdx/sessionQueue.length*100);
   var previews=previewSM2(card);
   var previewHtml=previews.map(function(p){return '<span class="rb-next-lbl">'+p.display+'</span>';});

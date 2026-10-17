@@ -1123,7 +1123,7 @@ function tkCalRender() {
 
   // dias do mês anterior (placeholder)
   for (let i=firstDay-1;i>=0;i--) {
-    cells.push(`<div class="tk-day other-month"><span class="tk-day-num">${daysInPrev-i}</span></div>`);
+    cells.push(`<div class="tk-day other-month" aria-hidden="true"><span class="tk-day-num">${daysInPrev-i}</span></div>`);
   }
 
   // dias do mês atual
@@ -1160,7 +1160,7 @@ function tkCalRender() {
 
   // completar última linha
   const rem = cells.length%7===0 ? 0 : 7-(cells.length%7);
-  for (let d=1;d<=rem;d++) cells.push(`<div class="tk-day other-month"><span class="tk-day-num">${d}</span></div>`);
+  for (let d=1;d<=rem;d++) cells.push(`<div class="tk-day other-month" aria-hidden="true"><span class="tk-day-num">${d}</span></div>`);
 
   grid.innerHTML = cells.join('');
 }
@@ -2739,7 +2739,7 @@ tkCalRender = function () {
       const dayNumber = dateObj.getDate();
       const isCurrentMonth = dateObj.getFullYear() === year && dateObj.getMonth() === month;
       if (!isCurrentMonth) {
-        weekCells.push(`<div class="tk-day other-month" style="grid-column:${colIndex + 1}"><span class="tk-day-num">${dayNumber}</span></div>`);
+        weekCells.push(`<div class="tk-day other-month" aria-hidden="true" style="grid-column:${colIndex + 1}"><span class="tk-day-num">${dayNumber}</span></div>`);
         continue;
       }
 
@@ -2805,7 +2805,7 @@ tkCalRender = function () {
 
     weekMarkup.push(`<div class="tk-cal-week" style="--tk-span-lanes:${laneCount}">
       ${weekCells.join('')}
-      <div class="tk-cal-week-spans" style="--tk-span-lanes:${laneCount}" aria-label="Tarefas com duração de vários dias">${spanMarkup}</div>
+      <div class="tk-cal-week-spans" style="--tk-span-lanes:${laneCount}" role="group" aria-label="Tarefas com duração de vários dias">${spanMarkup}</div>
     </div>`);
   }
   grid.innerHTML = weekMarkup.join('');
