@@ -1875,29 +1875,23 @@ afterReviewOwnerKnown(function(currentUid){
 });
 </script>
 
-<!-- STARFIELD -->
+<!-- STARFIELD: js/starfield.js com os parâmetros desta página -->
+<script src="js/starfield.js"></script>
 <script>
-(function(){
-  var cv=document.getElementById('bgc'),ctx=cv.getContext('2d');
-  var W,H,stars=[],mouse={x:-9999,y:-9999},shoots=[];
-  function rnd(a,b){return a+Math.random()*(b-a);}
-  function resize(){W=cv.width=innerWidth;H=cv.height=innerHeight;init();}
-  function init(){stars=[];for(var i=0;i<220;i++){var l=Math.floor(Math.random()*3);stars.push({x:rnd(0,W),y:rnd(0,H),vx:rnd(-.03,.03)*(l+1),vy:rnd(-.015,.025)*(l+1),r:rnd(.25,1.1)*(l*.4+.55),a:rnd(.25,1),ts:rnd(.004,.022),td:Math.random()>.5?1:-1,l:l,h:Math.random()<.15?(Math.random()<.5?'gold':Math.random()<.5?'v':'sky'):'w'});}}
-  var hm={w:[218,212,250],gold:[200,169,110],v:[140,120,210],sky:[120,190,240]};
-  function sp(){shoots.push({x:rnd(W*.2,W),y:rnd(0,H*.4),len:rnd(90,190),a:rnd(20,50)*Math.PI/180,sp:rnd(7,15),al:1});}
-  setInterval(sp,4800);setTimeout(sp,1000);
-  function frame(){
-    ctx.clearRect(0,0,W,H);
-    var bg=ctx.createRadialGradient(W*.35,H*.3,0,W*.5,H*.5,Math.max(W,H)*.9);bg.addColorStop(0,'#08082a');bg.addColorStop(.4,'#05050f');bg.addColorStop(1,'#020208');ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
-    [{cx:W*.15,cy:H*.2,r:300,c:'rgba(80,50,180,.03)'},{cx:W*.75,cy:H*.65,r:250,c:'rgba(180,100,50,.024)'},{cx:W*.5,cy:H*.88,r:190,c:'rgba(40,120,150,.02)'}].forEach(function(n){var g=ctx.createRadialGradient(n.cx,n.cy,0,n.cx,n.cy,n.r);g.addColorStop(0,n.c);g.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(n.cx,n.cy,n.r,0,Math.PI*2);ctx.fill();});
-    ctx.save();for(var i=0;i<stars.length;i++)for(var j=i+1;j<stars.length;j++){var dx=stars[i].x-stars[j].x,dy=stars[i].y-stars[j].y,dd=Math.sqrt(dx*dx+dy*dy);if(dd<85&&stars[i].l===stars[j].l){ctx.strokeStyle='rgba(200,180,255,'+(1-dd/85)*.065+')';ctx.lineWidth=.35;ctx.beginPath();ctx.moveTo(stars[i].x,stars[i].y);ctx.lineTo(stars[j].x,stars[j].y);ctx.stroke();}}ctx.restore();
-    for(var i=0;i<stars.length;i++){var s=stars[i];s.a+=s.ts*s.td;if(s.a>=1){s.a=1;s.td=-1;}if(s.a<=.12){s.a=.12;s.td=1;}var mx=mouse.x-s.x,my=mouse.y-s.y,md=Math.sqrt(mx*mx+my*my);if(md<75){var f=(1-md/75)*.45;s.x-=(mx/md)*f;s.y-=(my/md)*f;}s.x+=s.vx;s.y+=s.vy;if(s.x<-5)s.x=W+5;if(s.x>W+5)s.x=-5;if(s.y<-5)s.y=H+5;if(s.y>H+5)s.y=-5;var rgb=hm[s.h],gw=s.r*2.8;var gg=ctx.createRadialGradient(s.x,s.y,0,s.x,s.y,gw);gg.addColorStop(0,'rgba('+rgb[0]+','+rgb[1]+','+rgb[2]+','+s.a+')');gg.addColorStop(1,'rgba('+rgb[0]+','+rgb[1]+','+rgb[2]+',0)');ctx.beginPath();ctx.arc(s.x,s.y,gw,0,Math.PI*2);ctx.fillStyle=gg;ctx.fill();ctx.beginPath();ctx.arc(s.x,s.y,s.r*.55,0,Math.PI*2);ctx.fillStyle='rgba('+rgb[0]+','+rgb[1]+','+rgb[2]+','+Math.min(s.a*1.5,1)+')';ctx.fill();}
-    for(var i=shoots.length-1;i>=0;i--){var sh=shoots[i];sh.x-=Math.cos(sh.a)*sh.sp;sh.y+=Math.sin(sh.a)*sh.sp;sh.al-=.011;if(sh.al<=0||sh.x<-50||sh.y>H+50){shoots.splice(i,1);continue;}var tx=sh.x+Math.cos(sh.a)*sh.len,ty=sh.y-Math.sin(sh.a)*sh.len;var sg=ctx.createLinearGradient(sh.x,sh.y,tx,ty);sg.addColorStop(0,'rgba(255,255,255,'+sh.al+')');sg.addColorStop(.35,'rgba(200,180,255,'+(sh.al*.55)+')');sg.addColorStop(1,'rgba(255,255,255,0)');ctx.strokeStyle=sg;ctx.lineWidth=1.1;ctx.beginPath();ctx.moveTo(sh.x,sh.y);ctx.lineTo(tx,ty);ctx.stroke();ctx.beginPath();ctx.arc(sh.x,sh.y,1.4,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,'+sh.al+')';ctx.fill();}
-    requestAnimationFrame(frame);
-  }
-  window.addEventListener('resize',resize);window.addEventListener('mousemove',function(e){mouse.x=e.clientX;mouse.y=e.clientY;});window.addEventListener('mouseleave',function(){mouse.x=-9999;mouse.y=-9999;});
-  resize();frame();
-})();
+SoterStarfield.start(document.getElementById('bgc'), {
+  stars: 220, vx: [-0.03, 0.03], vy: [-0.015, 0.025], radius: [0.25, 1.1], radiusLayerBase: 0.55,
+  alpha: [0.25, 1], twinkle: [0.004, 0.022], minAlpha: 0.12,
+  hues: { w: [218, 212, 250], gold: [200, 169, 110], v: [140, 120, 210], sky: [120, 190, 240] },
+  nebulas: [
+    { x: 0.15, y: 0.2, r: 300, color: 'rgba(80,50,180,.03)' },
+    { x: 0.75, y: 0.65, r: 250, color: 'rgba(180,100,50,.024)' },
+    { x: 0.5, y: 0.88, r: 190, color: 'rgba(40,120,150,.02)' }
+  ],
+  connectDist: 85, connectAlpha: 0.065, connectWidth: 0.35, repel: 75, repelForce: 0.45,
+  glow: 2.8, core: 0.55, coreAlpha: 1.5,
+  shootInterval: 4800, shootFirst: 1000, shootLen: [90, 190], shootSpeed: [7, 15], shootFade: 0.011,
+  shootMidStop: 0.35, shootMidAlpha: 0.55, shootWidth: 1.1, shootHead: 1.4
+});
 </script>
 </body>
 </html>

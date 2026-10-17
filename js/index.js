@@ -19,6 +19,10 @@
   var stars = [];
   var shoots = [];
   var mouse = { x: -9999, y: -9999 };
+  // desempenho: fundo/nebulosas num canvas fora da tela e brilho das estrelas por sprite
+  var bgCanvas = document.createElement("canvas");
+  var glowSprites = {};
+  var resizeRaf = 0;
 
   // Hero constellation — stars travel between pool and background, never disappear
   var HERO_ZONE_X0 = 0;
@@ -456,27 +460,77 @@
     ctx.fill();
   }
 
+  // conexões por grade espacial: cada estrela só é comparada com as das células vizinhas
+  // (antes eram todos os pares, ~24 mil por quadro com 220 estrelas)
   function drawConstellations() {
     if (prefersReducedMotion || W < 900) return;
+    var cols = Math.ceil(W / CONNECT_DIST) + 1;
+    var grid = {};
+    var i;
+    for (i = 0; i < stars.length; i += 1) {
+      var key = Math.floor(stars[i].x / CONNECT_DIST) + Math.floor(stars[i].y / CONNECT_DIST) * cols;
+      (grid[key] || (grid[key] = [])).push(i);
+    }
     ctx.save();
-    for (var i = 0; i < stars.length; i += 1) {
-      for (var j = i + 1; j < stars.length; j += 1) {
-        var dx = stars[i].x - stars[j].x;
-        var dy = stars[i].y - stars[j].y;
-        var distSq = dx * dx + dy * dy;
-        if (distSq < connectDistSq && stars[i].layer === stars[j].layer) {
-          var d = Math.sqrt(distSq);
-          var op = (1 - d / CONNECT_DIST) * 0.07;
-          ctx.strokeStyle = "rgba(200,180,255," + op + ")";
-          ctx.lineWidth = 0.4;
-          ctx.beginPath();
-          ctx.moveTo(stars[i].x, stars[i].y);
-          ctx.lineTo(stars[j].x, stars[j].y);
-          ctx.stroke();
+    ctx.lineWidth = 0.4;
+    for (i = 0; i < stars.length; i += 1) {
+      var a = stars[i];
+      var cx = Math.floor(a.x / CONNECT_DIST);
+      var cy = Math.floor(a.y / CONNECT_DIST);
+      for (var gy = -1; gy <= 1; gy += 1) {
+        for (var gx = -1; gx <= 1; gx += 1) {
+          var list = grid[(cx + gx) + (cy + gy) * cols];
+          if (!list) continue;
+          for (var k = 0; k < list.length; k += 1) {
+            var j = list[k];
+            if (j <= i || stars[j].layer !== a.layer) continue;
+            var dx = a.x - stars[j].x;
+            var dy = a.y - stars[j].y;
+            var distSq = dx * dx + dy * dy;
+            if (distSq >= connectDistSq) continue;
+            var op = (1 - Math.sqrt(distSq) / CONNECT_DIST) * 0.07;
+            ctx.strokeStyle = "rgba(200,180,255," + op + ")";
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(stars[j].x, stars[j].y);
+            ctx.stroke();
+          }
         }
       }
     }
     ctx.restore();
+  }
+
+  function paintBackground() {
+    bgCanvas.width = W;
+    bgCanvas.height = H;
+    var main = ctx;
+    ctx = bgCanvas.getContext("2d");
+    var bg = ctx.createRadialGradient(W * 0.35, H * 0.3, 0, W * 0.5, H * 0.5, Math.max(W, H) * 0.9);
+    bg.addColorStop(0, "#08082a");
+    bg.addColorStop(0.4, "#05050f");
+    bg.addColorStop(1, "#020208");
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+    drawNebula(W * 0.15, H * 0.2, 320, "rgba(80,50,180,0.035)");
+    drawNebula(W * 0.75, H * 0.6, 280, "rgba(180,120,50,0.028)");
+    drawNebula(W * 0.5, H * 0.85, 200, "rgba(40,120,150,0.025)");
+    ctx = main;
+  }
+
+  function glowSprite(hue) {
+    if (glowSprites[hue]) return glowSprites[hue];
+    var c = document.createElement("canvas");
+    var rgb = hueMap[hue];
+    c.width = c.height = 64;
+    var g = c.getContext("2d");
+    var grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grad.addColorStop(0, "rgba(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ",1)");
+    grad.addColorStop(1, "rgba(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ",0)");
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 64, 64);
+    glowSprites[hue] = c;
+    return c;
   }
 
   function frame() {
@@ -487,17 +541,7 @@
     }
 
     ctx.clearRect(0, 0, W, H);
-
-    var bg = ctx.createRadialGradient(W * 0.35, H * 0.3, 0, W * 0.5, H * 0.5, Math.max(W, H) * 0.9);
-    bg.addColorStop(0, "#08082a");
-    bg.addColorStop(0.4, "#05050f");
-    bg.addColorStop(1, "#020208");
-    ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, W, H);
-
-    drawNebula(W * 0.15, H * 0.2, 320, "rgba(80,50,180,0.035)");
-    drawNebula(W * 0.75, H * 0.6, 280, "rgba(180,120,50,0.028)");
-    drawNebula(W * 0.5, H * 0.85, 200, "rgba(40,120,150,0.025)");
+    ctx.drawImage(bgCanvas, 0, 0);
 
     drawConstellations();
 
@@ -525,13 +569,9 @@
 
       var rgb = hueMap[s.hue];
       var glow = s.r * 3;
-      var glowGrad = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, glow);
-      glowGrad.addColorStop(0, "rgba(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + "," + s.alpha + ")");
-      glowGrad.addColorStop(1, "rgba(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ",0)");
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, glow, 0, Math.PI * 2);
-      ctx.fillStyle = glowGrad;
-      ctx.fill();
+      ctx.globalAlpha = s.alpha;
+      ctx.drawImage(glowSprite(s.hue), s.x - glow, s.y - glow, glow * 2, glow * 2);
+      ctx.globalAlpha = 1;
 
       ctx.beginPath();
       ctx.arc(s.x, s.y, s.r * 0.6, 0, Math.PI * 2);
@@ -571,15 +611,24 @@
       ctx.fill();
     }
 
+    // movimento reduzido: fica no quadro desenhado (sem laço de animação)
+    if (prefersReducedMotion) {
+      isAnimating = false;
+      animationFrameId = 0;
+      return;
+    }
     animationFrameId = requestAnimationFrame(frame);
   }
 
   function resize() {
+    resizeRaf = 0;
     if (!canvas || !ctx) return;
     W = canvas.width = window.innerWidth;
     H = canvas.height = window.innerHeight;
+    paintBackground();
     initStars();
     initHeroConstellation();
+    if (prefersReducedMotion) ensureAnimationLoop();
   }
 
   function ensureAnimationLoop() {
@@ -862,7 +911,9 @@
     items.forEach(function (item) { observer.observe(item); });
   }
 
-  window.addEventListener("resize", resize);
+  window.addEventListener("resize", function () {
+    if (!resizeRaf) resizeRaf = requestAnimationFrame(resize);
+  });
   window.addEventListener("mousemove", function (e) {
     mouse.x = e.clientX;
     mouse.y = e.clientY;

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@400;700&display=swap');
+/* fontes Cinzel: <link> no rpg.html (o @import aqui atrasava a renderização) */
 
 * {
   margin: 0;
