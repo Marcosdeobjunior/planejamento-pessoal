@@ -12,6 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Syne:wght@400;600;700;800&family=Josefin+Sans:wght@400;600&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/design-system.css">
+<link rel="stylesheet" href="css/icons.css">
 <link rel="stylesheet" href="css/components.css">
 <link rel="stylesheet" href="css/app-shell.css">
 <style>
@@ -562,7 +563,13 @@ td.nm:hover{color:var(--accent1)}
   opacity:0;transition:opacity .18s;min-width:60px;
 }
 .blk:hover .btnedit{opacity:.7}
-.marker.dobra{cursor:pointer;transition:transform .16s;padding-top:4px}
+.marker.dobra{cursor:pointer;transition:transform .16s;width:22px;height:22px;justify-content:center;align-items:center;margin-top:9px;font-size:14px}
+/* títulos alternantes: seta alinhada à primeira linha do título (antes ficava acima dele) */
+.blk[data-t="th1"] .marker.dobra{margin-top:38px;font-size:16px}
+.blk[data-t="th2"] .marker.dobra{margin-top:28px;font-size:16px}
+.blk[data-t="th3"] .marker.dobra{margin-top:18px}
+.colitem .blk[data-t="th1"] .marker.dobra{margin-top:20px}
+.colitem .blk[data-t="th2"] .marker.dobra{margin-top:15px}
 .marker.dobra.aberta{transform:rotate(90deg)}
 .blk[data-t="equation"] .ct{font-family:var(--font-mono);text-align:center;font-size:16px;color:var(--accent3)}
 .blk[data-t="h4"] .ct{font-size:17px;padding-top:10px;font-family:var(--font-display);font-weight:700;color:#f0eaff}
@@ -856,6 +863,10 @@ td.nm:hover{color:var(--accent1)}
 }
 [data-app-footer] .site-footer{margin-top:0}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+/* ícones de interface (Lucide): tamanho legível nos encaixes que eram glifos pequenos */
+.tw .ico{font-size:12px}
+.menu .ic .ico,.areamenu .lin .qi .ico{font-size:14px}
+.gut .ico{font-size:14px}
 </style>
 </head>
 <body data-page="projetos">
@@ -866,33 +877,33 @@ td.nm:hover{color:var(--accent1)}
     <button class="ws" id="btnArea" title="Trocar de espaço">
       <span class="wsico" id="areaIco">✦</span>
       <span class="wsnm"><b id="areaNome">Rubrica</b><small id="areaSub"></small></span>
-      <span class="wschev">⌄</span>
+      <span class="wschev"><i class="ico ico-chevrons-up-down" aria-hidden="true"></i></span>
     </button>
     <div style="padding:10px 0 4px">
-      <button class="sbtn" id="btnSearch"><span class="ic">⌕</span>Buscar<span class="kbd">Ctrl K</span></button>
-      <button class="sbtn" id="btnGraph"><span class="ic">✦</span>Grafo<span class="kbd">Ctrl G</span></button>
+      <button class="sbtn" id="btnSearch"><span class="ic"><i class="ico ico-search" aria-hidden="true"></i></span>Buscar<span class="kbd">Ctrl K</span></button>
+      <button class="sbtn" id="btnGraph"><span class="ic"><i class="ico ico-waypoints" aria-hidden="true"></i></span>Grafo<span class="kbd">Ctrl G</span></button>
       <button class="sbtn" id="btnMap"><span class="ic"><svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em"><path d="M9 4.5 3.5 6.3v13.2L9 17.7l6 2.1 5.5-1.8V4.8L15 6.6l-6-2.1z"/><path d="M9 4.5v13.2M15 6.6v13.2"/></svg></span>Mapa</button>
     </div>
     <div class="sec"><span>Área de trabalho</span><span class="sp"></span>
-      <button id="btnAllToggle" title="Expandir ou recolher tudo">⌄</button>
-      <button id="btnNewRoot" title="Nova página">+</button>
+      <button id="btnAllToggle" title="Expandir ou recolher tudo"><i class="ico ico-chevrons-down-up" aria-hidden="true"></i></button>
+      <button id="btnNewRoot" title="Nova página"><i class="ico ico-plus" aria-hidden="true"></i></button>
     </div>
     <div class="tree" id="tree"></div>
     <div class="foot">
-      <button class="sbtn" id="btnTrash"><span class="ic">🗑</span>Lixeira<span class="kbd" id="trashCount"></span></button>
-      <button class="sbtn" id="btnExport"><span class="ic">↧</span>Exportar Markdown</button>
-      <button class="sbtn" id="btnBackup"><span class="ic">⧉</span>Backup / restaurar</button>
-      <button class="sbtn" id="btnSync"><span class="ic">☁</span>Sincronização</button>
+      <button class="sbtn" id="btnTrash"><span class="ic"><i class="ico ico-trash-2" aria-hidden="true"></i></span>Lixeira<span class="kbd" id="trashCount"></span></button>
+      <button class="sbtn" id="btnExport"><span class="ic"><i class="ico ico-download" aria-hidden="true"></i></span>Exportar Markdown</button>
+      <button class="sbtn" id="btnBackup"><span class="ic"><i class="ico ico-archive" aria-hidden="true"></i></span>Backup / restaurar</button>
+      <button class="sbtn" id="btnSync"><span class="ic"><i class="ico ico-cloud" aria-hidden="true"></i></span>Sincronização</button>
     </div>
   </aside>
 
   <main class="main">
     <header class="top">
-      <button class="tbtn icon" id="togSide" style="display:none">☰</button>
-      <button class="tbtn icon" id="btnCollapseSide" title="Recolher barra lateral (Ctrl+\)">⟨</button>
+      <button class="tbtn icon" id="togSide" style="display:none" title="Mostrar páginas"><i class="ico ico-menu" aria-hidden="true"></i></button>
+      <button class="tbtn icon" id="btnCollapseSide" title="Recolher barra lateral (Ctrl+\)"><i class="ico ico-panel-left-close" aria-hidden="true"></i></button>
       <nav class="crumb" id="crumb"></nav>
       <span class="sp"></span>
-      <button class="tbtn icon" id="btnMore" title="Opções da página">⋯</button>
+      <button class="tbtn icon" id="btnMore" title="Opções da página"><i class="ico ico-ellipsis" aria-hidden="true"></i></button>
     </header>
     <div class="body">
       <div class="scroll" id="scroll"></div>
@@ -947,6 +958,8 @@ function migraChaveLocal(){
     localStorage.removeItem(KEY_BASE);
   }catch(e){}
 }
+/* ícone de interface (Lucide, css/icons.css), ex.: icn('ico-plus') */
+const icn=c=>'<i class="ico '+c+'" aria-hidden="true"></i>';
 /* tipo · nome · ícone · descrição · grupo · sinônimos para a busca */
 const BLOCK_TYPES=[
   ['p','Texto','Aa','parágrafo corrido','Blocos básicos','paragrafo'],
@@ -954,36 +967,36 @@ const BLOCK_TYPES=[
   ['h2','Título 2','H2','seção média','Blocos básicos','##'],
   ['h3','Título 3','H3','subseção','Blocos básicos','###'],
   ['h4','Título 4','H4','subseção menor','Blocos básicos','####'],
-  ['bullet','Lista com marcadores','•','lista simples','Blocos básicos','bullet'],
-  ['num','Lista numerada','1.','lista ordenada','Blocos básicos','ordenada'],
-  ['todo','Lista de tarefas','☐','caixa de marcar','Blocos básicos','tarefa todo'],
-  ['toggle','Lista de alternantes','›','dobra o que vem dentro','Blocos básicos','alternante toggle recolher'],
-  ['page','Página','▤','cria uma subpágina','Blocos básicos','subpagina'],
-  ['callout','Frase de destaque','◆','bloco em relevo','Blocos básicos','aviso destaque callout'],
-  ['quote','Citação','❝','destaque com barra','Blocos básicos','citacao'],
-  ['grid','Tabela','▤','tabela simples de texto','Blocos básicos','tabela grade'],
-  ['divider','Divisor','—','fio dourado','Blocos básicos','linha separador'],
-  ['pagelink','Link para a página','↗','aponta para uma página existente','Blocos básicos','link atalho'],
-  ['col2','2 colunas','▯▯','lado a lado','Blocos básicos','coluna colunas duas'],
-  ['col3','3 colunas','▯▯▯','três lado a lado','Blocos básicos','coluna colunas tres'],
-  ['col4','4 colunas','▯▯▯▯','quatro lado a lado','Blocos básicos','coluna colunas quatro'],
+  ['bullet','Lista com marcadores',icn('ico-list'),'lista simples','Blocos básicos','bullet'],
+  ['num','Lista numerada',icn('ico-list-ordered'),'lista ordenada','Blocos básicos','ordenada'],
+  ['todo','Lista de tarefas',icn('ico-list-todo'),'caixa de marcar','Blocos básicos','tarefa todo'],
+  ['toggle','Lista de alternantes',icn('ico-list-collapse'),'dobra o que vem dentro','Blocos básicos','alternante toggle recolher'],
+  ['page','Página',icn('ico-file-text'),'cria uma subpágina','Blocos básicos','subpagina'],
+  ['callout','Frase de destaque',icn('ico-message-square-text'),'bloco em relevo','Blocos básicos','aviso destaque callout'],
+  ['quote','Citação',icn('ico-quote'),'destaque com barra','Blocos básicos','citacao'],
+  ['grid','Tabela',icn('ico-grid-3x3'),'tabela simples de texto','Blocos básicos','tabela grade'],
+  ['divider','Divisor',icn('ico-minus'),'fio dourado','Blocos básicos','linha separador'],
+  ['pagelink','Link para a página',icn('ico-arrow-up-right'),'aponta para uma página existente','Blocos básicos','link atalho'],
+  ['col2','2 colunas',icn('ico-columns-2'),'lado a lado','Blocos básicos','coluna colunas duas'],
+  ['col3','3 colunas',icn('ico-columns-3'),'três lado a lado','Blocos básicos','coluna colunas tres'],
+  ['col4','4 colunas',icn('ico-columns-4'),'quatro lado a lado','Blocos básicos','coluna colunas quatro'],
 
-  ['image','Imagem','▣','da web ou do computador','Mídia','foto figura'],
-  ['video','Vídeo','▷','YouTube, Vimeo ou arquivo','Mídia','filme'],
-  ['audio','Áudio','♪','trilha ou gravação','Mídia','som musica'],
-  ['code','Código','{}','texto monoespaçado','Mídia','codigo'],
-  ['file','Arquivo','⎙','link para um arquivo','Mídia','anexo'],
-  ['bookmark','Marcador da web','🔖','cartão com o endereço','Mídia','bookmark link'],
+  ['image','Imagem',icn('ico-image'),'da web ou do computador','Mídia','foto figura'],
+  ['video','Vídeo',icn('ico-video'),'YouTube, Vimeo ou arquivo','Mídia','filme'],
+  ['audio','Áudio',icn('ico-music'),'trilha ou gravação','Mídia','som musica'],
+  ['code','Código',icn('ico-code'),'texto monoespaçado','Mídia','codigo'],
+  ['file','Arquivo',icn('ico-paperclip'),'link para um arquivo','Mídia','anexo'],
+  ['bookmark','Marcador da web',icn('ico-bookmark'),'cartão com o endereço','Mídia','bookmark link'],
 
-  ['table','Visualização em tabela','▦','subpáginas em tabela','Base de dados','tabela'],
-  ['board','Visualização em quadro','▥','subpáginas em colunas','Base de dados','quadro kanban'],
-  ['gallery','Visualização em galeria','▩','cartões com capa','Base de dados','galeria'],
-  ['list','Visualização em lista','☰','uma linha por página','Base de dados','lista'],
+  ['table','Visualização em tabela',icn('ico-table'),'subpáginas em tabela','Base de dados','tabela'],
+  ['board','Visualização em quadro',icn('ico-kanban'),'subpáginas em colunas','Base de dados','quadro kanban'],
+  ['gallery','Visualização em galeria',icn('ico-layout-grid'),'cartões com capa','Base de dados','galeria'],
+  ['list','Visualização em lista',icn('ico-rows-3'),'uma linha por página','Base de dados','lista'],
 
-  ['toc','Índice','⋮≡','sumário dos títulos desta página','Blocos avançados','sumario indice toc'],
-  ['equation','Equação em bloco','∑','fórmula em destaque','Blocos avançados','equacao formula matematica'],
-  ['button','Botão','▭','cria uma subpágina ao clicar','Blocos avançados','botao'],
-  ['breadcrumb','Trilha','⤳','caminho até esta página','Blocos avançados','trilha caminho breadcrumb'],
+  ['toc','Índice',icn('ico-table-of-contents'),'sumário dos títulos desta página','Blocos avançados','sumario indice toc'],
+  ['equation','Equação em bloco',icn('ico-sigma'),'fórmula em destaque','Blocos avançados','equacao formula matematica'],
+  ['button','Botão',icn('ico-rectangle-horizontal'),'cria uma subpágina ao clicar','Blocos avançados','botao'],
+  ['breadcrumb','Trilha',icn('ico-chevrons-right'),'caminho até esta página','Blocos avançados','trilha caminho breadcrumb'],
   ['th1','Título alternante 1','›H1','título que dobra a seção','Blocos avançados','alternante dobra'],
   ['th2','Título alternante 2','›H2','título que dobra a seção','Blocos avançados','alternante dobra'],
   ['th3','Título alternante 3','›H3','título que dobra a seção','Blocos avançados','alternante dobra']
@@ -994,10 +1007,10 @@ const nivelTitulo=t=>({h1:1,h2:2,h3:3,h4:4,th1:1,th2:2,th3:3})[t]||9;
 const ehVista=t=>['table','board','gallery','list'].indexOf(t)>=0;
 const ehMidia=t=>['image','video','audio','file','bookmark'].indexOf(t)>=0;
 const semTexto=t=>['divider','page','toc','breadcrumb','button','grid'].indexOf(t)>=0||ehVista(t)||ehMidia(t);
-const PROP_TYPES={texto:'≡',selecao:'⌄',numero:'#',data:'⌛'};
+const PROP_TYPES={texto:icn('ico-align-left'),selecao:icn('ico-circle-chevron-down'),numero:icn('ico-hash'),data:icn('ico-calendar')};
 const PILL={ideia:'var(--muted)',rascunho:'var(--accent1)',revisar:'var(--accent5)',pronto:'var(--accent3)',
   protagonista:'var(--accent2)',antagonista:'var(--accent4)',secundario:'var(--accent6)'};
-const ICONS=['✦','📖','✍️','🕯️','🗺️','🧭','👤','🌒','🏔️','🗝️','⚔️','🪶','🫀','🌫️','🔥','❄️','📄','🜁'];
+const ICONS=['✦','📖','✍️','🕯️','🗺️','🧭','👤','🌒','🏔️','🗝️','⚔️','🪶','🫀','🌫️','🔥','❄️','📄','🌬️'];
 /* ícone minimalista da seção Mapa — traço fino, sem cor, escala com o font-size do contexto */
 const MAPA_ICO='<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" '+
   'stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-.14em">'+
@@ -1117,7 +1130,7 @@ function applySideCollapsed(){
   const on=!!(S&&S.sideCollapsed);
   document.body.classList.toggle('side-collapsed',on);
   const b=$('#btnCollapseSide');
-  if(b){b.textContent=on?'⟩':'⟨';b.title=(on?'Expandir':'Recolher')+' barra lateral (Ctrl+\\)'}
+  if(b){b.innerHTML=on?icn('ico-panel-left-open'):icn('ico-panel-left-close');b.title=(on?'Expandir':'Recolher')+' barra lateral (Ctrl+\\)'}
 }
 function toggleSideCollapse(){
   S.sideCollapsed=!S.sideCollapsed;
@@ -1514,13 +1527,13 @@ function treeHTML(parentId,depth){
     const on=(p.id===S.activeId&&S.view==='page')||p.id===S.peekId;
     return `<div>
       <div class="row ${on?'on':''}" data-page="${p.id}" data-nav="1" style="padding-left:${8+depth*15}px">
-        <span class="tw ${ch.length?(p.expanded?'open':''):'leaf'}" data-tw="${p.id}">${ch.length?'▶':'·'}</span>
+        <span class="tw ${ch.length?(p.expanded?'open':''):'leaf'}" data-tw="${p.id}">${ch.length?icn('ico-chevron-right'):'·'}</span>
         <span class="em">${ico(p.icon,'15px')}</span>
         <span class="nm">${esc(p.title||'Sem título')}</span>
         ${ch.length&&!p.expanded?`<span class="cnt">${ch.length}</span>`:''}
-        <button class="add" data-rowmenu="${p.id}" title="Opções da página">⋯</button>
-        <button class="add" data-addsub="${p.id}" title="Nova subpágina">+</button>
-        <button class="add" data-trashrow="${p.id}" title="Mover para a lixeira">🗑</button>
+        <button class="add" data-rowmenu="${p.id}" title="Opções da página"><i class="ico ico-ellipsis" aria-hidden="true"></i></button>
+        <button class="add" data-addsub="${p.id}" title="Nova subpágina"><i class="ico ico-plus" aria-hidden="true"></i></button>
+        <button class="add" data-trashrow="${p.id}" title="Mover para a lixeira"><i class="ico ico-trash-2" aria-hidden="true"></i></button>
       </div>
       <div class="kids ${p.expanded?'open':''}">${p.expanded?treeHTML(p.id,depth+1):''}</div>
     </div>`;
@@ -1532,8 +1545,8 @@ function renderCrumb(){
   while(p){path.unshift(p);p=p.parentId?S.pages[p.parentId]:null}
   $('#crumb').innerHTML=path.map((q,i)=>
     `${i?'<i>/</i>':''}<button data-page="${q.id}" data-nav="1">${ico(q.icon,'14px')} ${esc(q.title||'Sem título')}</button>`).join('')
-    +(S.view==='graph'?'<i>/</i><button>✦ Grafo</button>':'')
-    +(S.view==='trash'?'<i>/</i><button>🗑 Lixeira</button>':'');
+    +(S.view==='graph'?'<i>/</i><button>'+icn('ico-waypoints')+' Grafo</button>':'')
+    +(S.view==='trash'?'<i>/</i><button>'+icn('ico-trash-2')+' Lixeira</button>':'');
 }
 
 /* ---------------- superfícies ---------------- */
@@ -1546,27 +1559,27 @@ function propsHTML(p){
     const c=PILL[slug(pr.v)];
     const val=pr.v?(pr.type==='selecao'&&c?`<span class="pill" style="color:${c}">${esc(pr.v)}</span>`:esc(pr.v)):'';
     return `<div class="prow ${oculta(p,k)?'esc':''}">
-      <div class="pkey" data-propkey="${esc(k)}"><span class="ic">${PROP_TYPES[pr.type]||'≡'}</span>${esc(k)}</div>
+      <div class="pkey" data-propkey="${esc(k)}"><span class="ic">${PROP_TYPES[pr.type]||PROP_TYPES.texto}</span>${esc(k)}</div>
       <div class="pval" ${cfg(p,'travada')?'':'contenteditable'} data-prop="${esc(k)}">${val}</div>
       <button class="polho" data-polho="${esc(k)}"
-        title="${oculta(p,k)?'Mostrar sempre':'Ocultar quando vazia ou não usada'}">${oculta(p,k)?'◠':'◉'}</button>
+        title="${oculta(p,k)?'Mostrar sempre':'Ocultar quando vazia ou não usada'}">${oculta(p,k)?icn('ico-eye-off'):icn('ico-eye')}</button>
     </div>`;
   };
   const visiveis=p.propOrder.filter(k=>!oculta(p,k)||mostrar);
   return `<div class="props" data-props>${visiveis.map(linha).join('')}
     ${escondidas.length?`<button class="propocultas" data-propocultas>
-      ${mostrar?'▾':'▸'} ${escondidas.length} propriedade${escondidas.length>1?'s':''} oculta${escondidas.length>1?'s':''}</button>`:''}
-    <button class="addprop" data-addprop><span>+</span>propriedade</button></div>`;
+      ${mostrar?icn('ico-chevron-down'):icn('ico-chevron-right')} ${escondidas.length} propriedade${escondidas.length>1?'s':''} oculta${escondidas.length>1?'s':''}</button>`:''}
+    <button class="addprop" data-addprop><span><i class="ico ico-plus" aria-hidden="true"></i></span>propriedade</button></div>`;
 }
-const gut=id=>`<div class="gut"><button data-plus="${id}" title="Inserir abaixo">+</button><button class="drag" draggable="true" data-drag="${id}" title="Arraste, ou clique para opções">⠿</button></div>`;
+const gut=id=>`<div class="gut"><button data-plus="${id}" title="Inserir abaixo"><i class="ico ico-plus" aria-hidden="true"></i></button><button class="drag" draggable="true" data-drag="${id}" title="Arraste, ou clique para opções"><i class="ico ico-grip-vertical" aria-hidden="true"></i></button></div>`;
 
 /* ---- blocos sem texto editável ---- */
 function midiaHTML(p,b){
   const u=b.text||'';
   const cai=m=>`<div class="vazio" data-midia="${b.id}">${m}</div>`;
-  if(!u)return cai({image:'▣  escolher imagem',video:'▷  colar o endereço do vídeo',
-    audio:'♪  colar o endereço do áudio',file:'⎙  apontar um arquivo',
-    bookmark:'🔖  colar um endereço'}[b.t]);
+  if(!u)return cai({image:icn('ico-image')+' escolher imagem',video:icn('ico-video')+' colar o endereço do vídeo',
+    audio:icn('ico-music')+' colar o endereço do áudio',file:icn('ico-paperclip')+' apontar um arquivo',
+    bookmark:icn('ico-bookmark')+' colar um endereço'}[b.t]);
   if(b.t==='image')return `<figure class="mfig"><img src="${esc(safeU(u))}" alt="${esc(b.leg||'')}" loading="lazy">
     <figcaption contenteditable data-leg="${b.id}" data-ph="legenda">${esc(b.leg||'')}</figcaption></figure>`;
   if(b.t==='video'){
@@ -1577,9 +1590,9 @@ function midiaHTML(p,b){
   }
   if(b.t==='audio')return `<audio class="maud" src="${esc(safeU(u))}" controls preload="none"></audio>`;
   if(b.t==='file')return `<a class="mcard" href="${esc(safeU(u))}" target="_blank" rel="noopener">
-    <span class="mi">⎙</span><span class="mt"><b>${esc(b.leg||u.split('/').pop()||'arquivo')}</b><small>${esc(u)}</small></span></a>`;
+    <span class="mi"><i class="ico ico-paperclip" aria-hidden="true"></i></span><span class="mt"><b>${esc(b.leg||u.split('/').pop()||'arquivo')}</b><small>${esc(u)}</small></span></a>`;
   return `<a class="mcard" href="${esc(safeU(u))}" target="_blank" rel="noopener">
-    <span class="mi">🔖</span><span class="mt"><b>${esc(b.leg||u.replace(/^https?:\/\//,'').split('/')[0])}</b><small>${esc(u)}</small></span></a>`;
+    <span class="mi"><i class="ico ico-bookmark" aria-hidden="true"></i></span><span class="mt"><b>${esc(b.leg||u.replace(/^https?:\/\//,'').split('/')[0])}</b><small>${esc(u)}</small></span></a>`;
 }
 function tocHTML(p){
   const t=p.blocks.filter(x=>ehTitulo(x.t)&&x.text.trim());
@@ -1630,7 +1643,7 @@ function blockHTML(p,b,i,list){
   if(b.t==='divider')return `<div class="blk" data-t="divider" data-id="${b.id}">${gut(b.id)}<hr></div>`;
   if(ehMidia(b.t)){
     const resizavel=(b.t==='image'||b.t==='video')&&b.text;
-    return `<div class="blk" data-t="${b.t}" data-id="${b.id}">${gut(b.id)}<div class="mwrap${resizavel?' mresize':''}"${resizavel?` style="width:${b.larg||100}%" data-mwrap="${b.id}"`:''}>${midiaHTML(p,b)}${resizavel?`<button class="mdel" data-mdel="${b.id}" title="Excluir">✕</button><div class="mhandle" data-mresize="${b.id}" title="Arraste para redimensionar"></div>`:''}</div></div>`;
+    return `<div class="blk" data-t="${b.t}" data-id="${b.id}">${gut(b.id)}<div class="mwrap${resizavel?' mresize':''}"${resizavel?` style="width:${b.larg||100}%" data-mwrap="${b.id}"`:''}>${midiaHTML(p,b)}${resizavel?`<button class="mdel" data-mdel="${b.id}" title="Excluir"><i class="ico ico-x" aria-hidden="true"></i></button><div class="mhandle" data-mresize="${b.id}" title="Arraste para redimensionar"></div>`:''}</div></div>`;
   }
   if(b.t==='toc')
     return `<div class="blk" data-t="toc" data-id="${b.id}">${gut(b.id)}<div class="mwrap">${tocHTML(p)}</div></div>`;
@@ -1646,19 +1659,19 @@ function blockHTML(p,b,i,list){
     const alvo=S.pages[b.text];
     return `<div class="blk" data-t="pagelink" data-id="${b.id}">${gut(b.id)}
       ${alvo?`<span class="pagelink" data-page="${esc(b.text)}">${ico(alvo.icon,'15px')} ${esc(alvo.title||'Sem título')}</span>`
-            :`<span class="pagelink vazio" data-escolhepg="${b.id}">↗  escolher uma página</span>`}</div>`;
+            :`<span class="pagelink vazio" data-escolhepg="${b.id}"><i class="ico ico-arrow-up-right" aria-hidden="true"></i> escolher uma página</span>`}</div>`;
   }
   if(b.t==='page'){
     const sub=S.pages[b.text];
     return `<div class="blk" data-t="page" data-id="${b.id}">${gut(b.id)}
-      <span class="pagelink" data-page="${esc(b.text)}">${sub?ico(sub.icon,'15px'):'📄'} ${sub?esc(sub.title||'Sem título'):'página removida'}${sub&&sub.trashed?' <small style="opacity:.6">(na lixeira)</small>':''}</span></div>`;
+      <span class="pagelink" data-page="${esc(b.text)}">${sub?ico(sub.icon,'15px'):icn('ico-file-x')} ${sub?esc(sub.title||'Sem título'):'página removida'}${sub&&sub.trashed?' <small style="opacity:.6">(na lixeira)</small>':''}</span></div>`;
   }
   if(ehVista(b.t))
     return `<div class="blk" data-t="${b.t}" data-id="${b.id}">${gut(b.id)}<div class="dbwrap">${dbHTML(p,b)}</div></div>`;
   if(b.t==='page'){
     const sub=S.pages[b.text];
     return `<div class="blk" data-t="page" data-id="${b.id}">${gut(b.id)}
-      <span class="pagelink" data-page="${esc(b.text)}">${sub?ico(sub.icon,'15px'):'📄'} ${sub?esc(sub.title||'Sem título'):'página removida'}${sub&&sub.trashed?' <small style="opacity:.6">(na lixeira)</small>':''}</span></div>`;
+      <span class="pagelink" data-page="${esc(b.text)}">${sub?ico(sub.icon,'15px'):icn('ico-file-x')} ${sub?esc(sub.title||'Sem título'):'página removida'}${sub&&sub.trashed?' <small style="opacity:.6">(na lixeira)</small>':''}</span></div>`;
   }
   const ph=b.t==='p'?"digite / para blocos, [[ para ligar, + para criar página":
     b.t.indexOf('h')===0?'título':b.t==='quote'?'citação':b.t==='code'?'código':
@@ -1666,11 +1679,11 @@ function blockHTML(p,b,i,list){
   let marker='';
   if(b.t==='bullet')marker='<span class="marker">✦</span>';
   if(b.t==='num'){let n=1;for(let k=i-1;k>=0&&list[k].t==='num';k--)n++;marker=`<span class="marker">${n}.</span>`}
-  if(b.t==='todo')marker=`<span class="marker" data-check="${b.id}">${b.checked?'☑':'☐'}</span>`;
+  if(b.t==='todo')marker=`<span class="marker" data-check="${b.id}">${b.checked?icn('ico-square-check'):icn('ico-square')}</span>`;
   if(b.t==='callout')marker=`<span class="marker" style="font-size:17px;padding-top:2px">${esc(b.icon||'✦')}</span>`;
   if(b.t==='toggle'||b.t.indexOf('th')===0)
-    marker=`<span class="marker dobra ${b.dobrado?'':'aberta'}" data-dobra="${b.id}">›</span>`;
-  if(b.t==='equation')marker='<span class="marker" style="opacity:.5">∑</span>';
+    marker=`<span class="marker dobra ${b.dobrado?'':'aberta'}" data-dobra="${b.id}">${icn('ico-chevron-right')}</span>`;
+  if(b.t==='equation')marker='<span class="marker" style="opacity:.5">'+icn('ico-sigma')+'</span>';
   return `<div class="blk ${b.checked?'done':''}" data-t="${b.t}" data-id="${b.id}">
     ${gut(b.id)}${marker}
     <div class="ct" ${cfg(p,'travada')?'':'contenteditable'} data-ph="${ph}" data-b="${b.id}">${inline(b.text)}</div></div>`;
@@ -1695,7 +1708,7 @@ function blocksHTML(p){
       const w=((larg[c]||1/nCols)*100).toFixed(3);
       cols+=`<div class="colitem" data-colg="${g}" data-coli="${c}" style="flex:0 1 ${w}%">`+
         trecho.filter(x=>(x.coli||0)===c).map(x=>blockHTML(p,x,L.indexOf(x),L)).join('')+
-        (trecho.some(x=>(x.coli||0)===c)?'':'<div class="colvazia" data-colnovo="'+g+':'+c+'">+</div>')+
+        (trecho.some(x=>(x.coli||0)===c)?'':'<div class="colvazia" data-colnovo="'+g+':'+c+'"><i class="ico ico-plus" aria-hidden="true"></i></div>')+
         '</div>';
       if(c<nCols-1)cols+=`<div class="colsep" data-colsep="${g}:${c}" title="Arraste para redimensionar"></div>`;
     }
@@ -1723,7 +1736,7 @@ function resumo(p,n){
 /* um bloco guarda várias vistas nomeadas; b.t espelha a ativa para que as
    checagens de bloco não textual continuem valendo */
 const VNOME={table:'Tabela',board:'Quadro',gallery:'Galeria',list:'Lista'};
-const VICO={table:'▦',board:'▥',gallery:'▩',list:'☰'};
+const VICO={table:icn('ico-table'),board:icn('ico-kanban'),gallery:icn('ico-layout-grid'),list:icn('ico-rows-3')};
 function migraVistas(b){
   if(b.views&&b.views.length)return b;
   const tipo=['table','board','gallery','list'].indexOf(b.t)>=0?b.t:'board';
@@ -1773,10 +1786,10 @@ function dbHTML(p,b){
   const tabs=`<div class="dbtabs">
     ${b.views.map((x,i)=>`<button class="vtab ${i===b.av?'on':''}" data-vsel="${i}" data-id="${b.id}"
       title="${i===b.av?'Opções desta vista':'Ver '+esc(x.nome)}">${VICO[x.tipo]} ${esc(x.nome)}</button>`).join('')}
-    <button class="vadd" data-vadd="${b.id}" title="Adicionar uma vista">+</button>
+    <button class="vadd" data-vadd="${b.id}" title="Adicionar uma vista"><i class="ico ico-plus" aria-hidden="true"></i></button>
     <span style="flex:1"></span>
-    ${mode==='gallery'?`<button data-galsize="${b.id}" title="Tamanho dos cartões">${{p:'▪',m:'▫',g:'▭'}[va.gs||'m']}</button>`:''}
-    <button data-vcfg="${b.id}" title="Configurações da database">⋯</button>
+    ${mode==='gallery'?`<button data-galsize="${b.id}" title="Tamanho dos cartões">${{p:icn('ico-grid-3x3'),m:icn('ico-grid-2x2'),g:icn('ico-rectangle-horizontal')}[va.gs||'m']}</button>`:''}
+    <button data-vcfg="${b.id}" title="Configurações da database"><i class="ico ico-ellipsis" aria-hidden="true"></i></button>
     <button data-dbnew="${b.id}">+ nova página</button></div>`;
   if(!subs.length)return tabs+`<div class="nada">nenhuma subpágina ainda — clique em “+ nova página”</div>`;
 
@@ -1795,12 +1808,12 @@ function dbHTML(p,b){
             ${props.map(k=>{const val=s.props[k].v,c=PILL[slug(val)];
               return `<span class="pill" style="color:${c||'var(--muted)'}">${esc(val)}</span>`}).join('')}
             <span class="gw">${pageWords(s)}p</span>
-            ${kids(s.id).length?`<span class="gw">▤ ${kids(s.id).length}</span>`:''}
+            ${kids(s.id).length?`<span class="gw">${icn('ico-file-text')} ${kids(s.id).length}</span>`:''}
           </div>
         </div>
       </article>`;
     }).join('')}
-      <button class="gcard gnew" data-dbnew="${b.id}"><span>＋</span>nova página</button>
+      <button class="gcard gnew" data-dbnew="${b.id}"><span><i class="ico ico-plus" aria-hidden="true"></i></span>nova página</button>
     </div>`;
   }
 
@@ -1840,15 +1853,15 @@ function backHTML(p){
   const rx=new RegExp('\\[\\['+p.title.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\]\\]','i');
   const rxE=new RegExp(esc('[['+p.title+']]').replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i');
   return `<div class="backl" data-back>
-    <h4>↩ Retrolinks · ${bl.length}</h4>
+    <h4>${icn('ico-arrow-down-left')} Retrolinks · ${bl.length}</h4>
     ${bl.map(q=>{
       const line=q.blocks.map(b=>b.text).filter(t=>t&&rx.test(t))[0]||'';
       const hl=esc(line).replace(rxE,'<mark>'+esc(p.title)+'</mark>');
       return `<div class="blitem" data-page="${q.id}"><b>${ico(q.icon,'15px')} ${esc(q.title||'Sem título')}</b><span>${hl}</span></div>`;
     }).join('')||'<div class="nada">nenhuma página aponta para esta ainda</div>'}
-    <h4 style="margin-top:24px">↪ Ligações desta página · ${out.length}</h4>
+    <h4 style="margin-top:24px">${icn('ico-arrow-up-right')} Ligações desta página · ${out.length}</h4>
     ${out.map(l=>{const t=findPage(l);
-      return `<div class="blitem" ${t?`data-page="${t.id}"`:`data-create="${esc(l)}"`}><b>${t?ico(t.icon,'15px')+' '+esc(l):'＋ criar “'+esc(l)+'”'}</b></div>`}).join('')
+      return `<div class="blitem" ${t?`data-page="${t.id}"`:`data-create="${esc(l)}"`}><b>${t?ico(t.icon,'15px')+' '+esc(l):icn('ico-plus')+' criar “'+esc(l)+'”'}</b></div>`}).join('')
       ||'<div class="nada">use [[ no texto para ligar páginas</div>'}</div>`;
 }
 
@@ -1859,7 +1872,7 @@ function surfaceHTML(p){
     ${p.cover?`<div class="cover" style="background:${esc(p.cover)}"><button class="swap" data-cover>trocar capa</button></div>`:''}
     <div class="page ${p.cover?'has-cover':''} ${wide?'wide':''}">
       <div class="pico" data-pico>${ico(p.icon,'56px')}</div>
-      ${trava?'<div class="lockbadge">⚿ página travada</div>':''}
+      ${trava?'<div class="lockbadge">'+icn('ico-lock')+' página travada</div>':''}
       <div class="ptitle" ${trava?'':'contenteditable'} data-title data-ph="Sem título">${esc(p.title)}</div>
       <div class="ptools">
         <button data-cover>${p.cover?'trocar capa':'capa'}</button>
@@ -1926,7 +1939,7 @@ const VALOR={modo:p=>cfg(p,'modo')==='herdar'?'padrão · '+MODO_NOME[S.openMode
 function pmCustomHTML(p){
   const d=new Date(p.updated||p.created);
   return `<div class="pmcust" data-cfgpid="${p.id}">
-    <button class="pmback" data-pmvoltar>‹ <span>Personalizar</span></button>
+    <button class="pmback" data-pmvoltar><i class="ico ico-chevron-left" aria-hidden="true"></i> <span>Personalizar</span></button>
 
     <div class="pmsec">Exibição</div>
     <div class="lbl"><span>como abre</span><b>${VALOR.modo(p)}</b></div>
@@ -1992,7 +2005,7 @@ function updateTrashCount(){
 function renderTrash(sc){
   const list=trashList();
   sc.innerHTML=`<div class="page">
-    <div class="ptitle" style="cursor:default;opacity:.92">🗑 Lixeira</div>
+    <div class="ptitle" style="cursor:default;opacity:.92"><i class="ico ico-trash-2" aria-hidden="true"></i> Lixeira</div>
     <div class="ptools" style="opacity:1;margin:12px 0 20px">
       <button data-trashclear ${list.length?'':'style="opacity:.4;pointer-events:none"'}>esvaziar lixeira</button>
     </div>
@@ -2012,7 +2025,7 @@ function renderMap(sc){
   const m=mapaAtual();
   const tabs=`<div class="maptabs">
     ${lista.map(x=>`<button class="${m&&x.id===m.id?'on':''}" data-mapsel="${x.id}">${esc(x.nome||'Mapa sem título')}</button>`).join('')}
-    <button class="mapnew" data-mapnovo title="Novo mapa">+</button>
+    <button class="mapnew" data-mapnovo title="Novo mapa"><i class="ico ico-plus" aria-hidden="true"></i></button>
   </div>`;
   if(!m){
     sc.innerHTML=`<div class="page">
@@ -2025,8 +2038,8 @@ function renderMap(sc){
   const marcs=(m.marcadores||[]).map(mk=>{
     const pg=S.pages[mk.pageId];
     return `<div class="mapin" style="left:${mk.x}%;top:${mk.y}%" data-mapmk="${mk.id}">
-      <button class="mapin-x" data-mapmkdel="${mk.id}" title="Remover marcador">✕</button>
-      <span class="mapin-ic">${pg?ico(pg.icon,'14px'):'📍'}</span>
+      <button class="mapin-x" data-mapmkdel="${mk.id}" title="Remover marcador"><i class="ico ico-x" aria-hidden="true"></i></button>
+      <span class="mapin-ic">${pg?ico(pg.icon,'14px'):icn('ico-map-pin')}</span>
       <span class="mapin-lb">${esc(pg?pg.title||'Sem título':'página removida')}</span>
     </div>`;
   }).join('');
@@ -2034,14 +2047,14 @@ function renderMap(sc){
     <div class="ptitle" style="cursor:default;opacity:.92">${MAPA_ICO} Mapa</div>
     ${tabs}
     <div class="mapbar">
-      <button data-mapimg="${m.id}">${m.img?'trocar imagem':'＋ imagem de fundo'}</button>
+      <button data-mapimg="${m.id}">${m.img?'trocar imagem':icn('ico-plus')+' imagem de fundo'}</button>
       <button data-maprename="${m.id}">renomear</button>
       <button data-mapdel="${m.id}" class="danger">excluir mapa</button>
       <span class="mapdica">${m.img?'clique no mapa para adicionar um marcador · arraste um marcador para movê-lo':''}</span>
     </div>
     <div class="mapstage ${m.img?'':'vazio-stage'}">
       ${m.img?`<img class="mapimg" src="${esc(safeU(m.img))}" alt="" draggable="false">${marcs}`
-        :`<div class="vazio" data-mapimg="${m.id}" style="margin:40px auto;max-width:320px;text-align:center">▣  escolher imagem de fundo</div>`}
+        :`<div class="vazio" data-mapimg="${m.id}" style="margin:40px auto;max-width:320px;text-align:center"><i class="ico ico-image" aria-hidden="true"></i> escolher imagem de fundo</div>`}
     </div>
   </div>`;
 }
@@ -2055,9 +2068,9 @@ function renderPeek(){
     <section class="peek ${mode}">
       <header class="peek-top">
         <span class="t">${ico(p.icon,'14px')} ${esc(p.title||'Sem título')}</span>
-        <button class="tbtn icon" data-peekmore title="Página">⋯</button>
-        <button class="tbtn icon" data-peekfull title="Abrir em tela cheia">⤢</button>
-        <button class="tbtn icon" data-closepeek title="Fechar">✕</button>
+        <button class="tbtn icon" data-peekmore title="Página"><i class="ico ico-ellipsis" aria-hidden="true"></i></button>
+        <button class="tbtn icon" data-peekfull title="Abrir em tela cheia"><i class="ico ico-maximize-2" aria-hidden="true"></i></button>
+        <button class="tbtn icon" data-closepeek title="Fechar"><i class="ico ico-x" aria-hidden="true"></i></button>
       </header>
       <div class="peek-body">
         <div class="peek-scroll">${surfaceHTML(p)}</div>
@@ -2455,7 +2468,7 @@ function openMenu(x,y,items,title){
   menuEl=document.createElement('div');
   menuEl.className='menu';
   menuEl.style.left=Math.max(8,Math.min(x,window.innerWidth-272))+'px';
-  menuEl.style.top=Math.max(8,Math.min(y,window.innerHeight-350))+'px';
+  menuEl.style.top=Math.max(66,Math.min(y,window.innerHeight-350))+'px';
   paintMenu();
   menuEl.addEventListener('mousedown',ev=>{
     const b=ev.target.closest('button[data-i]');if(!b)return;
@@ -2493,8 +2506,8 @@ function openPageMenu(anchorEl,p){
   pmenuEl=document.createElement('div');
   pmenuEl.className='menu pmenu';
   pmenuEl.style.left=Math.max(8,Math.min(r.right-280,window.innerWidth-288))+'px';
-  pmenuEl.style.top=Math.max(8,Math.min(r.bottom+6,window.innerHeight-460))+'px';
-  pmenuEl.innerHTML=`<div class="pmenu-search"><span class="pms-ic">⌕</span><input id="pmSearch" placeholder="Pesquisar ações…" autocomplete="off"></div>
+  pmenuEl.style.top=Math.max(66,Math.min(r.bottom+6,window.innerHeight-460))+'px';
+  pmenuEl.innerHTML=`<div class="pmenu-search"><span class="pms-ic"><i class="ico ico-search" aria-hidden="true"></i></span><input id="pmSearch" placeholder="Pesquisar ações…" autocomplete="off"></div>
     <div class="pmenu-scroll" id="pmBody"></div>
     <div class="pmenu-foot" id="pmFoot"></div>`;
   pmenuEl.addEventListener('click',e=>e.stopPropagation());
@@ -2507,24 +2520,24 @@ function openPageMenu(anchorEl,p){
 }
 function pmActions(p){
   return [
-    {id:'link',label:'Copiar link',ic:'🔗',kbd:'Ctrl Alt L',run:()=>pmCopyLink(p)},
-    {id:'content',label:'Copiar conteúdo da página',ic:'📄',run:()=>pmCopyContent(p)},
-    {id:'dup',label:'Duplicar',ic:'⧉',kbd:'Ctrl D',run:()=>pmDuplicate(p)},
-    {id:'move',label:'Mover para',ic:'→',run:el=>pmOpenMoveMenu(el,p)},
-    {id:'trash',label:'Mover para a lixeira',ic:'🗑',danger:true,run:()=>pmTrash(p)},
-    {id:'small',label:'Texto pequeno',ic:'A↓',toggle:cfg(p,'tamanho')==='pequeno',stay:true,run:()=>pmToggleCfg(p,'tamanho','pequeno','normal')},
-    {id:'wide',label:'Largura completa',ic:'↔',toggle:cfg(p,'largura')==='total',stay:true,run:()=>pmToggleCfg(p,'largura','total','normal')},
-    {id:'custom',label:'Personalizar página',ic:'⚙',chevron:true,stay:true,run:()=>pmOpenCustomize(p)},
-    {id:'lock',label:'Bloquear página',ic:'🔒',toggle:cfg(p,'travada'),stay:true,run:()=>pmToggleLock(p)},
-    {id:'undo',label:'Desfazer',ic:'↺',kbd:'Ctrl Z',run:()=>undo()},
-    {id:'import',label:'Importar',ic:'↥',run:()=>pmImport(p)},
-    {id:'export',label:'Exportar',ic:'↧',run:()=>{download((p.title||'pagina')+'.md',toMD(p),'text/markdown');toast('página exportada')}}
+    {id:'link',label:'Copiar link',ic:icn('ico-link'),kbd:'Ctrl Alt L',run:()=>pmCopyLink(p)},
+    {id:'content',label:'Copiar conteúdo da página',ic:icn('ico-copy'),run:()=>pmCopyContent(p)},
+    {id:'dup',label:'Duplicar',ic:icn('ico-copy-plus'),kbd:'Ctrl D',run:()=>pmDuplicate(p)},
+    {id:'move',label:'Mover para',ic:icn('ico-folder-input'),run:el=>pmOpenMoveMenu(el,p)},
+    {id:'trash',label:'Mover para a lixeira',ic:icn('ico-trash-2'),danger:true,run:()=>pmTrash(p)},
+    {id:'small',label:'Texto pequeno',ic:icn('ico-a-arrow-down'),toggle:cfg(p,'tamanho')==='pequeno',stay:true,run:()=>pmToggleCfg(p,'tamanho','pequeno','normal')},
+    {id:'wide',label:'Largura completa',ic:icn('ico-move-horizontal'),toggle:cfg(p,'largura')==='total',stay:true,run:()=>pmToggleCfg(p,'largura','total','normal')},
+    {id:'custom',label:'Personalizar página',ic:icn('ico-settings'),chevron:true,stay:true,run:()=>pmOpenCustomize(p)},
+    {id:'lock',label:'Bloquear página',ic:icn('ico-lock'),toggle:cfg(p,'travada'),stay:true,run:()=>pmToggleLock(p)},
+    {id:'undo',label:'Desfazer',ic:icn('ico-undo-2'),kbd:'Ctrl Z',run:()=>undo()},
+    {id:'import',label:'Importar',ic:icn('ico-upload'),run:()=>pmImport(p)},
+    {id:'export',label:'Exportar',ic:icn('ico-download'),run:()=>{download((p.title||'pagina')+'.md',toMD(p),'text/markdown');toast('página exportada')}}
   ];
 }
 function pmRow(a){
   if(!a)return'';
   const right=a.toggle!==undefined?`<span class="pmtoggle ${a.toggle?'on':''}"></span>`
-    :a.chevron?'<span class="pmchev">›</span>'
+    :a.chevron?'<span class="pmchev">'+icn('ico-chevron-right')+'</span>'
     :a.kbd?`<span class="pmkbd">${a.kbd}</span>`:'';
   return `<button class="pmenu-item ${a.danger?'danger':''}" data-pmact="${a.id}">
     <span class="ic">${a.ic}</span><span class="lbl">${esc(a.label)}</span>${right}</button>`;
@@ -2621,7 +2634,7 @@ function pmOpenMoveMenu(anchorEl,p){
   closePMenu();
   const excl=descendantIds(p.id);excl.add(p.id);
   const r=anchorEl.getBoundingClientRect();
-  const items=[{label:'Nível superior (sem página-mãe)',ic:'▤',act:!p.parentId,run:()=>pmMoveTo(p,null)}]
+  const items=[{label:'Nível superior (sem página-mãe)',ic:icn('ico-file-text'),act:!p.parentId,run:()=>pmMoveTo(p,null)}]
     .concat(daArea().filter(pp=>!excl.has(pp.id)&&!pp.trashed)
       .sort((a,b)=>(a.title||'').localeCompare(b.title||''))
       .map(pp=>({label:pp.title||'Sem título',ic:ico(pp.icon,'15px'),act:p.parentId===pp.id,run:()=>pmMoveTo(p,pp.id)})));
@@ -2713,7 +2726,7 @@ function suggest(ct){
     const q=slug(link[1]);
     const items=daArea().filter(pp=>pp.id!==p.id&&!pp.trashed&&slug(pp.title).indexOf(q)>=0).slice(0,6)
       .map(pp=>({label:pp.title||'Sem título',ic:ico(pp.icon,'15px'),sub:'ligar',run:()=>completeLink(host,ct,b,link[1],pp.title)}));
-    if(link[1].trim())items.push({label:'Criar “'+link[1].trim()+'”',ic:'＋',sub:'nova página já ligada',
+    if(link[1].trim())items.push({label:'Criar “'+link[1].trim()+'”',ic:icn('ico-plus'),sub:'nova página já ligada',
       run:()=>completeLink(host,ct,b,link[1],link[1].trim(),true)});
     if(!items.length)return closeMenu();
     return openMenu(x,y,items,'Ligar a uma página');
@@ -2725,11 +2738,11 @@ function suggest(ct){
     const items=ja&&ja.id!==p.id
       ? [{label:'Ligar a “'+ja.title+'”',ic:ico(ja.icon,'15px'),sub:'esta página já existe',
           run:()=>fromPlus(host,ct,b,plus[1],false)},
-         {label:'Abrir “'+ja.title+'”',ic:'⤢',sub:'ligar e abrir',
+         {label:'Abrir “'+ja.title+'”',ic:icn('ico-maximize-2'),sub:'ligar e abrir',
           run:()=>fromPlus(host,ct,b,plus[1],true)}]
-      : [{label:'Criar “'+title+'”',ic:'＋',sub:'página filha de '+(p.title||'Sem título'),
+      : [{label:'Criar “'+title+'”',ic:icn('ico-plus'),sub:'página filha de '+(p.title||'Sem título'),
           run:()=>fromPlus(host,ct,b,plus[1],false)},
-         {label:'Criar e abrir “'+title+'”',ic:'⤢',sub:'cria e já entra na página',
+         {label:'Criar e abrir “'+title+'”',ic:icn('ico-maximize-2'),sub:'cria e já entra na página',
           run:()=>fromPlus(host,ct,b,plus[1],true)}];
     return openMenu(x,y,items,'Nova página aqui dentro');
   }
@@ -2799,10 +2812,10 @@ function menuVista(anchor,host,p,b){
         label:VNOME[tp],ic:VICO[tp],act:v.tipo===tp,
         run:()=>{v.tipo=tp;b.t=tp;v.nome=v.nome||VNOME[tp];redes()}})),'Layout');
     }},
-    {label:'Visibilidade da propriedade',ic:'◉',sub:visiveis.length+' de '+chaves.length,run:()=>{
+    {label:'Visibilidade da propriedade',ic:icn('ico-eye'),sub:visiveis.length+' de '+chaves.length,run:()=>{
       if(!chaves.length)return toast('as subpáginas ainda não têm propriedades');
       openMenu(r.left-230,r.bottom+8,chaves.map(k=>({
-        label:k,ic:visiveis.indexOf(k)>=0?'◉':'◠',act:visiveis.indexOf(k)>=0,
+        label:k,ic:visiveis.indexOf(k)>=0?icn('ico-eye'):icn('ico-eye-off'),act:visiveis.indexOf(k)>=0,
         run:()=>{
           const at=propsDaVista(v,subs).slice();
           const i=at.indexOf(k);
@@ -2810,49 +2823,49 @@ function menuVista(anchor,host,p,b){
           v.props=at;redes();
         }})),'Mostrar na visualização');
     }},
-    {label:'Filtrar',ic:'⚟',sub:v.filtro&&v.filtro.campo?v.filtro.campo+' = '+v.filtro.valor:'nenhum',run:()=>{
-      const ops=[{label:'sem filtro',ic:'✕',run:()=>{delete v.filtro;redes()}}];
+    {label:'Filtrar',ic:icn('ico-filter'),sub:v.filtro&&v.filtro.campo?v.filtro.campo+' = '+v.filtro.valor:'nenhum',run:()=>{
+      const ops=[{label:'sem filtro',ic:icn('ico-x'),run:()=>{delete v.filtro;redes()}}];
       chaves.forEach(k=>{
         const vals=[...new Set(subs.map(x=>(x.props[k]||{}).v).filter(Boolean))];
-        vals.forEach(val=>ops.push({label:k+' = '+val,ic:'⚟',grupo:k,
+        vals.forEach(val=>ops.push({label:k+' = '+val,ic:icn('ico-filter'),grupo:k,
           act:v.filtro&&v.filtro.campo===k&&v.filtro.valor===val,
           run:()=>{v.filtro={campo:k,valor:val};redes()}}));
       });
       openMenu(r.left-230,r.bottom+8,ops,'Filtrar');
     }},
-    {label:'Ordenar',ic:'⇅',sub:nomeOrd(),run:()=>{
+    {label:'Ordenar',ic:icn('ico-arrow-up-down'),sub:nomeOrd(),run:()=>{
       const campos=[['__nome','nome'],['__palavras','palavras'],['__data','alteração']]
         .concat(chaves.map(k=>[k,k]));
-      const ops=[{label:'sem ordenação',ic:'✕',run:()=>{delete v.ord;redes()}}];
+      const ops=[{label:'sem ordenação',ic:icn('ico-x'),run:()=>{delete v.ord;redes()}}];
       campos.forEach(c=>{
-        ops.push({label:c[1]+' ↑',ic:'↑',act:v.ord&&v.ord.campo===c[0]&&v.ord.dir!=='desc',
+        ops.push({label:c[1]+' ↑',ic:icn('ico-arrow-up'),act:v.ord&&v.ord.campo===c[0]&&v.ord.dir!=='desc',
           run:()=>{v.ord={campo:c[0],dir:'asc'};redes()}});
-        ops.push({label:c[1]+' ↓',ic:'↓',act:v.ord&&v.ord.campo===c[0]&&v.ord.dir==='desc',
+        ops.push({label:c[1]+' ↓',ic:icn('ico-arrow-down'),act:v.ord&&v.ord.campo===c[0]&&v.ord.dir==='desc',
           run:()=>{v.ord={campo:c[0],dir:'desc'};redes()}});
       });
       openMenu(r.left-230,r.bottom+8,ops,'Ordenar');
     }},
-    {label:'Agrupar',ic:'▥',sub:v.tipo==='board'?(v.grp||'Status'):'só no quadro',run:()=>{
+    {label:'Agrupar',ic:icn('ico-group'),sub:v.tipo==='board'?(v.grp||'Status'):'só no quadro',run:()=>{
       if(v.tipo!=='board')return toast('o agrupamento vale para a visualização em quadro');
       openMenu(r.left-230,r.bottom+8,chaves.map(k=>({
-        label:k,ic:'▥',act:(v.grp||'Status')===k,
+        label:k,ic:icn('ico-group'),act:(v.grp||'Status')===k,
         run:()=>{v.grp=k;redes()}})),'Agrupar por');
     }},
-    {label:'Renomear visualização',ic:'✎',run:()=>{
+    {label:'Renomear visualização',ic:icn('ico-pencil'),run:()=>{
       const n=prompt('Nome da visualização:',v.nome);
       if(n&&n.trim()){v.nome=n.trim();redes()}}},
-    {label:'Duplicar visualização',ic:'⧉',run:()=>{
+    {label:'Duplicar visualização',ic:icn('ico-copy-plus'),run:()=>{
       const i=b.views.indexOf(v);
       b.views.splice(i+1,0,Object.assign({},v,{id:uid(),nome:v.nome+' 2'}));
       b.av=i+1;redes();}},
-    {label:'Copiar link para a visualização',ic:'🔗',run:()=>{
+    {label:'Copiar link para a visualização',ic:icn('ico-link'),run:()=>{
       const u=location.href.split('#')[0]+'#p='+p.id;
       if(navigator.clipboard)navigator.clipboard.writeText(u);
       toast('link copiado');}}
-  ].concat(b.views.length>1?[{label:'Excluir visualização',ic:'✕',run:()=>{
+  ].concat(b.views.length>1?[{label:'Excluir visualização',ic:icn('ico-trash-2'),run:()=>{
       const i=b.views.indexOf(v);b.views.splice(i,1);
       b.av=Math.max(0,i-1);b.t=b.views[b.av].tipo;redes();
-    }}]:[]).concat([{label:'Excluir database',ic:'✕',run:()=>{
+    }}]:[]).concat([{label:'Excluir database',ic:icn('ico-trash-2'),run:()=>{
       p.blocks=p.blocks.filter(x=>x.id!==b.id);
       if(!p.blocks.length)p.blocks=[mkBlock()];
       limpaColunas(p);refresh(host,'blocks');save();
@@ -2949,7 +2962,7 @@ document.addEventListener('click',e=>{
     const r=mapimgEl.getBoundingClientRect();
     const x=((e.clientX-r.left)/r.width)*100,y=((e.clientY-r.top)/r.height)*100;
     const cands=daArea().filter(pg=>!pg.trashed);
-    const itens=[{label:'criar nova página aqui',ic:'＋',run:()=>{
+    const itens=[{label:'criar nova página aqui',ic:icn('ico-plus'),run:()=>{
       const id=mkPage('Sem título',null,'📄');
       mp.marcadores=mp.marcadores||[];
       mp.marcadores.push({id:uid(),x:+x.toFixed(2),y:+y.toFixed(2),pageId:id});
@@ -3098,18 +3111,18 @@ document.addEventListener('click',e=>{
       const id=drag.dataset.drag,r=drag.getBoundingClientRect();
       const naColuna=!!(p.blocks.find(x=>x.id===id)||{}).colg;
       const itensBloco=[];
-      if(naColuna)itensBloco.push({label:'sair das colunas',ic:'⇤',run:()=>{
+      if(naColuna)itensBloco.push({label:'sair das colunas',ic:icn('ico-arrow-left-to-line'),run:()=>{
         const b=p.blocks.find(x=>x.id===id);delete b.colg;delete b.coli;
         limpaColunas(p);refresh(host,'blocks');save();
       }});
       BLOCK_TYPES.filter(x=>['page','table','board','gallery','list','col2','col3','col4'].indexOf(x[0])<0)
         .forEach(x=>itensBloco.push({label:'virar '+x[1].toLowerCase(),ic:x[2],grupo:x[4],
           run:()=>setType(host,id,x[0])}));
-      itensBloco.push({label:'duplicar',ic:'⧉',run:()=>{
+      itensBloco.push({label:'duplicar',ic:icn('ico-copy-plus'),run:()=>{
         const i=p.blocks.findIndex(b=>b.id===id);
         p.blocks.splice(i+1,0,Object.assign({},p.blocks[i],{id:uid()}));refresh(host,'blocks');save();
       }});
-      itensBloco.push({label:'excluir',ic:'✕',run:()=>{
+      itensBloco.push({label:'excluir',ic:icn('ico-trash-2'),run:()=>{
         p.blocks=p.blocks.filter(b=>b.id!==id);
         if(!p.blocks.length)p.blocks=[mkBlock()];limpaColunas(p);refresh(host,'blocks');save();
       }});
@@ -3149,16 +3162,16 @@ document.addEventListener('click',e=>{
       if(i!==b.av){b.av=i;b.t=b.views[i].tipo;refresh(host,'blocks');save();return}
       const r=vsel.getBoundingClientRect();
       return openMenu(r.left,r.bottom+8,[
-        {label:'renomear vista',ic:'✎',run:()=>{
+        {label:'renomear vista',ic:icn('ico-pencil'),run:()=>{
           const n=prompt('Nome da vista:',b.views[i].nome);
           if(n&&n.trim()){b.views[i].nome=n.trim();refresh(host,'blocks');save()}}},
-        {label:'duplicar vista',ic:'⧉',run:()=>{
+        {label:'duplicar vista',ic:icn('ico-copy-plus'),run:()=>{
           b.views.splice(i+1,0,Object.assign({},b.views[i],{id:uid(),nome:b.views[i].nome+' 2'}));
           b.av=i+1;refresh(host,'blocks');save()}}
       ].concat(['table','board','gallery','list'].filter(tp=>tp!==b.views[i].tipo).map(tp=>({
         label:'virar '+VNOME[tp].toLowerCase(),ic:VICO[tp],
         run:()=>{b.views[i].tipo=tp;b.views[i].nome=VNOME[tp];b.t=tp;refresh(host,'blocks');save()}})),
-      b.views.length>1?[{label:'excluir vista',ic:'✕',run:()=>{
+      b.views.length>1?[{label:'excluir vista',ic:icn('ico-trash-2'),run:()=>{
         b.views.splice(i,1);b.av=Math.max(0,i-1);b.t=b.views[b.av].tipo;
         refresh(host,'blocks');save()}}]:[]),b.views[i].nome);
     }
@@ -3198,11 +3211,11 @@ document.addEventListener('click',e=>{
     if(pk){
       const k=pk.dataset.propkey,r=pk.getBoundingClientRect();
       return openMenu(r.left,r.bottom+8,[
-        {label:'renomear',ic:'✎',run:()=>{const n=prompt('Novo nome:',k);if(!n||n===k)return;
+        {label:'renomear',ic:icn('ico-pencil'),run:()=>{const n=prompt('Novo nome:',k);if(!n||n===k)return;
           p.propOrder=p.propOrder.map(x=>x===k?n:x);p.props[n]=p.props[k];delete p.props[k];save();refresh(host,'props')}}
-      ].concat(['ideia','rascunho','revisar','pronto'].map(v=>({label:'definir: '+v,ic:'●',
+      ].concat(['ideia','rascunho','revisar','pronto'].map(v=>({label:'definir: '+v,ic:icn('ico-circle-dot'),
           run:()=>{p.props[k]={type:'selecao',v};save();refresh(host,'props')}})),
-        [{label:'remover propriedade',ic:'✕',run:()=>{
+        [{label:'remover propriedade',ic:icn('ico-x'),run:()=>{
           p.propOrder=p.propOrder.filter(x=>x!==k);delete p.props[k];save();refresh(host,'props')}}]),k);
     }
   }
@@ -3555,14 +3568,14 @@ async function menuAreas(anchor){
     '<div class="cab"><span class="wsico">'+ico(a.icone||'✦','17px')+'</span>'+
       '<span class="wsnm"><b>'+esc(a.nome)+'</b><small>'+
       daArea().filter(p=>!p.trashed).length+' páginas</small></span></div>'+
-    '<button class="lin" data-areacfg><span class="qi">⚙</span><span class="nm">Configurações do espaço</span></button>'+
+    '<button class="lin" data-areacfg><span class="qi">'+icn('ico-settings')+'</span><span class="nm">Configurações do espaço</span></button>'+
     '<div class="sep"></div>'+
     (quem?'<div class="conta">'+esc(quem)+'</div>':'<div class="conta">espaços</div>')+
     S.areas.map(x=>
       '<button class="lin" data-area="'+x.id+'"><span class="qi">'+ico(x.icone||'✦','13px')+'</span>'+
       '<span class="nm">'+esc(x.nome)+'</span>'+
-      (x.id===S.areaAtiva?'<span class="ck">✓</span>':'')+'</button>').join('')+
-    '<button class="lin nova" data-areanova><span class="qi">＋</span>'+
+      (x.id===S.areaAtiva?'<span class="ck">'+icn('ico-check')+'</span>':'')+'</button>').join('')+
+    '<button class="lin nova" data-areanova><span class="qi">'+icn('ico-plus')+'</span>'+
       '<span class="nm">Novo espaço de trabalho</span></button>';
   document.body.appendChild(el);
   menuFresh=true;setTimeout(()=>{menuFresh=false},0);
@@ -3593,13 +3606,13 @@ async function menuAreas(anchor){
     const at=areaAtual();
     const r2=anchor.getBoundingClientRect();
     openMenu(r2.left,r2.bottom+6,[
-      {label:'renomear espaço',ic:'✎',run:()=>{
+      {label:'renomear espaço',ic:icn('ico-pencil'),run:()=>{
         const n=prompt('Nome do espaço:',at.nome);
         if(n&&n.trim()){at.nome=n.trim();save();renderArea()}}},
       {label:'trocar o ícone',ic:ico(at.icone||'✦','15px'),run:()=>
         abrePicker('icone',at.icone,v=>{at.icone=v||'✦';save();renderArea()})},
-      {label:'exportar este espaço',ic:'↧',run:exportMD}
-    ].concat(S.areas.length>1?[{label:'excluir espaço',ic:'✕',run:()=>{
+      {label:'exportar este espaço',ic:icn('ico-download'),run:exportMD}
+    ].concat(S.areas.length>1?[{label:'excluir espaço',ic:icn('ico-trash-2'),run:()=>{
       const n=daArea().length;
       if(!confirm('Excluir “'+at.nome+'” e as '+n+' páginas dele?'))return;
       daArea().forEach(p=>delete S.pages[p.id]);
@@ -3628,9 +3641,9 @@ function spotlight(pre){
   document.body.appendChild(ov);
   let items=[],sel=0;
   const cmds=[
-    {label:'Nova página',ic:'＋',kind:'ação',run:()=>go(mkPage('',S.activeId,'📄'))},
-    {label:'Abrir o grafo',ic:'✦',kind:'ação',run:()=>{S.view='graph';save();render()}},
-    {label:'Exportar Markdown',ic:'↧',kind:'ação',run:exportMD}
+    {label:'Nova página',ic:icn('ico-plus'),kind:'ação',run:()=>go(mkPage('',S.activeId,'📄'))},
+    {label:'Abrir o grafo',ic:icn('ico-waypoints'),kind:'ação',run:()=>{S.view='graph';save();render()}},
+    {label:'Exportar Markdown',ic:icn('ico-download'),kind:'ação',run:exportMD}
   ];
   const build=q=>{
     const s=slug(q);
@@ -3644,7 +3657,7 @@ function spotlight(pre){
     sel=0;paint();
   };
   const paint=()=>{$('#sr').innerHTML=items.map((it,i)=>
-    '<button data-i="'+i+'" class="'+(i===sel?'sel':'')+'"><span>'+(it.ic||'📄')+'</span>'+esc(it.label)+'<small>'+esc(it.kind||'')+'</small></button>').join('')
+    '<button data-i="'+i+'" class="'+(i===sel?'sel':'')+'"><span>'+(it.ic||icn('ico-file-text'))+'</span>'+esc(it.label)+'<small>'+esc(it.kind||'')+'</small></button>').join('')
     ||'<div class="nada" style="padding:14px">enter cria uma página com esse nome</div>'};
   const close=()=>ov.remove();
   const inp=$('#sq');inp.focus();inp.select();
@@ -3713,7 +3726,7 @@ $('#btnAllToggle').onclick=e=>{
   const any=Object.values(S.pages).some(p=>p.expanded&&kids(p.id).length);
   Object.values(S.pages).forEach(p=>p.expanded=!any);
   save();renderTree();
-  e.currentTarget.textContent=any?'⌄':'⌃';
+  e.currentTarget.innerHTML=any?icn('ico-chevrons-up-down'):icn('ico-chevrons-down-up');
   e.currentTarget.title=any?'Expandir tudo':'Recolher tudo';
 };
 /* enquanto o rodapé sobe, a lateral perde a mesma altura, de modo que a
@@ -3740,9 +3753,9 @@ $('#btnSync').onclick=async e=>{
   }
   const pgs=Object.keys(S.pages).length;
   openMenu(r.left,r.top-190,[
-    {label:quem,ic:f?'✔':'○',sub:f?(nuvemErro?'erro na última sincronização':'sincronizando '+pgs+' páginas')
+    {label:quem,ic:f?icn('ico-circle-check'):icn('ico-circle'),sub:f?(nuvemErro?'erro na última sincronização':'sincronizando '+pgs+' páginas')
       :'trabalhando só neste aparelho'},
-    {label:'enviar este aparelho para a nuvem',ic:'↑',
+    {label:'enviar este aparelho para a nuvem',ic:icn('ico-cloud-upload'),
       sub:'sobrescreve o que está na conta',
       run:async()=>{
         if(!fb())return toast('entre na sua conta primeiro');
@@ -3759,7 +3772,7 @@ $('#btnSync').onclick=async e=>{
         await nuvemGravar();
         toast(nuvemErro?'não consegui enviar':'enviado para a sua conta');
       }},
-    {label:'trazer da nuvem',ic:'↓',
+    {label:'trazer da nuvem',ic:icn('ico-cloud-download'),
       sub:'descarta o que está neste aparelho',
       run:async()=>{
         if(!fb())return toast('entre na sua conta primeiro');
@@ -3772,7 +3785,7 @@ $('#btnSync').onclick=async e=>{
         S.peekId=null;if(S.view==='graph'||S.view==='trash')S.view='page';
         render();save();toast('trazido da sua conta');
       }},
-    {label:'excluir todos os meus dados',ic:'🗑',
+    {label:'excluir todos os meus dados',ic:icn('ico-trash-2'),
       sub:'apaga a Rubrica desta conta, na nuvem e aqui',
       run:async()=>{
         if(!confirm('Apagar TODAS as páginas da Rubrica desta conta?\n\nIsto não tem volta. Considere exportar um backup antes.'))return;
@@ -3809,8 +3822,8 @@ function backupValido(d){
 $('#btnBackup').onclick=e=>{
   const r=e.currentTarget.getBoundingClientRect();
   openMenu(r.left,r.top-100,[
-    {label:'salvar backup (.json)',ic:'↧',run:()=>{download('rubrica-backup.json',JSON.stringify(S,null,2),'application/json');toast('backup salvo')}},
-    {label:'restaurar de um arquivo',ic:'↥',run:()=>{
+    {label:'salvar backup (.json)',ic:icn('ico-download'),run:()=>{download('rubrica-backup.json',JSON.stringify(S,null,2),'application/json');toast('backup salvo')}},
+    {label:'restaurar de um arquivo',ic:icn('ico-upload'),run:()=>{
       const i=document.createElement('input');i.type='file';i.accept='.json';
       i.onchange=()=>{const f=i.files[0];if(!f)return;const rd=new FileReader();
         rd.onload=()=>{try{const d=JSON.parse(rd.result);if(!backupValido(d))throw 0;S=d;save();render();toast('restaurado')}

@@ -12,6 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/icons.css">
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/app-shell.css">
   <link rel="stylesheet" href="css/viagens.css">
@@ -43,9 +44,9 @@
       <div class="cp">
         <div class="cph"><span class="cptit">Lista de Viagens</span><span class="cpcnt" id="c-cnt">0 destinos</span></div>
         <div class="list-tools">
-          <input class="inp" id="travel-search" type="text" placeholder="🔍 Buscar...">
+          <input class="inp" id="travel-search" type="text" placeholder="Buscar...">
           <div class="filter-wrap" id="travel-filter-wrap">
-            <button class="btn-filter" id="travel-filter-btn" type="button">⚙ Filtros <span class="filter-badge" id="travel-filter-badge">0</span></button>
+            <button class="btn-filter" id="travel-filter-btn" type="button"><i class="ico ico-sliders-horizontal" aria-hidden="true"></i> Filtros <span class="filter-badge" id="travel-filter-badge">0</span></button>
             <div class="filter-panel" id="travel-filter-panel">
               <div class="filter-section-title">Tipo de Local</div>
               <div class="filter-chips">
@@ -68,9 +69,9 @@
         </div>
         <div class="cl" id="cards"></div>
         <div class="pg" id="pag" style="display:none">
-          <button class="pb" id="p-prev" type="button">&#8249;</button>
+          <button class="pb" id="p-prev" type="button" aria-label="Anterior"><i class="ico ico-chevron-left" aria-hidden="true"></i></button>
           <span class="pi" id="p-info">1/1</span>
-          <button class="pb" id="p-next" type="button">&#8250;</button>
+          <button class="pb" id="p-next" type="button" aria-label="Próximo"><i class="ico ico-chevron-right" aria-hidden="true"></i></button>
         </div>
       </div>
 
@@ -98,7 +99,7 @@
     <div class="md">
       <div class="mdh">
         <h3 class="mdt" id="mo-title">Nova Viagem</h3>
-        <button class="mdc" id="mo-close" type="button">&#10005;</button>
+        <button class="mdc" id="mo-close" type="button" aria-label="Fechar"><i class="ico ico-x" aria-hidden="true"></i></button>
       </div>
       <form id="tform" autocomplete="off">
         <div class="fg"><label class="fl">Destino *</label><input type="text" class="fi" id="f-dest" placeholder="Ex: T&oacute;quio, Jap&atilde;o" required></div>
@@ -142,7 +143,7 @@
     <div class="md" style="max-width:380px">
       <div class="mdh">
         <h3 class="mdt">Gerenciar Dados</h3>
-        <button class="mdc" id="mo-data-close" type="button">&#10005;</button>
+        <button class="mdc" id="mo-data-close" type="button" aria-label="Fechar"><i class="ico ico-x" aria-hidden="true"></i></button>
       </div>
       <div class="do">
         <button class="dob" id="btn-exp" type="button">

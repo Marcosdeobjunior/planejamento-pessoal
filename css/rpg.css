@@ -618,7 +618,7 @@ canvas.rpg-xp-bar {
 }
 
 .rpg-attr-icon {
-  font-size: 12px;
+  font-size: 13px;
   text-align: center;
   opacity: .8;
   padding-top: 12px;
@@ -723,6 +723,7 @@ canvas.rpg-xp-bar {
 
 .rpg-class-opt-icon {
   font-size: 17px;
+  color: #d4af6a;
   margin-bottom: 4px;
   display: block;
 }
@@ -755,11 +756,15 @@ canvas.rpg-xp-bar {
 }
 
 .rpg-class-opt.locked::after {
-  content: "🔒";
+  content: "";
   position: absolute;
   top: 6px;
   right: 7px;
-  font-size: 10px;
+  width: 10px;
+  height: 10px;
+  background-color: #c8a96e;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' %3E %3Crect width='18' height='11' x='3' y='11' rx='2' ry='2' /%3E %3Cpath d='M7 11V7a5 5 0 0 1 10 0v4' /%3E %3C/svg%3E") center/contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' %3E %3Crect width='18' height='11' x='3' y='11' rx='2' ry='2' /%3E %3Cpath d='M7 11V7a5 5 0 0 1 10 0v4' /%3E %3C/svg%3E") center/contain no-repeat;
   opacity: .88;
 }
 
@@ -863,6 +868,7 @@ canvas.rpg-xp-bar {
   align-items: center;
   justify-content: center;
   font-size: 15px;
+  color: #d4af6a;
   background: rgba(212, 175, 106, .08);
   border: 1px solid rgba(212, 175, 106, .2);
   box-shadow: 0 0 12px rgba(212, 175, 106, .08);
@@ -1267,6 +1273,7 @@ body.rpg-tutorial-open [data-app-header] {
 
 .rpg-skill-icon {
   font-size: 22px;
+  color: var(--skill-color, #d4af6a);
 }
 
 .rpg-skill-lock-badge,
@@ -1489,6 +1496,7 @@ body.rpg-tutorial-open [data-app-header] {
   align-items: center;
   justify-content: center;
   font-size: 20px;
+  color: var(--badge-color, #d4af6a);
   background: rgba(212, 175, 106, .12);
   border: 1px solid rgba(212, 175, 106, .28);
   box-shadow: 0 0 12px rgba(212, 175, 106, .1);
@@ -1642,6 +1650,7 @@ body.rpg-reading-open [data-app-header] {
   align-items: center;
   justify-content: center;
   font-size: 13px;
+  color: #d4af6a;
   background: rgba(212, 175, 106, .12);
   border: 1px solid rgba(212, 175, 106, .22);
 }

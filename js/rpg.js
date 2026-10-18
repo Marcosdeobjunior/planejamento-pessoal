@@ -23,24 +23,24 @@
   ];
 
   var RPG_CLASSES = {
-    initiate: { name: "Despertando", icon: "✦", bonus: "Sem especialização fixa", passive: "Base neutra para construir sua rota.", color: "#c8a96e" },
-    scholar: { name: "Sábio", icon: "\uD83D\uDCDA", bonus: "Leitura, estudo e revisão", passive: "+12% XP em Livraria, Estudo e Revisão.", color: "#c8a96e" },
-    warrior: { name: "Guerreiro", icon: "\u2694", bonus: "Treino e disciplina", passive: "+14% XP em Academia e +6% em Tarefas.", color: "#e06b8b" },
-    explorer: { name: "Explorador", icon: "\uD83E\uDDED", bonus: "Expansão de mundo", passive: "+14% XP em Viagens e +3% em Cinema.", color: "#5ec4a8" },
-    artist: { name: "Artista", icon: "\uD83C\uDFA8", bonus: "Expressão e sensibilidade", passive: "+12% XP em Sonhos e +10% em Wishlist.", color: "#7c6fcd" },
-    mage: { name: "Mago", icon: "\uD83D\uDD2E", bonus: "Memória e precisão mental", passive: "+14% XP em Revisão e +10% em Estudo.", color: "#4ab0e8" },
-    ranger: { name: "Ranger", icon: "\uD83C\uDFF9", bonus: "Versatilidade consistente", passive: "+8% XP em Tarefas, Academia e Viagens.", color: "#e8864a" }
+    initiate: { name: "Despertando", icon: "ico-sparkle", bonus: "Sem especialização fixa", passive: "Base neutra para construir sua rota.", color: "#c8a96e" },
+    scholar: { name: "Sábio", icon: "ico-library", bonus: "Leitura, estudo e revisão", passive: "+12% XP em Livraria, Estudo e Revisão.", color: "#c8a96e" },
+    warrior: { name: "Guerreiro", icon: "ico-swords", bonus: "Treino e disciplina", passive: "+14% XP em Academia e +6% em Tarefas.", color: "#e06b8b" },
+    explorer: { name: "Explorador", icon: "ico-compass", bonus: "Expansão de mundo", passive: "+14% XP em Viagens e +3% em Cinema.", color: "#5ec4a8" },
+    artist: { name: "Artista", icon: "ico-palette", bonus: "Expressão e sensibilidade", passive: "+12% XP em Sonhos e +10% em Wishlist.", color: "#7c6fcd" },
+    mage: { name: "Mago", icon: "ico-wand-sparkles", bonus: "Memória e precisão mental", passive: "+14% XP em Revisão e +10% em Estudo.", color: "#4ab0e8" },
+    ranger: { name: "Ranger", icon: "ico-crosshair", bonus: "Versatilidade consistente", passive: "+8% XP em Tarefas, Academia e Viagens.", color: "#e8864a" }
   };
 
   var RPG_SKILLS = [
-    { id: "reading", icon: "\uD83D\uDCD6", name: "Devorador de Páginas", desc: "Leia livros para evoluir", color: "#c8a96e", reqLevel: 1, reqXP: 0, reqAch: null, getLevel: function () { return Math.min(10, getLivros().filter(isDoneLivro).length); } },
-    { id: "cinema", icon: "\uD83C\uDFAC", name: "Olhos de Lince", desc: "Assista filmes e séries", color: "#e8864a", reqLevel: 1, reqXP: 0, reqAch: null, getLevel: function () { return Math.min(10, getCinema().filter(isDoneCinema).length); } },
-    { id: "fitness", icon: "\uD83D\uDCAA", name: "Corpo de Ferro", desc: "Complete treinos na academia", color: "#e06b8b", reqLevel: 1, reqXP: 0, reqAch: null, getLevel: function () { return Math.min(10, Math.floor(getGym().length / 3)); } },
-    { id: "study", icon: "\uD83C\uDF93", name: "Mente Afiada", desc: "Acumule horas de estudo", color: "#4ab0e8", reqLevel: 2, reqXP: 50, reqAch: null, getLevel: function () { return Math.min(10, Math.floor(getEstudosHoras() / 5)); } },
-    { id: "travel", icon: "\u2708\uFE0F", name: "Passaporte Dourado", desc: "Visite novos destinos", color: "#5ec4a8", reqLevel: 3, reqXP: 100, reqAch: null, getLevel: function () { return Math.min(10, getViagens().filter(isVisitedViagem).length * 2); } },
-    { id: "dreams", icon: "\uD83C\uDF19", name: "Arquiteto dos Sonhos", desc: "Registre e conquiste sonhos", color: "#7c6fcd", reqLevel: 4, reqXP: 150, reqAch: "dreamer", getLevel: function () { return Math.min(10, getSonhos().length); } },
-    { id: "planning", icon: "\uD83D\uDCCB", name: "Estrategista", desc: "Conclua tarefas e planeje", color: "#5ec4a8", reqLevel: 5, reqXP: 200, reqAch: "taskmaster", getLevel: function () { return Math.min(10, Math.floor(getTasks().filter(isDoneTask).length / 5)); } },
-    { id: "manga", icon: "\uD83D\uDCD6", name: "Espírito Otaku", desc: "Leia mangás e light novels", color: "#e06b8b", reqLevel: 6, reqXP: 250, reqAch: "manga_fan", getLevel: function () { return Math.min(10, getMangas().filter(isDoneManga).length); } }
+    { id: "reading", icon: "ico-book-open", name: "Devorador de Páginas", desc: "Leia livros para evoluir", color: "#c8a96e", reqLevel: 1, reqXP: 0, reqAch: null, getLevel: function () { return Math.min(10, getLivros().filter(isDoneLivro).length); } },
+    { id: "cinema", icon: "ico-clapperboard", name: "Olhos de Lince", desc: "Assista filmes e séries", color: "#e8864a", reqLevel: 1, reqXP: 0, reqAch: null, getLevel: function () { return Math.min(10, getCinema().filter(isDoneCinema).length); } },
+    { id: "fitness", icon: "ico-dumbbell", name: "Corpo de Ferro", desc: "Complete treinos na academia", color: "#e06b8b", reqLevel: 1, reqXP: 0, reqAch: null, getLevel: function () { return Math.min(10, Math.floor(getGym().length / 3)); } },
+    { id: "study", icon: "ico-graduation-cap", name: "Mente Afiada", desc: "Acumule horas de estudo", color: "#4ab0e8", reqLevel: 2, reqXP: 50, reqAch: null, getLevel: function () { return Math.min(10, Math.floor(getEstudosHoras() / 5)); } },
+    { id: "travel", icon: "ico-plane", name: "Passaporte Dourado", desc: "Visite novos destinos", color: "#5ec4a8", reqLevel: 3, reqXP: 100, reqAch: null, getLevel: function () { return Math.min(10, getViagens().filter(isVisitedViagem).length * 2); } },
+    { id: "dreams", icon: "ico-moon", name: "Arquiteto dos Sonhos", desc: "Registre e conquiste sonhos", color: "#7c6fcd", reqLevel: 4, reqXP: 150, reqAch: "dreamer", getLevel: function () { return Math.min(10, getSonhos().length); } },
+    { id: "planning", icon: "ico-clipboard-list", name: "Estrategista", desc: "Conclua tarefas e planeje", color: "#5ec4a8", reqLevel: 5, reqXP: 200, reqAch: "taskmaster", getLevel: function () { return Math.min(10, Math.floor(getTasks().filter(isDoneTask).length / 5)); } },
+    { id: "manga", icon: "ico-book-open", name: "Espírito Otaku", desc: "Leia mangás e light novels", color: "#e06b8b", reqLevel: 6, reqXP: 250, reqAch: "manga_fan", getLevel: function () { return Math.min(10, getMangas().filter(isDoneManga).length); } }
   ];
 
   var ACHIEVEMENT_GROUP_IMAGES = {
@@ -91,6 +91,11 @@
 
   function normalizeText(value) {
     return String(value || "").trim().toLowerCase();
+  }
+
+  // ícone "ico-<nome>" (css/icons.css) em HTML; ver SoterUtils.icon
+  function iconHtml(value) {
+    return window.SoterUtils && window.SoterUtils.icon ? window.SoterUtils.icon(value) : escapeHtml(value);
   }
 
   function escapeHtml(value) {
@@ -606,101 +611,101 @@
 
   function buildLeituraAchievements() {
     return []
-      .concat(makeSeries({ group: "Leitura", col: "#c8a96e", icon: "\uD83D\uDCD6", idPrefix: "reading_books", names: arcNames("Biblioteca"), thresholds: [1, 2, 3, 5, 8, 10, 15, 20, 30, 50], ids: ["first_book", "reading_triplet", null, "reading_hand", null, "bookworm", "reading_shelf", "bookmaster", "reading_legend", null], metric: getCompletedBooksCount, desc: function (v) { return "Conclua " + reqLabel(v, "livro", "livros") + " completos."; }, req: function (v) { return reqLabel(v, "livro", "livros"); } }))
-      .concat(makeSeries({ group: "Leitura", col: "#c8a96e", icon: "\uD83D\uDCC4", idPrefix: "reading_pages", names: arcNames("Marcapagina"), thresholds: [100, 200, 350, 500, 800, 1200, 1800, 2600, 4000, 6000], metric: getReadPagesTotal, desc: function (v) { return "Leia " + v + " paginas no total da jornada."; }, req: function (v) { return v + " paginas"; } }))
-      .concat(makeSeries({ group: "Leitura", col: "#c8a96e", icon: "\u270D", idPrefix: "reading_notes", names: arcNames("Margem Viva"), thresholds: [1, 2, 3, 5, 8, 10, 14, 20, 28, 40], metric: getBooksWithNotesCount, desc: function (v) { return "Deixe notas ou resenhas em " + reqLabel(v, "livro", "livros") + "."; }, req: function (v) { return reqLabel(v, "nota", "notas"); } }))
-      .concat(makeSeries({ group: "Leitura", col: "#c8a96e", icon: "\u2B50", idPrefix: "reading_ratings", names: arcNames("Curadoria"), thresholds: [1, 2, 4, 6, 10, 15, 20, 30, 40, 60], metric: getRatedBooksCount, desc: function (v) { return "Avalie " + reqLabel(v, "livro", "livros") + " da estante."; }, req: function (v) { return reqLabel(v, "avaliacao", "avaliacoes"); } }))
-      .concat(makeSeries({ group: "Leitura", col: "#c8a96e", icon: "\u2764", idPrefix: "reading_favorites", names: arcNames("Estante Dourada"), thresholds: [1, 2, 3, 5, 8, 10, 12, 15, 20, 30], metric: getFavoriteBooksCount, desc: function (v) { return "Marque " + reqLabel(v, "livro favorito", "livros favoritos") + "."; }, req: function (v) { return reqLabel(v, "favorito", "favoritos"); } }));
+      .concat(makeSeries({ group: "Leitura", col: "#c8a96e", icon: "ico-book-open", idPrefix: "reading_books", names: arcNames("Biblioteca"), thresholds: [1, 2, 3, 5, 8, 10, 15, 20, 30, 50], ids: ["first_book", "reading_triplet", null, "reading_hand", null, "bookworm", "reading_shelf", "bookmaster", "reading_legend", null], metric: getCompletedBooksCount, desc: function (v) { return "Conclua " + reqLabel(v, "livro", "livros") + " completos."; }, req: function (v) { return reqLabel(v, "livro", "livros"); } }))
+      .concat(makeSeries({ group: "Leitura", col: "#c8a96e", icon: "ico-file-text", idPrefix: "reading_pages", names: arcNames("Marcapagina"), thresholds: [100, 200, 350, 500, 800, 1200, 1800, 2600, 4000, 6000], metric: getReadPagesTotal, desc: function (v) { return "Leia " + v + " paginas no total da jornada."; }, req: function (v) { return v + " paginas"; } }))
+      .concat(makeSeries({ group: "Leitura", col: "#c8a96e", icon: "ico-pen-line", idPrefix: "reading_notes", names: arcNames("Margem Viva"), thresholds: [1, 2, 3, 5, 8, 10, 14, 20, 28, 40], metric: getBooksWithNotesCount, desc: function (v) { return "Deixe notas ou resenhas em " + reqLabel(v, "livro", "livros") + "."; }, req: function (v) { return reqLabel(v, "nota", "notas"); } }))
+      .concat(makeSeries({ group: "Leitura", col: "#c8a96e", icon: "ico-star", idPrefix: "reading_ratings", names: arcNames("Curadoria"), thresholds: [1, 2, 4, 6, 10, 15, 20, 30, 40, 60], metric: getRatedBooksCount, desc: function (v) { return "Avalie " + reqLabel(v, "livro", "livros") + " da estante."; }, req: function (v) { return reqLabel(v, "avaliacao", "avaliacoes"); } }))
+      .concat(makeSeries({ group: "Leitura", col: "#c8a96e", icon: "ico-heart", idPrefix: "reading_favorites", names: arcNames("Estante Dourada"), thresholds: [1, 2, 3, 5, 8, 10, 12, 15, 20, 30], metric: getFavoriteBooksCount, desc: function (v) { return "Marque " + reqLabel(v, "livro favorito", "livros favoritos") + "."; }, req: function (v) { return reqLabel(v, "favorito", "favoritos"); } }));
   }
 
   function buildCinemaAchievements() {
     return []
-      .concat(makeSeries({ group: "Cinema", col: "#e8864a", icon: "\uD83C\uDFAC", idPrefix: "cinema_done", names: arcNames("Claquete"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 40, 60], ids: [null, null, null, "cinephile", null, null, null, "cinelord", null, null], metric: getCinemaCompletedCount, desc: function (v) { return "Conclua " + reqLabel(v, "titulo", "titulos") + " entre filmes e series."; }, req: function (v) { return reqLabel(v, "titulo", "titulos"); } }))
-      .concat(makeSeries({ group: "Cinema", col: "#e8864a", icon: "\uD83C\uDFA5", idPrefix: "cinema_entries", names: arcNames("Catalogo de Cena"), thresholds: [1, 3, 5, 8, 12, 20, 30, 45, 60, 80], metric: getCinemaEntriesCount, desc: function (v) { return "Cadastre " + reqLabel(v, "titulo", "titulos") + " no cinema."; }, req: function (v) { return reqLabel(v, "cadastro", "cadastros"); } }))
-      .concat(makeSeries({ group: "Cinema", col: "#e8864a", icon: "\uD83C\uDF9E", idPrefix: "cinema_units", names: arcNames("Tela Viva"), thresholds: [1, 5, 10, 20, 35, 60, 90, 140, 220, 320], metric: getCinemaUnitsTotal, desc: function (v) { return "Assista " + v + " unidades entre filmes, episodios ou temporadas."; }, req: function (v) { return v + " unidades"; } }))
-      .concat(makeSeries({ group: "Cinema", col: "#e8864a", icon: "\uD83D\uDCDD", idPrefix: "cinema_ratings", names: arcNames("Critica de Bolso"), thresholds: [1, 2, 4, 6, 10, 15, 20, 30, 40, 60], metric: getCinemaRatedCount, desc: function (v) { return "Avalie " + reqLabel(v, "obra", "obras") + " do cinema."; }, req: function (v) { return reqLabel(v, "avaliacao", "avaliacoes"); } }))
-      .concat(makeSeries({ group: "Cinema", col: "#e8864a", icon: "\u2728", idPrefix: "cinema_favorites", names: arcNames("Arquivo de Cena"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 35, 50], metric: getCinemaFavoriteCount, desc: function (v) { return "Marque " + reqLabel(v, "titulo favorito", "titulos favoritos") + " no cinema."; }, req: function (v) { return reqLabel(v, "favorito", "favoritos"); } }));
+      .concat(makeSeries({ group: "Cinema", col: "#e8864a", icon: "ico-clapperboard", idPrefix: "cinema_done", names: arcNames("Claquete"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 40, 60], ids: [null, null, null, "cinephile", null, null, null, "cinelord", null, null], metric: getCinemaCompletedCount, desc: function (v) { return "Conclua " + reqLabel(v, "titulo", "titulos") + " entre filmes e series."; }, req: function (v) { return reqLabel(v, "titulo", "titulos"); } }))
+      .concat(makeSeries({ group: "Cinema", col: "#e8864a", icon: "ico-video", idPrefix: "cinema_entries", names: arcNames("Catalogo de Cena"), thresholds: [1, 3, 5, 8, 12, 20, 30, 45, 60, 80], metric: getCinemaEntriesCount, desc: function (v) { return "Cadastre " + reqLabel(v, "titulo", "titulos") + " no cinema."; }, req: function (v) { return reqLabel(v, "cadastro", "cadastros"); } }))
+      .concat(makeSeries({ group: "Cinema", col: "#e8864a", icon: "ico-film", idPrefix: "cinema_units", names: arcNames("Tela Viva"), thresholds: [1, 5, 10, 20, 35, 60, 90, 140, 220, 320], metric: getCinemaUnitsTotal, desc: function (v) { return "Assista " + v + " unidades entre filmes, episodios ou temporadas."; }, req: function (v) { return v + " unidades"; } }))
+      .concat(makeSeries({ group: "Cinema", col: "#e8864a", icon: "ico-notebook-pen", idPrefix: "cinema_ratings", names: arcNames("Critica de Bolso"), thresholds: [1, 2, 4, 6, 10, 15, 20, 30, 40, 60], metric: getCinemaRatedCount, desc: function (v) { return "Avalie " + reqLabel(v, "obra", "obras") + " do cinema."; }, req: function (v) { return reqLabel(v, "avaliacao", "avaliacoes"); } }))
+      .concat(makeSeries({ group: "Cinema", col: "#e8864a", icon: "ico-sparkles", idPrefix: "cinema_favorites", names: arcNames("Arquivo de Cena"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 35, 50], metric: getCinemaFavoriteCount, desc: function (v) { return "Marque " + reqLabel(v, "titulo favorito", "titulos favoritos") + " no cinema."; }, req: function (v) { return reqLabel(v, "favorito", "favoritos"); } }));
   }
 
   function buildAcademiaAchievements() {
     return []
-      .concat(makeSeries({ group: "Academia", col: "#e06b8b", icon: "\uD83D\uDCAA", idPrefix: "gym_count", names: arcNames("Forja"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 40, 60], ids: ["gym_start", null, null, null, null, null, "gym_warrior", null, "gym_legend", null], metric: function () { return getGym().length; }, desc: function (v) { return "Registre " + reqLabel(v, "treino", "treinos") + " na academia."; }, req: function (v) { return reqLabel(v, "treino", "treinos"); } }))
-      .concat(makeSeries({ group: "Academia", col: "#e06b8b", icon: "\u23F1", idPrefix: "gym_minutes", names: arcNames("Cadencia"), thresholds: [30, 60, 120, 240, 400, 700, 1000, 1500, 2200, 3000], metric: getGymMinutesTotal, desc: function (v) { return "Acumule " + v + " minutos registrados de treino."; }, req: function (v) { return v + " min"; } }))
-      .concat(makeSeries({ group: "Academia", col: "#e06b8b", icon: "\uD83E\uDDF7", idPrefix: "gym_types", names: arcNames("Variedade"), thresholds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], metric: getGymTypeDiversityCount, desc: function (v) { return "Registre " + reqLabel(v, "estilo de treino", "estilos de treino") + " diferente."; }, req: function (v) { return reqLabel(v, "estilo", "estilos"); } }))
-      .concat(makeSeries({ group: "Academia", col: "#e06b8b", icon: "\uD83D\uDCDD", idPrefix: "gym_detail", names: arcNames("Registro Brutal"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 35, 50], metric: getGymDetailedCount, desc: function (v) { return "Detalhe " + reqLabel(v, "treino", "treinos") + " com dados alem do basico."; }, req: function (v) { return reqLabel(v, "registro rico", "registros ricos"); } }))
-      .concat(makeSeries({ group: "Academia", col: "#e06b8b", icon: "\u2699", idPrefix: "gym_effort", names: arcNames("Volume de Aco"), thresholds: [10, 30, 60, 100, 150, 220, 320, 450, 650, 900], metric: getGymEffortScore, desc: function (v) { return "Atinga score de esforco " + v + " somando volume, tempo e carga."; }, req: function (v) { return v + " score"; } }));
+      .concat(makeSeries({ group: "Academia", col: "#e06b8b", icon: "ico-dumbbell", idPrefix: "gym_count", names: arcNames("Forja"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 40, 60], ids: ["gym_start", null, null, null, null, null, "gym_warrior", null, "gym_legend", null], metric: function () { return getGym().length; }, desc: function (v) { return "Registre " + reqLabel(v, "treino", "treinos") + " na academia."; }, req: function (v) { return reqLabel(v, "treino", "treinos"); } }))
+      .concat(makeSeries({ group: "Academia", col: "#e06b8b", icon: "ico-timer", idPrefix: "gym_minutes", names: arcNames("Cadencia"), thresholds: [30, 60, 120, 240, 400, 700, 1000, 1500, 2200, 3000], metric: getGymMinutesTotal, desc: function (v) { return "Acumule " + v + " minutos registrados de treino."; }, req: function (v) { return v + " min"; } }))
+      .concat(makeSeries({ group: "Academia", col: "#e06b8b", icon: "ico-shapes", idPrefix: "gym_types", names: arcNames("Variedade"), thresholds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], metric: getGymTypeDiversityCount, desc: function (v) { return "Registre " + reqLabel(v, "estilo de treino", "estilos de treino") + " diferente."; }, req: function (v) { return reqLabel(v, "estilo", "estilos"); } }))
+      .concat(makeSeries({ group: "Academia", col: "#e06b8b", icon: "ico-notebook-pen", idPrefix: "gym_detail", names: arcNames("Registro Brutal"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 35, 50], metric: getGymDetailedCount, desc: function (v) { return "Detalhe " + reqLabel(v, "treino", "treinos") + " com dados alem do basico."; }, req: function (v) { return reqLabel(v, "registro rico", "registros ricos"); } }))
+      .concat(makeSeries({ group: "Academia", col: "#e06b8b", icon: "ico-settings", idPrefix: "gym_effort", names: arcNames("Volume de Aco"), thresholds: [10, 30, 60, 100, 150, 220, 320, 450, 650, 900], metric: getGymEffortScore, desc: function (v) { return "Atinga score de esforco " + v + " somando volume, tempo e carga."; }, req: function (v) { return v + " score"; } }));
   }
 
   function buildEstudoAchievements() {
     return []
-      .concat(makeSeries({ group: "Estudo", col: "#4ab0e8", icon: "\uD83C\uDF93", idPrefix: "study_sessions", names: arcNames("Caderno Aberto"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 40, 60], ids: [null, null, null, null, null, "scholar", null, null, null, null], metric: getStudySessionsCount, desc: function (v) { return "Registre " + reqLabel(v, "sessao de estudo", "sessoes de estudo") + "."; }, req: function (v) { return reqLabel(v, "sessao", "sessoes"); } }))
-      .concat(makeSeries({ group: "Estudo", col: "#4ab0e8", icon: "\u23F3", idPrefix: "study_hours", names: arcNames("Sessao Clara"), thresholds: [1, 3, 5, 8, 12, 20, 30, 50, 80, 120], ids: [null, null, null, null, null, null, null, "professor", null, null], metric: getEstudosHoras, desc: function (v) { return "Acumule " + v + " horas de estudo registradas."; }, req: function (v) { return v + "h"; } }))
-      .concat(makeSeries({ group: "Estudo", col: "#4ab0e8", icon: "\uD83D\uDCD8", idPrefix: "study_subjects", names: arcNames("Mapa Mental"), thresholds: [1, 2, 3, 4, 5, 6, 8, 10, 12, 15], metric: getStudySubjectCount, desc: function (v) { return "Estude " + reqLabel(v, "tema diferente", "temas diferentes") + "."; }, req: function (v) { return reqLabel(v, "tema", "temas"); } }))
-      .concat(makeSeries({ group: "Estudo", col: "#4ab0e8", icon: "\u270D", idPrefix: "study_notes", names: arcNames("Margem Atenta"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 35, 50], metric: getStudyNotesCount, desc: function (v) { return "Anexe resumo, nota ou comentario em " + reqLabel(v, "sessao", "sessoes") + "."; }, req: function (v) { return reqLabel(v, "nota", "notas"); } }))
-      .concat(makeSeries({ group: "Estudo", col: "#4ab0e8", icon: "\uD83D\uDD25", idPrefix: "study_long", names: arcNames("Imersao"), thresholds: [1, 2, 3, 5, 8, 12, 16, 20, 30, 40], metric: getStudyLongSessionsCount, desc: function (v) { return "Complete " + reqLabel(v, "sessao longa", "sessoes longas") + " de 2h ou mais."; }, req: function (v) { return reqLabel(v, "sessao longa", "sessoes longas"); } }));
+      .concat(makeSeries({ group: "Estudo", col: "#4ab0e8", icon: "ico-graduation-cap", idPrefix: "study_sessions", names: arcNames("Caderno Aberto"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 40, 60], ids: [null, null, null, null, null, "scholar", null, null, null, null], metric: getStudySessionsCount, desc: function (v) { return "Registre " + reqLabel(v, "sessao de estudo", "sessoes de estudo") + "."; }, req: function (v) { return reqLabel(v, "sessao", "sessoes"); } }))
+      .concat(makeSeries({ group: "Estudo", col: "#4ab0e8", icon: "ico-hourglass", idPrefix: "study_hours", names: arcNames("Sessao Clara"), thresholds: [1, 3, 5, 8, 12, 20, 30, 50, 80, 120], ids: [null, null, null, null, null, null, null, "professor", null, null], metric: getEstudosHoras, desc: function (v) { return "Acumule " + v + " horas de estudo registradas."; }, req: function (v) { return v + "h"; } }))
+      .concat(makeSeries({ group: "Estudo", col: "#4ab0e8", icon: "ico-book", idPrefix: "study_subjects", names: arcNames("Mapa Mental"), thresholds: [1, 2, 3, 4, 5, 6, 8, 10, 12, 15], metric: getStudySubjectCount, desc: function (v) { return "Estude " + reqLabel(v, "tema diferente", "temas diferentes") + "."; }, req: function (v) { return reqLabel(v, "tema", "temas"); } }))
+      .concat(makeSeries({ group: "Estudo", col: "#4ab0e8", icon: "ico-pen-line", idPrefix: "study_notes", names: arcNames("Margem Atenta"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 35, 50], metric: getStudyNotesCount, desc: function (v) { return "Anexe resumo, nota ou comentario em " + reqLabel(v, "sessao", "sessoes") + "."; }, req: function (v) { return reqLabel(v, "nota", "notas"); } }))
+      .concat(makeSeries({ group: "Estudo", col: "#4ab0e8", icon: "ico-flame", idPrefix: "study_long", names: arcNames("Imersao"), thresholds: [1, 2, 3, 5, 8, 12, 16, 20, 30, 40], metric: getStudyLongSessionsCount, desc: function (v) { return "Complete " + reqLabel(v, "sessao longa", "sessoes longas") + " de 2h ou mais."; }, req: function (v) { return reqLabel(v, "sessao longa", "sessoes longas"); } }));
   }
 
   function buildSonhosAchievements() {
     return []
-      .concat(makeSeries({ group: "Sonhos", col: "#7c6fcd", icon: "\uD83C\uDF19", idPrefix: "dream_count", names: arcNames("Nebulosa"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 35, 50], ids: [null, null, null, "dreamer", null, null, null, null, null, null], metric: function () { return getSonhos().length; }, desc: function (v) { return "Registre " + reqLabel(v, "sonho", "sonhos") + " no hub."; }, req: function (v) { return reqLabel(v, "sonho", "sonhos"); } }))
-      .concat(makeSeries({ group: "Sonhos", col: "#7c6fcd", icon: "\uD83E\uDDED", idPrefix: "dream_plan", names: arcNames("Mapa de Desejos"), thresholds: [1, 2, 3, 5, 7, 10, 14, 18, 24, 30], metric: getDreamsWithPlanCount, desc: function (v) { return "Estruture plano, metas ou etapas em " + reqLabel(v, "sonho", "sonhos") + "."; }, req: function (v) { return reqLabel(v, "plano", "planos"); } }))
-      .concat(makeSeries({ group: "Sonhos", col: "#7c6fcd", icon: "\u2728", idPrefix: "dream_done", names: arcNames("Sonho Vivo"), thresholds: [1, 2, 3, 5, 8, 12, 16, 20, 25, 30], metric: getDreamsCompletedCount, desc: function (v) { return "Marque " + reqLabel(v, "sonho realizado", "sonhos realizados") + "."; }, req: function (v) { return reqLabel(v, "realizado", "realizados"); } }))
-      .concat(makeSeries({ group: "Sonhos", col: "#7c6fcd", icon: "\uD83D\uDCDD", idPrefix: "dream_reflection", names: arcNames("Reflexo Noturno"), thresholds: [1, 2, 3, 5, 7, 10, 14, 18, 24, 30], metric: getDreamsReflectionCount, desc: function (v) { return "Escreva reflexoes ou contexto em " + reqLabel(v, "sonho", "sonhos") + "."; }, req: function (v) { return reqLabel(v, "reflexao", "reflexoes"); } }))
-      .concat(makeSeries({ group: "Sonhos", col: "#7c6fcd", icon: "\uD83C\uDF0C", idPrefix: "dream_categories", names: arcNames("Horizonte Intimo"), thresholds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], metric: getDreamCategoryCount, desc: function (v) { return "Organize sonhos em " + reqLabel(v, "categoria", "categorias") + " distintas."; }, req: function (v) { return reqLabel(v, "categoria", "categorias"); } }));
+      .concat(makeSeries({ group: "Sonhos", col: "#7c6fcd", icon: "ico-moon", idPrefix: "dream_count", names: arcNames("Nebulosa"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 35, 50], ids: [null, null, null, "dreamer", null, null, null, null, null, null], metric: function () { return getSonhos().length; }, desc: function (v) { return "Registre " + reqLabel(v, "sonho", "sonhos") + " no hub."; }, req: function (v) { return reqLabel(v, "sonho", "sonhos"); } }))
+      .concat(makeSeries({ group: "Sonhos", col: "#7c6fcd", icon: "ico-compass", idPrefix: "dream_plan", names: arcNames("Mapa de Desejos"), thresholds: [1, 2, 3, 5, 7, 10, 14, 18, 24, 30], metric: getDreamsWithPlanCount, desc: function (v) { return "Estruture plano, metas ou etapas em " + reqLabel(v, "sonho", "sonhos") + "."; }, req: function (v) { return reqLabel(v, "plano", "planos"); } }))
+      .concat(makeSeries({ group: "Sonhos", col: "#7c6fcd", icon: "ico-sparkles", idPrefix: "dream_done", names: arcNames("Sonho Vivo"), thresholds: [1, 2, 3, 5, 8, 12, 16, 20, 25, 30], metric: getDreamsCompletedCount, desc: function (v) { return "Marque " + reqLabel(v, "sonho realizado", "sonhos realizados") + "."; }, req: function (v) { return reqLabel(v, "realizado", "realizados"); } }))
+      .concat(makeSeries({ group: "Sonhos", col: "#7c6fcd", icon: "ico-notebook-pen", idPrefix: "dream_reflection", names: arcNames("Reflexo Noturno"), thresholds: [1, 2, 3, 5, 7, 10, 14, 18, 24, 30], metric: getDreamsReflectionCount, desc: function (v) { return "Escreva reflexoes ou contexto em " + reqLabel(v, "sonho", "sonhos") + "."; }, req: function (v) { return reqLabel(v, "reflexao", "reflexoes"); } }))
+      .concat(makeSeries({ group: "Sonhos", col: "#7c6fcd", icon: "ico-orbit", idPrefix: "dream_categories", names: arcNames("Horizonte Intimo"), thresholds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], metric: getDreamCategoryCount, desc: function (v) { return "Organize sonhos em " + reqLabel(v, "categoria", "categorias") + " distintas."; }, req: function (v) { return reqLabel(v, "categoria", "categorias"); } }));
   }
 
   function buildViagensAchievements() {
     return []
-      .concat(makeSeries({ group: "Viagens", col: "#5ec4a8", icon: "\u2708\uFE0F", idPrefix: "travel_all", names: arcNames("Passaporte"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 35, 50], ids: ["traveler", null, null, "globetrotter", null, null, null, null, null, null], metric: function () { return getViagens().length; }, desc: function (v) { return "Cadastre " + reqLabel(v, "viagem", "viagens") + " no mapa."; }, req: function (v) { return reqLabel(v, "viagem", "viagens"); } }))
-      .concat(makeSeries({ group: "Viagens", col: "#5ec4a8", icon: "\uD83C\uDF0D", idPrefix: "travel_visited", names: arcNames("Rota Viva"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 35, 50], metric: function () { return getViagens().filter(isVisitedViagem).length; }, desc: function (v) { return "Marque " + reqLabel(v, "destino visitado", "destinos visitados") + "."; }, req: function (v) { return reqLabel(v, "visitado", "visitados"); } }))
-      .concat(makeSeries({ group: "Viagens", col: "#5ec4a8", icon: "\uD83D\uDDFA", idPrefix: "travel_planned", names: arcNames("Roteiro Aberto"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 35, 50], metric: getPlannedTripsCount, desc: function (v) { return "Mantenha " + reqLabel(v, "viagem planejada", "viagens planejadas") + " no radar."; }, req: function (v) { return reqLabel(v, "planejada", "planejadas"); } }))
-      .concat(makeSeries({ group: "Viagens", col: "#5ec4a8", icon: "\uD83E\uDDED", idPrefix: "travel_unique", names: arcNames("Atlas"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 35, 50], metric: getUniqueTripDestinationsCount, desc: function (v) { return "Registre " + reqLabel(v, "destino unico", "destinos unicos") + " na trilha."; }, req: function (v) { return reqLabel(v, "destino", "destinos"); } }))
-      .concat(makeSeries({ group: "Viagens", col: "#5ec4a8", icon: "\uD83D\uDCDD", idPrefix: "travel_notes", names: arcNames("Caderno de Bordo"), thresholds: [1, 2, 3, 5, 7, 10, 14, 18, 24, 30], metric: getTripNotesCount, desc: function (v) { return "Anote roteiros, notas ou memorias em " + reqLabel(v, "viagem", "viagens") + "."; }, req: function (v) { return reqLabel(v, "anotacao", "anotacoes"); } }));
+      .concat(makeSeries({ group: "Viagens", col: "#5ec4a8", icon: "ico-plane", idPrefix: "travel_all", names: arcNames("Passaporte"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 35, 50], ids: ["traveler", null, null, "globetrotter", null, null, null, null, null, null], metric: function () { return getViagens().length; }, desc: function (v) { return "Cadastre " + reqLabel(v, "viagem", "viagens") + " no mapa."; }, req: function (v) { return reqLabel(v, "viagem", "viagens"); } }))
+      .concat(makeSeries({ group: "Viagens", col: "#5ec4a8", icon: "ico-globe", idPrefix: "travel_visited", names: arcNames("Rota Viva"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 35, 50], metric: function () { return getViagens().filter(isVisitedViagem).length; }, desc: function (v) { return "Marque " + reqLabel(v, "destino visitado", "destinos visitados") + "."; }, req: function (v) { return reqLabel(v, "visitado", "visitados"); } }))
+      .concat(makeSeries({ group: "Viagens", col: "#5ec4a8", icon: "ico-map", idPrefix: "travel_planned", names: arcNames("Roteiro Aberto"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 35, 50], metric: getPlannedTripsCount, desc: function (v) { return "Mantenha " + reqLabel(v, "viagem planejada", "viagens planejadas") + " no radar."; }, req: function (v) { return reqLabel(v, "planejada", "planejadas"); } }))
+      .concat(makeSeries({ group: "Viagens", col: "#5ec4a8", icon: "ico-compass", idPrefix: "travel_unique", names: arcNames("Atlas"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 35, 50], metric: getUniqueTripDestinationsCount, desc: function (v) { return "Registre " + reqLabel(v, "destino unico", "destinos unicos") + " na trilha."; }, req: function (v) { return reqLabel(v, "destino", "destinos"); } }))
+      .concat(makeSeries({ group: "Viagens", col: "#5ec4a8", icon: "ico-notebook-pen", idPrefix: "travel_notes", names: arcNames("Caderno de Bordo"), thresholds: [1, 2, 3, 5, 7, 10, 14, 18, 24, 30], metric: getTripNotesCount, desc: function (v) { return "Anote roteiros, notas ou memorias em " + reqLabel(v, "viagem", "viagens") + "."; }, req: function (v) { return reqLabel(v, "anotacao", "anotacoes"); } }));
   }
 
   function buildMangasAchievements() {
     return []
-      .concat(makeSeries({ group: "Mangas", col: "#e06b8b", icon: "\uD83D\uDDBC", idPrefix: "manga_done", names: arcNames("Painel"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 35, 50], ids: [null, null, null, "manga_fan", null, null, null, null, null, null], metric: getCompletedMangasCount, desc: function (v) { return "Conclua " + reqLabel(v, "manga", "mangas") + "."; }, req: function (v) { return reqLabel(v, "manga", "mangas"); } }))
-      .concat(makeSeries({ group: "Mangas", col: "#e06b8b", icon: "\uD83D\uDCD6", idPrefix: "manga_chapters", names: arcNames("Capitulo"), thresholds: [10, 25, 50, 80, 120, 180, 260, 360, 500, 700], metric: getMangaChaptersTotal, desc: function (v) { return "Leia " + v + " capitulos no total."; }, req: function (v) { return v + " capitulos"; } }))
-      .concat(makeSeries({ group: "Mangas", col: "#e06b8b", icon: "\uD83D\uDCDA", idPrefix: "manga_entries", names: arcNames("Estante Otaku"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 35, 50], metric: getMangaEntriesCount, desc: function (v) { return "Cadastre " + reqLabel(v, "serie", "series") + " de manga."; }, req: function (v) { return reqLabel(v, "cadastro", "cadastros"); } }))
-      .concat(makeSeries({ group: "Mangas", col: "#e06b8b", icon: "\u2B50", idPrefix: "manga_ratings", names: arcNames("Curadoria Otaku"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 35, 50], metric: getMangaRatedCount, desc: function (v) { return "Avalie " + reqLabel(v, "manga", "mangas") + " lidos."; }, req: function (v) { return reqLabel(v, "avaliacao", "avaliacoes"); } }))
-      .concat(makeSeries({ group: "Mangas", col: "#e06b8b", icon: "\u2764", idPrefix: "manga_favorites", names: arcNames("Favoritos Otaku"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 35, 50], metric: getMangaFavoriteCount, desc: function (v) { return "Marque " + reqLabel(v, "manga favorito", "mangas favoritos") + "."; }, req: function (v) { return reqLabel(v, "favorito", "favoritos"); } }));
+      .concat(makeSeries({ group: "Mangas", col: "#e06b8b", icon: "ico-book-image", idPrefix: "manga_done", names: arcNames("Painel"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 35, 50], ids: [null, null, null, "manga_fan", null, null, null, null, null, null], metric: getCompletedMangasCount, desc: function (v) { return "Conclua " + reqLabel(v, "manga", "mangas") + "."; }, req: function (v) { return reqLabel(v, "manga", "mangas"); } }))
+      .concat(makeSeries({ group: "Mangas", col: "#e06b8b", icon: "ico-book-open", idPrefix: "manga_chapters", names: arcNames("Capitulo"), thresholds: [10, 25, 50, 80, 120, 180, 260, 360, 500, 700], metric: getMangaChaptersTotal, desc: function (v) { return "Leia " + v + " capitulos no total."; }, req: function (v) { return v + " capitulos"; } }))
+      .concat(makeSeries({ group: "Mangas", col: "#e06b8b", icon: "ico-library", idPrefix: "manga_entries", names: arcNames("Estante Otaku"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 35, 50], metric: getMangaEntriesCount, desc: function (v) { return "Cadastre " + reqLabel(v, "serie", "series") + " de manga."; }, req: function (v) { return reqLabel(v, "cadastro", "cadastros"); } }))
+      .concat(makeSeries({ group: "Mangas", col: "#e06b8b", icon: "ico-star", idPrefix: "manga_ratings", names: arcNames("Curadoria Otaku"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 35, 50], metric: getMangaRatedCount, desc: function (v) { return "Avalie " + reqLabel(v, "manga", "mangas") + " lidos."; }, req: function (v) { return reqLabel(v, "avaliacao", "avaliacoes"); } }))
+      .concat(makeSeries({ group: "Mangas", col: "#e06b8b", icon: "ico-heart", idPrefix: "manga_favorites", names: arcNames("Favoritos Otaku"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 35, 50], metric: getMangaFavoriteCount, desc: function (v) { return "Marque " + reqLabel(v, "manga favorito", "mangas favoritos") + "."; }, req: function (v) { return reqLabel(v, "favorito", "favoritos"); } }));
   }
 
   function buildTarefasAchievements() {
     return []
-      .concat(makeSeries({ group: "Tarefas", col: "#5ec4a8", icon: "\u2705", idPrefix: "tasks_done", names: arcNames("Checklist"), thresholds: [1, 3, 5, 8, 12, 20, 30, 45, 65, 90], ids: [null, null, null, null, null, "taskmaster", null, "planner", null, null], metric: getTaskCompletedCount, desc: function (v) { return "Conclua " + reqLabel(v, "tarefa", "tarefas") + "."; }, req: function (v) { return reqLabel(v, "tarefa", "tarefas"); } }))
-      .concat(makeSeries({ group: "Tarefas", col: "#5ec4a8", icon: "\uD83D\uDCCB", idPrefix: "tasks_all", names: arcNames("Fluxo"), thresholds: [3, 5, 8, 12, 18, 25, 35, 50, 70, 100], metric: getTaskTotalCount, desc: function (v) { return "Mantenha " + reqLabel(v, "tarefa", "tarefas") + " no sistema."; }, req: function (v) { return reqLabel(v, "registro", "registros"); } }))
-      .concat(makeSeries({ group: "Tarefas", col: "#5ec4a8", icon: "\u26A0", idPrefix: "tasks_high", names: arcNames("Prioridade"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 35, 50], metric: getHighPriorityTasksDoneCount, desc: function (v) { return "Feche " + reqLabel(v, "tarefa critica", "tarefas criticas") + "."; }, req: function (v) { return reqLabel(v, "prioridade alta", "prioridades altas"); } }))
-      .concat(makeSeries({ group: "Tarefas", col: "#5ec4a8", icon: "\u2699", idPrefix: "tasks_complex", names: arcNames("Engenharia"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 35, 50], metric: getComplexTasksDoneCount, desc: function (v) { return "Conclua " + reqLabel(v, "tarefa complexa", "tarefas complexas") + "."; }, req: function (v) { return reqLabel(v, "complexa", "complexas"); } }))
-      .concat(makeSeries({ group: "Tarefas", col: "#5ec4a8", icon: "\uD83E\uDDF5", idPrefix: "tasks_subtasks", names: arcNames("Costura"), thresholds: [3, 5, 8, 12, 18, 25, 35, 50, 70, 100], metric: getSubtasksTotalCount, desc: function (v) { return "Crie " + reqLabel(v, "subtarefa", "subtarefas") + " conectadas ao plano."; }, req: function (v) { return reqLabel(v, "subtarefa", "subtarefas"); } }));
+      .concat(makeSeries({ group: "Tarefas", col: "#5ec4a8", icon: "ico-circle-check", idPrefix: "tasks_done", names: arcNames("Checklist"), thresholds: [1, 3, 5, 8, 12, 20, 30, 45, 65, 90], ids: [null, null, null, null, null, "taskmaster", null, "planner", null, null], metric: getTaskCompletedCount, desc: function (v) { return "Conclua " + reqLabel(v, "tarefa", "tarefas") + "."; }, req: function (v) { return reqLabel(v, "tarefa", "tarefas"); } }))
+      .concat(makeSeries({ group: "Tarefas", col: "#5ec4a8", icon: "ico-clipboard-list", idPrefix: "tasks_all", names: arcNames("Fluxo"), thresholds: [3, 5, 8, 12, 18, 25, 35, 50, 70, 100], metric: getTaskTotalCount, desc: function (v) { return "Mantenha " + reqLabel(v, "tarefa", "tarefas") + " no sistema."; }, req: function (v) { return reqLabel(v, "registro", "registros"); } }))
+      .concat(makeSeries({ group: "Tarefas", col: "#5ec4a8", icon: "ico-triangle-alert", idPrefix: "tasks_high", names: arcNames("Prioridade"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 35, 50], metric: getHighPriorityTasksDoneCount, desc: function (v) { return "Feche " + reqLabel(v, "tarefa critica", "tarefas criticas") + "."; }, req: function (v) { return reqLabel(v, "prioridade alta", "prioridades altas"); } }))
+      .concat(makeSeries({ group: "Tarefas", col: "#5ec4a8", icon: "ico-settings", idPrefix: "tasks_complex", names: arcNames("Engenharia"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 35, 50], metric: getComplexTasksDoneCount, desc: function (v) { return "Conclua " + reqLabel(v, "tarefa complexa", "tarefas complexas") + "."; }, req: function (v) { return reqLabel(v, "complexa", "complexas"); } }))
+      .concat(makeSeries({ group: "Tarefas", col: "#5ec4a8", icon: "ico-list-tree", idPrefix: "tasks_subtasks", names: arcNames("Costura"), thresholds: [3, 5, 8, 12, 18, 25, 35, 50, 70, 100], metric: getSubtasksTotalCount, desc: function (v) { return "Crie " + reqLabel(v, "subtarefa", "subtarefas") + " conectadas ao plano."; }, req: function (v) { return reqLabel(v, "subtarefa", "subtarefas"); } }));
   }
 
   function buildEvolucaoAchievements() {
     return []
-      .concat(makeSeries({ group: "Evolução", col: "#c8a96e", icon: "\u2694", idPrefix: "evo_level", names: arcNames("Nível"), thresholds: [2, 3, 4, 5, 6, 8, 10, 12, 15, 20], ids: [null, null, null, "level5", null, null, "legend", null, null, null], metric: function () { return getLevel(Math.round(calcXP())); }, desc: function (v) { return "Alcance o nível " + v + " no sistema RPG."; }, req: function (v) { return "Nível " + v; } }))
-      .concat(makeSeries({ group: "Evolução", col: "#c8a96e", icon: "\u2728", idPrefix: "evo_xp", names: arcNames("Prestígio"), thresholds: [100, 250, 500, 800, 1200, 1800, 2600, 3600, 5000, 7000], metric: function () { return Math.round(calcXP()); }, desc: function (v) { return "Acumule " + v + " pontos de XP total."; }, req: function (v) { return v + " XP"; } }))
-      .concat(makeSeries({ group: "Evolução", col: "#c8a96e", icon: "\uD83D\uDEE1", idPrefix: "evo_skills", names: arcNames("Arsenal"), thresholds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], metric: getSkillsUnlockedCount, desc: function (v) { return "Desbloqueie " + reqLabel(v, "habilidade", "habilidades") + " do personagem."; }, req: function (v) { return reqLabel(v, "skill", "skills"); } }))
-      .concat(makeSeries({ group: "Evolução", col: "#c8a96e", icon: "\uD83E\uDDE0", idPrefix: "evo_attrs", names: arcNames("Atributo"), thresholds: [120, 180, 240, 300, 360, 420, 480, 540, 580, 600], metric: getAttrTotal, desc: function (v) { return "Some " + v + " pontos entre todos os atributos."; }, req: function (v) { return v + " atributos"; } }))
-      .concat(makeSeries({ group: "Evolução", col: "#c8a96e", icon: "\uD83C\uDF0C", idPrefix: "evo_sources", names: arcNames("Constelação"), thresholds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], metric: getActiveSourceCount, desc: function (v) { return "Ative " + reqLabel(v, "fonte de XP", "fontes de XP") + " no ecossistema."; }, req: function (v) { return reqLabel(v, "fonte", "fontes"); } }));
+      .concat(makeSeries({ group: "Evolução", col: "#c8a96e", icon: "ico-swords", idPrefix: "evo_level", names: arcNames("Nível"), thresholds: [2, 3, 4, 5, 6, 8, 10, 12, 15, 20], ids: [null, null, null, "level5", null, null, "legend", null, null, null], metric: function () { return getLevel(Math.round(calcXP())); }, desc: function (v) { return "Alcance o nível " + v + " no sistema RPG."; }, req: function (v) { return "Nível " + v; } }))
+      .concat(makeSeries({ group: "Evolução", col: "#c8a96e", icon: "ico-sparkles", idPrefix: "evo_xp", names: arcNames("Prestígio"), thresholds: [100, 250, 500, 800, 1200, 1800, 2600, 3600, 5000, 7000], metric: function () { return Math.round(calcXP()); }, desc: function (v) { return "Acumule " + v + " pontos de XP total."; }, req: function (v) { return v + " XP"; } }))
+      .concat(makeSeries({ group: "Evolução", col: "#c8a96e", icon: "ico-shield", idPrefix: "evo_skills", names: arcNames("Arsenal"), thresholds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], metric: getSkillsUnlockedCount, desc: function (v) { return "Desbloqueie " + reqLabel(v, "habilidade", "habilidades") + " do personagem."; }, req: function (v) { return reqLabel(v, "skill", "skills"); } }))
+      .concat(makeSeries({ group: "Evolução", col: "#c8a96e", icon: "ico-brain", idPrefix: "evo_attrs", names: arcNames("Atributo"), thresholds: [120, 180, 240, 300, 360, 420, 480, 540, 580, 600], metric: getAttrTotal, desc: function (v) { return "Some " + v + " pontos entre todos os atributos."; }, req: function (v) { return v + " atributos"; } }))
+      .concat(makeSeries({ group: "Evolução", col: "#c8a96e", icon: "ico-orbit", idPrefix: "evo_sources", names: arcNames("Constelação"), thresholds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], metric: getActiveSourceCount, desc: function (v) { return "Ative " + reqLabel(v, "fonte de XP", "fontes de XP") + " no ecossistema."; }, req: function (v) { return reqLabel(v, "fonte", "fontes"); } }));
   }
 
   function buildColecaoAchievements() {
     return []
-      .concat(makeSeries({ group: "Coleção", col: "#c8a96e", icon: "\u2B50", idPrefix: "collection_favorites", names: arcNames("Favoritos"), thresholds: [1, 3, 5, 8, 10, 15, 25, 35, 50, 70], ids: [null, null, null, null, "collector", null, null, null, null, null], metric: getFavoritosCount, desc: function (v) { return "Some " + reqLabel(v, "favorito", "favoritos") + " entre todas as mídias."; }, req: function (v) { return reqLabel(v, "favorito", "favoritos"); } }))
-      .concat(makeSeries({ group: "Coleção", col: "#c8a96e", icon: "\uD83D\uDCC2", idPrefix: "collection_size", names: arcNames("Museu"), thresholds: [5, 10, 15, 25, 40, 60, 90, 130, 180, 250], metric: getLibraryEntriesCount, desc: function (v) { return "Reúna " + reqLabel(v, "item", "itens") + " entre livros, cinema e mangás."; }, req: function (v) { return reqLabel(v, "item", "itens"); } }))
-      .concat(makeSeries({ group: "Coleção", col: "#c8a96e", icon: "\uD83C\uDFC6", idPrefix: "collection_done", names: arcNames("Arquivo"), thresholds: [1, 3, 5, 8, 12, 18, 25, 35, 50, 70], metric: getCompletedMediaCount, desc: function (v) { return "Conclua " + reqLabel(v, "obra", "obras") + " no acervo geral."; }, req: function (v) { return reqLabel(v, "concluída", "concluídas"); } }))
-      .concat(makeSeries({ group: "Coleção", col: "#c8a96e", icon: "\uD83D\uDCDD", idPrefix: "collection_rated", names: arcNames("Curadoria"), thresholds: [1, 3, 5, 8, 12, 18, 25, 35, 50, 70], metric: getAllRatedCount, desc: function (v) { return "Avalie " + reqLabel(v, "item", "itens") + " do acervo."; }, req: function (v) { return reqLabel(v, "avaliação", "avaliações"); } }))
-      .concat(makeSeries({ group: "Coleção", col: "#c8a96e", icon: "\u270D", idPrefix: "collection_notes", names: arcNames("Margem do Acervo"), thresholds: [1, 3, 5, 8, 12, 18, 25, 35, 50, 70], metric: getAllNotedCount, desc: function (v) { return "Escreva notas ou reviews em " + reqLabel(v, "item", "itens") + " da coleção."; }, req: function (v) { return reqLabel(v, "nota", "notas"); } }));
+      .concat(makeSeries({ group: "Coleção", col: "#c8a96e", icon: "ico-star", idPrefix: "collection_favorites", names: arcNames("Favoritos"), thresholds: [1, 3, 5, 8, 10, 15, 25, 35, 50, 70], ids: [null, null, null, null, "collector", null, null, null, null, null], metric: getFavoritosCount, desc: function (v) { return "Some " + reqLabel(v, "favorito", "favoritos") + " entre todas as mídias."; }, req: function (v) { return reqLabel(v, "favorito", "favoritos"); } }))
+      .concat(makeSeries({ group: "Coleção", col: "#c8a96e", icon: "ico-folder-open", idPrefix: "collection_size", names: arcNames("Museu"), thresholds: [5, 10, 15, 25, 40, 60, 90, 130, 180, 250], metric: getLibraryEntriesCount, desc: function (v) { return "Reúna " + reqLabel(v, "item", "itens") + " entre livros, cinema e mangás."; }, req: function (v) { return reqLabel(v, "item", "itens"); } }))
+      .concat(makeSeries({ group: "Coleção", col: "#c8a96e", icon: "ico-trophy", idPrefix: "collection_done", names: arcNames("Arquivo"), thresholds: [1, 3, 5, 8, 12, 18, 25, 35, 50, 70], metric: getCompletedMediaCount, desc: function (v) { return "Conclua " + reqLabel(v, "obra", "obras") + " no acervo geral."; }, req: function (v) { return reqLabel(v, "concluída", "concluídas"); } }))
+      .concat(makeSeries({ group: "Coleção", col: "#c8a96e", icon: "ico-notebook-pen", idPrefix: "collection_rated", names: arcNames("Curadoria"), thresholds: [1, 3, 5, 8, 12, 18, 25, 35, 50, 70], metric: getAllRatedCount, desc: function (v) { return "Avalie " + reqLabel(v, "item", "itens") + " do acervo."; }, req: function (v) { return reqLabel(v, "avaliação", "avaliações"); } }))
+      .concat(makeSeries({ group: "Coleção", col: "#c8a96e", icon: "ico-pen-line", idPrefix: "collection_notes", names: arcNames("Margem do Acervo"), thresholds: [1, 3, 5, 8, 12, 18, 25, 35, 50, 70], metric: getAllNotedCount, desc: function (v) { return "Escreva notas ou reviews em " + reqLabel(v, "item", "itens") + " da coleção."; }, req: function (v) { return reqLabel(v, "nota", "notas"); } }));
   }
 
   function buildWishlistAchievements() {
     return []
-      .concat(makeSeries({ group: "Wishlist", col: "#7c6fcd", icon: "\uD83C\uDF20", idPrefix: "wishlist_count", names: arcNames("Desejo"), thresholds: [1, 3, 5, 8, 10, 15, 25, 35, 50, 70], ids: [null, null, null, null, "wishmaster", null, null, null, null, null], metric: function () { return getWishlist().length; }, desc: function (v) { return "Adicione " + reqLabel(v, "item", "itens") + " a wishlist."; }, req: function (v) { return reqLabel(v, "item", "itens"); } }))
-      .concat(makeSeries({ group: "Wishlist", col: "#7c6fcd", icon: "\u26A0", idPrefix: "wishlist_priority", names: arcNames("Radar"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 35, 50], metric: getWishlistPriorityCount, desc: function (v) { return "Defina " + reqLabel(v, "item prioritario", "itens prioritarios") + "."; }, req: function (v) { return reqLabel(v, "prioridade", "prioridades"); } }))
-      .concat(makeSeries({ group: "Wishlist", col: "#7c6fcd", icon: "\uD83D\uDCB8", idPrefix: "wishlist_price", names: arcNames("Etiqueta"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 35, 50], metric: getWishlistPricedCount, desc: function (v) { return "Informe preco ou valor em " + reqLabel(v, "item", "itens") + " desejados."; }, req: function (v) { return reqLabel(v, "preco", "precos"); } }))
-      .concat(makeSeries({ group: "Wishlist", col: "#7c6fcd", icon: "\uD83D\uDCC1", idPrefix: "wishlist_categories", names: arcNames("Prateleira Futura"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 35, 50], metric: getWishlistCategorizedCount, desc: function (v) { return "Categorize " + reqLabel(v, "item", "itens") + " da wishlist."; }, req: function (v) { return reqLabel(v, "categoria", "categorias"); } }))
-      .concat(makeSeries({ group: "Wishlist", col: "#7c6fcd", icon: "\uD83C\uDFC6", idPrefix: "wishlist_acquired", names: arcNames("Tesouro Pretendido"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 35, 50], metric: getWishlistAcquiredCount, desc: function (v) { return "Transforme " + reqLabel(v, "desejo em conquista", "desejos em conquistas") + "."; }, req: function (v) { return reqLabel(v, "conquista", "conquistas"); } }));
+      .concat(makeSeries({ group: "Wishlist", col: "#7c6fcd", icon: "ico-gift", idPrefix: "wishlist_count", names: arcNames("Desejo"), thresholds: [1, 3, 5, 8, 10, 15, 25, 35, 50, 70], ids: [null, null, null, null, "wishmaster", null, null, null, null, null], metric: function () { return getWishlist().length; }, desc: function (v) { return "Adicione " + reqLabel(v, "item", "itens") + " a wishlist."; }, req: function (v) { return reqLabel(v, "item", "itens"); } }))
+      .concat(makeSeries({ group: "Wishlist", col: "#7c6fcd", icon: "ico-triangle-alert", idPrefix: "wishlist_priority", names: arcNames("Radar"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 35, 50], metric: getWishlistPriorityCount, desc: function (v) { return "Defina " + reqLabel(v, "item prioritario", "itens prioritarios") + "."; }, req: function (v) { return reqLabel(v, "prioridade", "prioridades"); } }))
+      .concat(makeSeries({ group: "Wishlist", col: "#7c6fcd", icon: "ico-tag", idPrefix: "wishlist_price", names: arcNames("Etiqueta"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 35, 50], metric: getWishlistPricedCount, desc: function (v) { return "Informe preco ou valor em " + reqLabel(v, "item", "itens") + " desejados."; }, req: function (v) { return reqLabel(v, "preco", "precos"); } }))
+      .concat(makeSeries({ group: "Wishlist", col: "#7c6fcd", icon: "ico-folder", idPrefix: "wishlist_categories", names: arcNames("Prateleira Futura"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 35, 50], metric: getWishlistCategorizedCount, desc: function (v) { return "Categorize " + reqLabel(v, "item", "itens") + " da wishlist."; }, req: function (v) { return reqLabel(v, "categoria", "categorias"); } }))
+      .concat(makeSeries({ group: "Wishlist", col: "#7c6fcd", icon: "ico-trophy", idPrefix: "wishlist_acquired", names: arcNames("Tesouro Pretendido"), thresholds: [1, 2, 3, 5, 8, 12, 18, 25, 35, 50], metric: getWishlistAcquiredCount, desc: function (v) { return "Transforme " + reqLabel(v, "desejo em conquista", "desejos em conquistas") + "."; }, req: function (v) { return reqLabel(v, "conquista", "conquistas"); } }));
   }
 
   function calcXP() {
@@ -738,14 +743,14 @@
       saveState(state);
     }
     var pool = [
-      { id: "m_leitura", icon: "\uD83D\uDCDA", name: "Sessao de Leitura", desc: "Abra a pagina de livros e registre progresso", xp: 20, color: "#c8a96e" },
-      { id: "m_treino", icon: "\uD83D\uDCAA", name: "Treino do Dia", desc: "Registre um treino na Academia", xp: 30, color: "#e06b8b" },
-      { id: "m_tarefa", icon: "\u2705", name: "Conclua uma Tarefa", desc: "Marque ao menos 1 tarefa como concluida hoje", xp: 15, color: "#5ec4a8" },
-      { id: "m_estudo", icon: "\uD83C\uDF93", name: "Hora de Estudo", desc: "Adicione uma sessao de estudo", xp: 25, color: "#4ab0e8" },
-      { id: "m_sonho", icon: "\uD83C\uDF19", name: "Registro de Sonho", desc: "Adicione ou revise um sonho", xp: 10, color: "#7c6fcd" },
-      { id: "m_cinema", icon: "\uD83C\uDFAC", name: "Sessao de Cinema", desc: "Registre um filme ou serie", xp: 15, color: "#e8864a" },
-      { id: "m_manga", icon: "\uD83D\uDDBC", name: "Capitulo de Manga", desc: "Atualize seu progresso de manga", xp: 12, color: "#e06b8b" },
-      { id: "m_wishlist", icon: "\uD83C\uDF20", name: "Atualizar Wishlist", desc: "Adicione ou revise um item da wishlist", xp: 8, color: "#7c6fcd" }
+      { id: "m_leitura", icon: "ico-library", name: "Sessao de Leitura", desc: "Abra a pagina de livros e registre progresso", xp: 20, color: "#c8a96e" },
+      { id: "m_treino", icon: "ico-dumbbell", name: "Treino do Dia", desc: "Registre um treino na Academia", xp: 30, color: "#e06b8b" },
+      { id: "m_tarefa", icon: "ico-circle-check", name: "Conclua uma Tarefa", desc: "Marque ao menos 1 tarefa como concluida hoje", xp: 15, color: "#5ec4a8" },
+      { id: "m_estudo", icon: "ico-graduation-cap", name: "Hora de Estudo", desc: "Adicione uma sessao de estudo", xp: 25, color: "#4ab0e8" },
+      { id: "m_sonho", icon: "ico-moon", name: "Registro de Sonho", desc: "Adicione ou revise um sonho", xp: 10, color: "#7c6fcd" },
+      { id: "m_cinema", icon: "ico-clapperboard", name: "Sessao de Cinema", desc: "Registre um filme ou serie", xp: 15, color: "#e8864a" },
+      { id: "m_manga", icon: "ico-book-image", name: "Capitulo de Manga", desc: "Atualize seu progresso de manga", xp: 12, color: "#e06b8b" },
+      { id: "m_wishlist", icon: "ico-gift", name: "Atualizar Wishlist", desc: "Adicione ou revise um item da wishlist", xp: 8, color: "#7c6fcd" }
     ];
     var seed = parseInt(today.replace(/-/g, ""), 10) % pool.length;
     return [0, 1, 2, 3].map(function (offset) {
@@ -782,12 +787,12 @@
     var xp = Math.round(calcXP());
     function cap100(val) { return Math.min(100, val); }
     return [
-      { icon: "\uD83E\uDDE0", label: "Intelecto", val: cap100(livros * 4 + estudo * 2), color: "#c8a96e" },
-      { icon: "\uD83D\uDCAA", label: "Forca", val: cap100(gym * 3), color: "#e06b8b" },
-      { icon: "\uD83E\uDDED", label: "Sabedoria", val: cap100(livros * 2 + estudo * 3), color: "#4ab0e8" },
-      { icon: "\u26A1", label: "Disciplina", val: cap100(tarefas * 2 + gym), color: "#5ec4a8" },
-      { icon: "\uD83C\uDF0D", label: "Exploracao", val: cap100(viagens * 10 + cinema * 2), color: "#7c6fcd" },
-      { icon: "\u2728", label: "Prestigio", val: cap100(Math.floor(xp / 20)), color: "#e8864a" }
+      { icon: "ico-brain", label: "Intelecto", val: cap100(livros * 4 + estudo * 2), color: "#c8a96e" },
+      { icon: "ico-dumbbell", label: "Forca", val: cap100(gym * 3), color: "#e06b8b" },
+      { icon: "ico-compass", label: "Sabedoria", val: cap100(livros * 2 + estudo * 3), color: "#4ab0e8" },
+      { icon: "ico-zap", label: "Disciplina", val: cap100(tarefas * 2 + gym), color: "#5ec4a8" },
+      { icon: "ico-globe", label: "Exploracao", val: cap100(viagens * 10 + cinema * 2), color: "#7c6fcd" },
+      { icon: "ico-sparkles", label: "Prestigio", val: cap100(Math.floor(xp / 20)), color: "#e8864a" }
     ];
   }
 
@@ -797,25 +802,25 @@
     var now = Date.now();
 
     getLivros().filter(function (item) { return getLivroPagesRead(item) > 0; }).slice(-3).forEach(function (item) {
-      entries.push({ icon: "\uD83D\uDCD6", text: 'Leitura registrada: "' + (item.titulo || item.title || "Livro") + '"', xp: calcLivroXP(item), t: item.updatedAt || item.id || now });
+      entries.push({ icon: "ico-book-open", text: 'Leitura registrada: "' + (item.titulo || item.title || "Livro") + '"', xp: calcLivroXP(item), t: item.updatedAt || item.id || now });
     });
     getCinema().filter(function (item) { return calcCinemaXP(item) > 0; }).slice(-3).forEach(function (item) {
-      entries.push({ icon: "\uD83C\uDFAC", text: 'Progresso no cinema: "' + (item.titulo || item.title || "Titulo") + '"', xp: calcCinemaXP(item), t: item.updatedAt || item.id || now });
+      entries.push({ icon: "ico-clapperboard", text: 'Progresso no cinema: "' + (item.titulo || item.title || "Titulo") + '"', xp: calcCinemaXP(item), t: item.updatedAt || item.id || now });
     });
     getMangas().filter(function (item) { return getMangaChaptersRead(item) > 0; }).slice(-3).forEach(function (item) {
-      entries.push({ icon: "\uD83D\uDDBC", text: 'Leitura de manga: "' + (item.titulo || item.title || "Manga") + '"', xp: calcMangaXP(item), t: item.updatedAt || item.id || now });
+      entries.push({ icon: "ico-book-image", text: 'Leitura de manga: "' + (item.titulo || item.title || "Manga") + '"', xp: calcMangaXP(item), t: item.updatedAt || item.id || now });
     });
     getGym().slice(-4).forEach(function (item) {
-      entries.push({ icon: "\uD83D\uDCAA", text: "Treino registrado" + (item.tipo ? " - " + item.tipo : ""), xp: XP_PER_TREINO, t: item.updatedAt || item.id || now });
+      entries.push({ icon: "ico-dumbbell", text: "Treino registrado" + (item.tipo ? " - " + item.tipo : ""), xp: XP_PER_TREINO, t: item.updatedAt || item.id || now });
     });
     getTasks().filter(isDoneTask).slice(-3).forEach(function (item) {
-      entries.push({ icon: "\u2705", text: 'Tarefa concluida: "' + (item.nome || "Tarefa") + '"', xp: calcTaskXP(item), t: item.updatedAt || item.id || now });
+      entries.push({ icon: "ico-circle-check", text: 'Tarefa concluida: "' + (item.nome || "Tarefa") + '"', xp: calcTaskXP(item), t: item.updatedAt || item.id || now });
     });
     getViagens().filter(isVisitedViagem).slice(-2).forEach(function (item) {
-      entries.push({ icon: "\u2708\uFE0F", text: "Visitou " + (item.flag || "") + " " + (item.dest || item.destino || "Destino"), xp: XP_PER_VIAGEM, t: item.updatedAt || item.id || now });
+      entries.push({ icon: "ico-plane", text: "Visitou " + (item.flag || "") + " " + (item.dest || item.destino || "Destino"), xp: XP_PER_VIAGEM, t: item.updatedAt || item.id || now });
     });
     getEstudos().slice(-2).forEach(function (item) {
-      entries.push({ icon: "\uD83C\uDF93", text: "Estudou " + Number(item.horas || 0) + "h - " + (item.materia || "Estudo"), xp: Math.round(Number(item.horas || 0) * XP_PER_HORA_ESTUDO), t: item.updatedAt || item.id || now });
+      entries.push({ icon: "ico-graduation-cap", text: "Estudou " + Number(item.horas || 0) + "h - " + (item.materia || "Estudo"), xp: Math.round(Number(item.horas || 0) * XP_PER_HORA_ESTUDO), t: item.updatedAt || item.id || now });
     });
     return entries.sort(function (a, b) { return b.t - a.t; }).slice(0, 12);
   }
@@ -851,9 +856,9 @@
     function buildBadge(item) {
       var unlocked = !!achievementStatusCache[item.id];
       return '<div class="rpg-badge ' + (unlocked ? "" : "locked") + '" style="--badge-color:' + item.col + '">' +
-        '<div class="rpg-badge-icon-wrap">' + item.icon + '</div>' +
+        '<div class="rpg-badge-icon-wrap">' + iconHtml(item.icon) + '</div>' +
         '<div style="flex:1;min-width:0"><div class="rpg-badge-name">' + escapeHtml(item.name) + '</div><div class="rpg-badge-desc">' + escapeHtml(item.desc) + '</div></div>' +
-        '<div class="rpg-badge-status">' + (unlocked ? "\u2713 Obtida" : "\uD83D\uDD12 " + escapeHtml(item.req)) + '</div></div>';
+        '<div class="rpg-badge-status">' + (unlocked ? '<i class="ico ico-check" aria-hidden="true"></i> Obtida' : '<i class="ico ico-lock" aria-hidden="true"></i> ' + escapeHtml(item.req)) + '</div></div>';
     }
 
     var groupsHtml = Object.keys(groups).map(function (groupName) {
@@ -889,9 +894,9 @@
       grid.innerHTML = items.map(function (item) {
         var unlocked = achievementStatusCache[item.id] != null ? achievementStatusCache[item.id] : item.check();
         return '<div class="rpg-badge ' + (unlocked ? "" : "locked") + '" style="--badge-color:' + item.col + '">' +
-          '<div class="rpg-badge-icon-wrap">' + item.icon + '</div>' +
+          '<div class="rpg-badge-icon-wrap">' + iconHtml(item.icon) + '</div>' +
           '<div style="flex:1;min-width:0"><div class="rpg-badge-name">' + escapeHtml(item.name) + '</div><div class="rpg-badge-desc">' + escapeHtml(item.desc) + '</div></div>' +
-          '<div class="rpg-badge-status">' + (unlocked ? "\u2713 Obtida" : "\uD83D\uDD12 " + escapeHtml(item.req)) + '</div></div>';
+          '<div class="rpg-badge-status">' + (unlocked ? '<i class="ico ico-check" aria-hidden="true"></i> Obtida' : '<i class="ico ico-lock" aria-hidden="true"></i> ' + escapeHtml(item.req)) + '</div></div>';
       }).join("");
     }
     overlay.scrollTop = 0;
@@ -996,7 +1001,7 @@
       '    <div class="rpg-account-verify-title">' + (action === "delete" ? "Excluir conta" : "Desconectar conta") + '</div>',
       '    <div class="rpg-account-verify-copy">Conclua os fatores de confirmação abaixo antes de seguir.</div>',
       '  </div>',
-      '  <button class="rpg-account-verify-close" id="rpg-account-cancel-btn" type="button" aria-label="Fechar">✕</button>',
+      '  <button class="rpg-account-verify-close" id="rpg-account-cancel-btn" type="button" aria-label="Fechar"><i class="ico ico-x" aria-hidden="true"></i></button>',
       '</div>',
       '<div class="rpg-account-factor-list">',
       '  <div class="rpg-account-factor">',
@@ -1190,16 +1195,20 @@
       var element = document.getElementById(id);
       if (element) element.textContent = value;
     }
+    function setHtml(id, html) {
+      var element = document.getElementById(id);
+      if (element) element.innerHTML = html;
+    }
 
     setText("rpg-hero-name", name);
-    setText("rpg-hero-title", cls.icon + " " + cls.name + " · Nível " + level);
+    setHtml("rpg-hero-title", iconHtml(cls.icon) + " " + escapeHtml(cls.name) + " · Nível " + level);
     setText("rpg-class-badge", cls.name);
     setText("rpg-xp-label", xp.toLocaleString("pt-BR") + " XP");
     setText("rpg-xp-next-label", (xpNext - xp).toLocaleString("pt-BR") + " XP para o próximo nível " + (level + 1));
     setText("rpg-orb-level", String(level));
     setText("rpg-level-big", String(level));
     setText("rpg-level-title", title);
-    setText("rpg-level-sub", cls.icon + " " + cls.name + " - " + (cls.passive || cls.bonus));
+    setHtml("rpg-level-sub", iconHtml(cls.icon) + " " + escapeHtml(cls.name + " - " + (cls.passive || cls.bonus)));
     setText("rpg-qs-livros", String(quickStats.livros || 0));
     setText("rpg-qs-cinema", String(quickStats.cinema || 0));
     setText("rpg-qs-gym", String(quickStats.gym || 0));
@@ -1240,7 +1249,7 @@
     var attrsEl = document.getElementById("rpg-attrs");
     if (attrsEl) {
       attrsEl.innerHTML = rpgCalcAttrs().map(function (attr) {
-        return '<div class="rpg-attr"><div class="rpg-attr-icon">' + attr.icon + '</div><div class="rpg-attr-main"><div class="rpg-attr-label">' + attr.label + '</div><div class="rpg-attr-bar-wrap"><div class="rpg-attr-bar" style="width:0%;background:' + attr.color + '" data-w="' + attr.val + '"></div></div></div><div class="rpg-attr-val">' + attr.val + "</div></div>";
+        return '<div class="rpg-attr"><div class="rpg-attr-icon" style="color:' + attr.color + '">' + iconHtml(attr.icon) + '</div><div class="rpg-attr-main"><div class="rpg-attr-label">' + attr.label + '</div><div class="rpg-attr-bar-wrap"><div class="rpg-attr-bar" style="width:0%;background:' + attr.color + '" data-w="' + attr.val + '"></div></div></div><div class="rpg-attr-val">' + attr.val + "</div></div>";
       }).join("");
       setTimeout(function () {
         attrsEl.querySelectorAll("[data-w]").forEach(function (bar) { bar.style.width = bar.getAttribute("data-w") + "%"; });
@@ -1266,21 +1275,21 @@
     var xpSources = document.getElementById("rpg-xp-sources");
     if (xpSources) {
       var sources = [
-        { icon: "\uD83D\uDCDA", label: "Livraria", val: breakdown.livros },
-        { icon: "\uD83C\uDFAC", label: "Cinema", val: breakdown.cinema },
-        { icon: "\uD83D\uDDBC", label: "Mangas", val: breakdown.mangas },
-        { icon: "\uD83D\uDCAA", label: "Treinos", val: breakdown.treinos },
-        { icon: "\u2705", label: "Tarefas", val: breakdown.tarefas },
-        { icon: "\uD83C\uDF93", label: "Estudos", val: breakdown.estudos || breakdown.estudo || 0 },
-        { icon: "\uD83E\uDDE0", label: "Revisão", val: breakdown.revisao || 0 },
-        { icon: "\uD83C\uDF19", label: "Sonhos", val: breakdown.sonhos },
-        { icon: "\u2708\uFE0F", label: "Viagens", val: breakdown.viagens },
-        { icon: "\uD83D\uDCB0", label: "Financas", val: breakdown.financas || 0 },
-        { icon: "\uD83C\uDF20", label: "Wishlist", val: breakdown.wishlist || 0 },
-        { icon: "\u2728", label: "Missoes", val: breakdown.missoes || 0 }
+        { icon: "ico-library", label: "Livraria", val: breakdown.livros },
+        { icon: "ico-clapperboard", label: "Cinema", val: breakdown.cinema },
+        { icon: "ico-book-image", label: "Mangas", val: breakdown.mangas },
+        { icon: "ico-dumbbell", label: "Treinos", val: breakdown.treinos },
+        { icon: "ico-circle-check", label: "Tarefas", val: breakdown.tarefas },
+        { icon: "ico-graduation-cap", label: "Estudos", val: breakdown.estudos || breakdown.estudo || 0 },
+        { icon: "ico-brain", label: "Revisão", val: breakdown.revisao || 0 },
+        { icon: "ico-moon", label: "Sonhos", val: breakdown.sonhos },
+        { icon: "ico-plane", label: "Viagens", val: breakdown.viagens },
+        { icon: "ico-wallet", label: "Financas", val: breakdown.financas || 0 },
+        { icon: "ico-gift", label: "Wishlist", val: breakdown.wishlist || 0 },
+        { icon: "ico-sparkles", label: "Missoes", val: breakdown.missoes || 0 }
       ].filter(function (item) { return item.val > 0; });
       xpSources.innerHTML = sources.map(function (item) {
-        return '<div class="rpg-xp-source">' + item.icon + " " + item.label + ' <span class="rpg-xp-source-val">+' + item.val + "</span></div>";
+        return '<div class="rpg-xp-source">' + iconHtml(item.icon) + " " + item.label + ' <span class="rpg-xp-source-val">+' + item.val + "</span></div>";
       }).join("");
     }
 
@@ -1290,7 +1299,7 @@
     if (missionsEl) {
       missionsEl.innerHTML = missions.map(function (mission) {
         return '<div class="rpg-mission ' + (mission.done ? "done locked" : "") + '" style="--m-color:' + mission.color + '" title="' + (mission.done ? "Missao concluida automaticamente apos a acao correspondente." : "Conclua a acao descrita para liberar esta missao automaticamente.") + '">' +
-          '<div class="rpg-mission-check">' + (mission.done ? "\u2713" : "") + '</div><div class="rpg-mission-info"><div class="rpg-mission-name">' + mission.icon + " " + mission.name + '</div><div class="rpg-mission-meta">' + mission.desc + '</div></div><div class="rpg-mission-xp">+' + mission.xp + " XP</div></div>";
+          '<div class="rpg-mission-check">' + (mission.done ? '<i class="ico ico-check" aria-hidden="true"></i>' : "") + '</div><div class="rpg-mission-info"><div class="rpg-mission-name">' + iconHtml(mission.icon) + " " + mission.name + '</div><div class="rpg-mission-meta">' + mission.desc + '</div></div><div class="rpg-mission-xp">+' + mission.xp + " XP</div></div>";
       }).join("");
     }
 
@@ -1303,8 +1312,8 @@
         var unlocked = !!skill.unlocked;
         var levelNum = unlocked ? Number(skill.level || 0) : 0;
         return '<div class="rpg-skill ' + (unlocked ? "" : "locked") + '" style="--skill-color:' + skill.color + '">' +
-          '<div class="rpg-skill-header"><div class="rpg-skill-icon">' + skill.icon + '</div>' +
-          (unlocked ? '<div class="rpg-skill-active-badge">\u2713 Ativa</div>' : '<div class="rpg-skill-lock-badge">Nv' + requiredLevel + " req.</div>") +
+          '<div class="rpg-skill-header"><div class="rpg-skill-icon">' + iconHtml(skill.icon) + '</div>' +
+          (unlocked ? '<div class="rpg-skill-active-badge"><i class="ico ico-check" aria-hidden="true"></i> Ativa</div>' : '<div class="rpg-skill-lock-badge">Nv' + requiredLevel + " req.</div>") +
           '</div><div class="rpg-skill-name">' + skill.name + '</div><div class="rpg-skill-desc">' + skill.desc + '</div>' +
           '<div class="rpg-skill-utility">' + (skill.utility || "Sem efeito adicional definido.") + '</div>' +
           '<div class="rpg-skill-foot"><span class="rpg-skill-lvl-txt">Nível ' + levelNum + '/10</span><span class="rpg-skill-lvl-num">' + (levelNum > 0 ? "\u25AE".repeat(Math.min(levelNum, 5)) + (levelNum > 5 ? "+" : "") : "-") + '</span></div>' +
@@ -1318,7 +1327,7 @@
     if (logEl) {
       var log = rpgBuildLog();
       logEl.innerHTML = log.length ? log.map(function (entry) {
-        return '<div class="rpg-log-item"><div class="rpg-log-icon">' + entry.icon + '</div><div class="rpg-log-text">' + escapeHtml(entry.text) + '</div><div class="rpg-log-xp">+' + entry.xp + "</div></div>";
+        return '<div class="rpg-log-item"><div class="rpg-log-icon">' + iconHtml(entry.icon) + '</div><div class="rpg-log-text">' + escapeHtml(entry.text) + '</div><div class="rpg-log-xp">+' + entry.xp + "</div></div>";
       }).join("") : '<div class="rpg-log-empty">\u2726 Nenhuma atividade ainda. Comece a explorar o universo! \u2726</div>';
     }
   }

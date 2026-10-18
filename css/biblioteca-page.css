@@ -1207,3 +1207,17 @@
     .filter-layout { grid-template-columns: 1fr; }
     .filter-col-right { border-left:0; padding-left:0; }
   }
+
+  /* ícones (Lucide) no lugar dos emojis: favorito em rosa, estrela acesa com brilho, marcadores neutros */
+  .fav-icon .ico-heart-fill, .mc-fav-badge .ico, #th-fav-icon .ico-heart-fill { color: var(--accent4); }
+  .mstar.on .ico { filter: drop-shadow(0 0 6px rgba(200,169,110,.7)); }
+  .mc-img-placeholder .ph-icon, .empty-icon, .collection-fallback, .upload-hint .uh-icon { color: rgba(200,169,110,.55); }
+  .filter-chip .ico, .btn-filter .ico, .btn .ico { vertical-align: -0.15em; }
+  /* celular: busca em linha própria; Filtros e Adicionar lado a lado sem quebrar o texto */
+  @media (max-width: 600px) {
+    .lib-toolbar { width: 100%; flex-wrap: wrap; }
+    .lib-toolbar > .inp { flex: 1 1 100% !important; min-width: 0 !important; }
+    .lib-toolbar > .filter-wrap { flex: 1; }
+    .lib-toolbar .btn-filter { width: 100%; height: 100%; justify-content: center; }
+    .lib-toolbar > .btn { flex: 1; white-space: nowrap; }
+  }

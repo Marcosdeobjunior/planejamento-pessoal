@@ -13,6 +13,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/icons.css">
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/app-shell.css">
   <link rel="stylesheet" href="css/financas.css">
@@ -50,7 +51,7 @@
               </div>
               <div class="rpg-char-identity-info">
                 <div class="rpg-char-name" id="rpg-hero-name">Usuário</div>
-                <div class="rpg-char-title" id="rpg-hero-title">⚔ Viajante · Nível 1</div>
+                <div class="rpg-char-title" id="rpg-hero-title"><i class="ico ico-swords" aria-hidden="true"></i> Viajante · Nível 1</div>
               </div>
               <div class="rpg-level-orb"> 
                 <div class="rpg-level-orb-label">NV</div>
@@ -80,29 +81,29 @@
               <div class="rpg-class-select">
                 <span class="rpg-class-lbl-txt">Classe</span>
                 <div class="rpg-classes">
-                  <div class="rpg-class-opt" data-class="scholar" onclick="rpgSetClass('scholar')"><span class="rpg-class-opt-icon">📚</span><div class="rpg-class-opt-name">Sábio</div><div class="rpg-class-opt-meta">0/30 dias</div></div>
-                  <div class="rpg-class-opt" data-class="warrior" onclick="rpgSetClass('warrior')"><span class="rpg-class-opt-icon">⚔</span><div class="rpg-class-opt-name">Guerreiro</div><div class="rpg-class-opt-meta">0/60 treinos</div></div>
-                  <div class="rpg-class-opt" data-class="explorer" onclick="rpgSetClass('explorer')"><span class="rpg-class-opt-icon">🧭</span><div class="rpg-class-opt-name">Explorador</div><div class="rpg-class-opt-meta">0/5 viagens</div></div>
-                  <div class="rpg-class-opt" data-class="artist" onclick="rpgSetClass('artist')"><span class="rpg-class-opt-icon">🎨</span><div class="rpg-class-opt-name">Artista</div><div class="rpg-class-opt-meta">Definição pendente</div></div>
-                  <div class="rpg-class-opt" data-class="mage" onclick="rpgSetClass('mage')"><span class="rpg-class-opt-icon">🔮</span><div class="rpg-class-opt-name">Mago</div><div class="rpg-class-opt-meta">Definição pendente</div></div>
-                  <div class="rpg-class-opt" data-class="ranger" onclick="rpgSetClass('ranger')"><span class="rpg-class-opt-icon">🏹</span><div class="rpg-class-opt-name">Ranger</div><div class="rpg-class-opt-meta">Definição pendente</div></div>
+                  <div class="rpg-class-opt" data-class="scholar" onclick="rpgSetClass('scholar')"><span class="rpg-class-opt-icon"><i class="ico ico-library" aria-hidden="true"></i></span><div class="rpg-class-opt-name">Sábio</div><div class="rpg-class-opt-meta">0/30 dias</div></div>
+                  <div class="rpg-class-opt" data-class="warrior" onclick="rpgSetClass('warrior')"><span class="rpg-class-opt-icon"><i class="ico ico-swords" aria-hidden="true"></i></span><div class="rpg-class-opt-name">Guerreiro</div><div class="rpg-class-opt-meta">0/60 treinos</div></div>
+                  <div class="rpg-class-opt" data-class="explorer" onclick="rpgSetClass('explorer')"><span class="rpg-class-opt-icon"><i class="ico ico-compass" aria-hidden="true"></i></span><div class="rpg-class-opt-name">Explorador</div><div class="rpg-class-opt-meta">0/5 viagens</div></div>
+                  <div class="rpg-class-opt" data-class="artist" onclick="rpgSetClass('artist')"><span class="rpg-class-opt-icon"><i class="ico ico-palette" aria-hidden="true"></i></span><div class="rpg-class-opt-name">Artista</div><div class="rpg-class-opt-meta">Definição pendente</div></div>
+                  <div class="rpg-class-opt" data-class="mage" onclick="rpgSetClass('mage')"><span class="rpg-class-opt-icon"><i class="ico ico-wand-sparkles" aria-hidden="true"></i></span><div class="rpg-class-opt-name">Mago</div><div class="rpg-class-opt-meta">Definição pendente</div></div>
+                  <div class="rpg-class-opt" data-class="ranger" onclick="rpgSetClass('ranger')"><span class="rpg-class-opt-icon"><i class="ico ico-crosshair" aria-hidden="true"></i></span><div class="rpg-class-opt-name">Ranger</div><div class="rpg-class-opt-meta">Definição pendente</div></div>
                 </div>
               </div>
 
               <div class="rpg-divider"><span class="rpg-divider-rune">✦ ✦ ✦</span></div>
 
               <div class="rpg-quick-stats">
-                <div class="rpg-qs"><div class="rpg-qs-val" id="rpg-qs-livros">0</div><div class="rpg-qs-lbl">📚 Livros</div></div>
-                <div class="rpg-qs"><div class="rpg-qs-val" id="rpg-qs-cinema">0</div><div class="rpg-qs-lbl">🎬 Filmes</div></div>
-                <div class="rpg-qs"><div class="rpg-qs-val" id="rpg-qs-gym">0</div><div class="rpg-qs-lbl">🏋 Treinos</div></div>
-                <div class="rpg-qs"><div class="rpg-qs-val" id="rpg-qs-tarefas">0</div><div class="rpg-qs-lbl">✅ Tarefas</div></div>
+                <div class="rpg-qs"><div class="rpg-qs-val" id="rpg-qs-livros">0</div><div class="rpg-qs-lbl"><i class="ico ico-library" aria-hidden="true"></i> Livros</div></div>
+                <div class="rpg-qs"><div class="rpg-qs-val" id="rpg-qs-cinema">0</div><div class="rpg-qs-lbl"><i class="ico ico-clapperboard" aria-hidden="true"></i> Filmes</div></div>
+                <div class="rpg-qs"><div class="rpg-qs-val" id="rpg-qs-gym">0</div><div class="rpg-qs-lbl"><i class="ico ico-dumbbell" aria-hidden="true"></i> Treinos</div></div>
+                <div class="rpg-qs"><div class="rpg-qs-val" id="rpg-qs-tarefas">0</div><div class="rpg-qs-lbl"><i class="ico ico-circle-check" aria-hidden="true"></i> Tarefas</div></div>
               </div>
             </div>
           </div>
 
           <section class="rpg-account-panel">
             <div class="rpg-section-hd">
-              <div class="rpg-section-hd-icon">👤</div>
+              <div class="rpg-section-hd-icon"><i class="ico ico-user" aria-hidden="true"></i></div>
               <div class="rpg-section-title">Conta</div>
               <span class="rpg-section-sub">Sessão e segurança</span>
             </div>
@@ -134,7 +135,7 @@
 
           <div class="rpg-panel">
             <div class="rpg-section-hd">
-              <div class="rpg-section-hd-icon">🎯</div>
+              <div class="rpg-section-hd-icon"><i class="ico ico-target" aria-hidden="true"></i></div>
               <div class="rpg-section-title">Missões do Dia</div>
               <span class="rpg-section-sub" id="rpg-missions-sub"></span>
             </div>
@@ -143,7 +144,7 @@
 
           <div class="rpg-panel">
             <div class="rpg-section-hd">
-              <div class="rpg-section-hd-icon">🛡️</div>
+              <div class="rpg-section-hd-icon"><i class="ico ico-shield" aria-hidden="true"></i></div>
               <div class="rpg-section-title">Habilidades</div>
               <span class="rpg-section-sub" id="rpg-skills-sub"></span>
             </div>
@@ -152,7 +153,7 @@
 
           <div class="rpg-panel">
             <div class="rpg-section-hd">
-              <div class="rpg-section-hd-icon">🏆</div>
+              <div class="rpg-section-hd-icon"><i class="ico ico-trophy" aria-hidden="true"></i></div>
               <div class="rpg-section-title">Conquistas</div>
               <span class="rpg-section-sub" id="rpg-ach-sub"></span>
             </div>
@@ -161,7 +162,7 @@
 
           <div class="rpg-panel">
             <div class="rpg-section-hd">
-              <div class="rpg-section-hd-icon">📜</div>
+              <div class="rpg-section-hd-icon"><i class="ico ico-scroll-text" aria-hidden="true"></i></div>
               <div class="rpg-section-title">Log de Atividades</div>
               <span class="rpg-section-sub">Últimos eventos</span>
             </div>

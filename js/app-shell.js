@@ -40,7 +40,26 @@ window.SoterUtils = window.SoterUtils || (function () {
     return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
   }
 
-  return { esc: esc, safeUrl: safeUrl, localDateKey: localDateKey };
+  // Ícone de interface (css/icons.css): "ico-<nome>" vira <i class="ico ico-<nome>">. Emojis
+  // antigos já salvos (ex.: notificações guardadas) viram o ícone equivalente; outro texto sai escapado.
+  var LEGACY_ICONS = {
+    "\ud83d\udcda": "ico-library", "\ud83d\udcd6": "ico-book-open", "\ud83c\udfac": "ico-clapperboard",
+    "\ud83d\udcfa": "ico-tv", "\ud83d\uddbc": "ico-book-image", "\ud83d\udcaa": "ico-dumbbell",
+    "\ud83c\udfcb": "ico-dumbbell", "\ud83e\udde0": "ico-brain", "\ud83c\udf93": "ico-graduation-cap",
+    "\u2708": "ico-plane", "\ud83c\udf19": "ico-moon", "\ud83d\udccb": "ico-clipboard-list",
+    "\u2705": "ico-circle-check", "\ud83c\udf20": "ico-gift", "\ud83d\udcb0": "ico-wallet",
+    "\ud83d\udce4": "ico-arrow-up-from-line", "\u23f0": "ico-alarm-clock", "\ud83d\uddd3": "ico-calendar",
+    "\u231b": "ico-hourglass", "\ud83d\udccc": "ico-pin", "\ud83d\udd14": "ico-bell", "\u2694": "ico-swords",
+    "\u2726": "ico-sparkle", "\ud83e\udded": "ico-compass", "\ud83c\udfa8": "ico-palette",
+    "\ud83d\udd2e": "ico-wand-sparkles", "\ud83c\udff9": "ico-crosshair", "\u2728": "ico-sparkles"
+  };
+  function icon(value) {
+    var v = String(value == null ? "" : value).replace(/\ufe0f/g, "");
+    if (LEGACY_ICONS[v]) v = LEGACY_ICONS[v];
+    return /^ico-[a-z0-9-]+$/.test(v) ? '<i class="ico ' + v + '" aria-hidden="true"></i>' : esc(v);
+  }
+
+  return { esc: esc, safeUrl: safeUrl, localDateKey: localDateKey, icon: icon };
 }());
 
 (function () {
@@ -1172,7 +1191,7 @@ window.SoterUtils = window.SoterUtils || (function () {
     if (!input) return;
     isPass = input.type === 'password';
     input.type = isPass ? 'text' : 'password';
-    if (btn) btn.textContent = isPass ? '\u2600' : '\uD83C\uDF19';
+    if (btn) btn.innerHTML = isPass ? '<i class="ico ico-sun" aria-hidden="true"></i>' : '<i class="ico ico-moon" aria-hidden="true"></i>';
     authSkyState[key] = isPass ? 'day' : 'night';
     syncAuthSky();
   }
@@ -1245,7 +1264,7 @@ window.SoterUtils = window.SoterUtils || (function () {
       '            <label class="lm-label">Senha</label>',
       '            <div style="position:relative">',
       '              <input id="firebase-auth-password-input" type="password" placeholder="\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022" autocomplete="current-password" class="lm-field-inp">',
-      '              <button class="lm-eye-btn" id="firebase-auth-password-eye" type="button" title="Mostrar/ocultar senha">\uD83C\uDF19</button>',
+      '              <button class="lm-eye-btn" id="firebase-auth-password-eye" type="button" title="Mostrar/ocultar senha"><i class="ico ico-moon" aria-hidden="true"></i></button>',
       '            </div>',
       '          </div>',
       '          <label class="lm-remember-row">',
@@ -1275,7 +1294,7 @@ window.SoterUtils = window.SoterUtils || (function () {
       '            <label class="lm-label">Senha <span style="opacity:.4;font-size:8px">(m\u00edn. 6 caracteres)</span></label>',
       '            <div style="position:relative">',
       '              <input id="firebase-auth-signup-password-input" type="password" placeholder="M\u00ednimo 6 caracteres" autocomplete="new-password" class="lm-field-inp">',
-      '              <button class="lm-eye-btn" id="firebase-auth-signup-password-eye" type="button" title="Mostrar/ocultar senha">\uD83C\uDF19</button>',
+      '              <button class="lm-eye-btn" id="firebase-auth-signup-password-eye" type="button" title="Mostrar/ocultar senha"><i class="ico ico-moon" aria-hidden="true"></i></button>',
       '            </div>',
       '          </div>',
       '          <div>',
@@ -1284,7 +1303,7 @@ window.SoterUtils = window.SoterUtils || (function () {
       '            <div class="apc-field-wrap" id="apc-field-wrap">',
       '              <div style="position:relative">',
       '                <input id="firebase-auth-signup-password-confirm-input" type="password" placeholder="Repita sua senha" autocomplete="new-password" class="lm-field-inp">',
-      '                <button class="lm-eye-btn" id="firebase-auth-signup-password-confirm-eye" type="button" title="Mostrar/ocultar senha">\uD83C\uDF19</button>',
+      '                <button class="lm-eye-btn" id="firebase-auth-signup-password-confirm-eye" type="button" title="Mostrar/ocultar senha"><i class="ico ico-moon" aria-hidden="true"></i></button>',
       '              </div>',
       '            </div>',
       '          </div>',
@@ -3449,13 +3468,13 @@ window.SoterUtils = window.SoterUtils || (function () {
   ];
 
   var RPG_CLASSES = {
-    initiate: { name: "Despertando", icon: "\u2726", bonus: "Sem especializa\u00e7\u00e3o fixa", passive: "Base neutra para construir sua rota." },
-    scholar: { name: "S\u00e1bio", icon: "\uD83D\uDCDA", bonus: "Leitura, estudo e revis\u00e3o", passive: "+12% XP em Livraria, Estudo e Revis\u00e3o." },
-    warrior: { name: "Guerreiro", icon: "\u2694", bonus: "Treino e disciplina", passive: "+14% XP em Academia e +6% em Tarefas." },
-    explorer: { name: "Explorador", icon: "\uD83E\uDDED", bonus: "Expans\u00e3o de mundo", passive: "+14% XP em Viagens e +3% em Cinema." },
-    artist: { name: "Artista", icon: "\uD83C\uDFA8", bonus: "Express\u00e3o e sensibilidade", passive: "+12% XP em Sonhos e +10% em Wishlist." },
-    mage: { name: "Mago", icon: "\uD83D\uDD2E", bonus: "Mem\u00f3ria e precis\u00e3o mental", passive: "+14% XP em Revis\u00e3o e +10% em Estudo." },
-    ranger: { name: "Ranger", icon: "\uD83C\uDFF9", bonus: "Versatilidade consistente", passive: "+8% XP em Tarefas, Academia e Viagens." }
+    initiate: { name: "Despertando", icon: "ico-sparkle", bonus: "Sem especializa\u00e7\u00e3o fixa", passive: "Base neutra para construir sua rota." },
+    scholar: { name: "S\u00e1bio", icon: "ico-library", bonus: "Leitura, estudo e revis\u00e3o", passive: "+12% XP em Livraria, Estudo e Revis\u00e3o." },
+    warrior: { name: "Guerreiro", icon: "ico-swords", bonus: "Treino e disciplina", passive: "+14% XP em Academia e +6% em Tarefas." },
+    explorer: { name: "Explorador", icon: "ico-compass", bonus: "Expans\u00e3o de mundo", passive: "+14% XP em Viagens e +3% em Cinema." },
+    artist: { name: "Artista", icon: "ico-palette", bonus: "Express\u00e3o e sensibilidade", passive: "+12% XP em Sonhos e +10% em Wishlist." },
+    mage: { name: "Mago", icon: "ico-wand-sparkles", bonus: "Mem\u00f3ria e precis\u00e3o mental", passive: "+14% XP em Revis\u00e3o e +10% em Estudo." },
+    ranger: { name: "Ranger", icon: "ico-crosshair", bonus: "Versatilidade consistente", passive: "+8% XP em Tarefas, Academia e Viagens." }
   };
 
   var RPG_MISSION_XP = {
@@ -3497,7 +3516,7 @@ window.SoterUtils = window.SoterUtils || (function () {
   var RPG_SKILL_DEFS = [
     {
       id: "reading",
-      icon: "\uD83D\uDCD6",
+      icon: "ico-book-open",
       color: "#c8a96e",
       name: "Devorador de P\u00e1ginas",
       desc: "Aprimora leitura profunda e recompensa registro de qualidade.",
@@ -3509,7 +3528,7 @@ window.SoterUtils = window.SoterUtils || (function () {
     },
     {
       id: "cinema",
-      icon: "\uD83C\uDFAC",
+      icon: "ico-clapperboard",
       color: "#e8864a",
       name: "Olhos de Lince",
       desc: "Transforma curadoria audiovisual em progresso mais valioso.",
@@ -3521,7 +3540,7 @@ window.SoterUtils = window.SoterUtils || (function () {
     },
     {
       id: "fitness",
-      icon: "\uD83D\uDCAA",
+      icon: "ico-dumbbell",
       color: "#e06b8b",
       name: "Corpo de Ferro",
       desc: "Premia const\u00e2ncia real nos treinos programados.",
@@ -3533,7 +3552,7 @@ window.SoterUtils = window.SoterUtils || (function () {
     },
     {
       id: "study",
-      icon: "\uD83E\uDDE0",
+      icon: "ico-brain",
       color: "#4ab0e8",
       name: "Mente Afiada",
       desc: "Aumenta reten\u00e7\u00e3o, revis\u00e3o e horas de estudo de alto valor.",
@@ -3548,7 +3567,7 @@ window.SoterUtils = window.SoterUtils || (function () {
     },
     {
       id: "travel",
-      icon: "\u2708\uFE0F",
+      icon: "ico-plane",
       color: "#5ec4a8",
       name: "Passaporte Dourado",
       desc: "D\u00e1 mais peso a destinos realmente conclu\u00eddos e vividos.",
@@ -3560,7 +3579,7 @@ window.SoterUtils = window.SoterUtils || (function () {
     },
     {
       id: "dreams",
-      icon: "\uD83C\uDF19",
+      icon: "ico-moon",
       color: "#7c6fcd",
       name: "Arquiteto dos Sonhos",
       desc: "Valoriza planos densos, reflex\u00e3o e sonhos concretizados.",
@@ -3574,7 +3593,7 @@ window.SoterUtils = window.SoterUtils || (function () {
     },
     {
       id: "planning",
-      icon: "\uD83D\uDCCB",
+      icon: "ico-clipboard-list",
       color: "#5ec4a8",
       name: "Estrategista",
       desc: "Converte organiza\u00e7\u00e3o e execu\u00e7\u00e3o limpa em vantagem real.",
@@ -3586,7 +3605,7 @@ window.SoterUtils = window.SoterUtils || (function () {
     },
     {
       id: "manga",
-      icon: "\uD83D\uDCDA",
+      icon: "ico-library",
       color: "#e06b8b",
       name: "Esp\u00edrito Otaku",
       desc: "Valoriza cad\u00eancia, conclus\u00e3o e curadoria de mang\u00e1s.",
@@ -4435,14 +4454,14 @@ window.SoterUtils = window.SoterUtils || (function () {
       notifications.unshift(createNotification(
         DREAM_NOTIF_PREFIX + "overdue",
         "Sonhos: " + dreamCounts.overdue + " prazo" + (dreamCounts.overdue === 1 ? " venceu." : "s venceram."),
-        { icon: "\uD83C\uDF19", label: "Sonhos", tone: "danger", cycle: today, href: "sonhos.html" }
+        { icon: "ico-moon", label: "Sonhos", tone: "danger", cycle: today, href: "sonhos.html" }
       ));
     }
     if (dreamCounts.soon > 0) {
       notifications.unshift(createNotification(
         DREAM_NOTIF_PREFIX + "soon",
         "Sonhos: " + dreamCounts.soon + " prazo" + (dreamCounts.soon === 1 ? " est\u00e1 pr\u00f3ximo." : "s est\u00e3o pr\u00f3ximos."),
-        { icon: "\uD83C\uDF19", label: "Sonhos", tone: "dream", cycle: today, href: "sonhos.html" }
+        { icon: "ico-moon", label: "Sonhos", tone: "dream", cycle: today, href: "sonhos.html" }
       ));
     }
 
@@ -4450,14 +4469,14 @@ window.SoterUtils = window.SoterUtils || (function () {
       notifications.unshift(createNotification(
         TRAVEL_NOTIF_PREFIX + "overdue",
         "Viagens: " + travelCounts.overdue + " data" + (travelCounts.overdue === 1 ? " passou sem conclus\u00e3o." : "s passaram sem conclus\u00e3o."),
-        { icon: "\u2708\uFE0F", label: "Viagens", tone: "danger", cycle: today, href: "viagens.html" }
+        { icon: "ico-plane", label: "Viagens", tone: "danger", cycle: today, href: "viagens.html" }
       ));
     }
     if (travelCounts.soon > 0) {
       notifications.unshift(createNotification(
         TRAVEL_NOTIF_PREFIX + "soon",
         "Viagens: " + travelCounts.soon + " data" + (travelCounts.soon === 1 ? " est\u00e1 pr\u00f3xima." : "s est\u00e3o pr\u00f3ximas."),
-        { icon: "\u2708\uFE0F", label: "Viagens", tone: "travel", cycle: today, href: "viagens.html" }
+        { icon: "ico-plane", label: "Viagens", tone: "travel", cycle: today, href: "viagens.html" }
       ));
     }
 
@@ -4465,14 +4484,14 @@ window.SoterUtils = window.SoterUtils || (function () {
       notifications.unshift(createNotification(
         FINANCE_NOTIF_PREFIX + "debit-out",
         "Finan\u00e7as: " + financeCounts.dueOut + " sa\u00edda" + (financeCounts.dueOut === 1 ? " agendada foi debitada hoje." : "s agendadas foram debitadas hoje."),
-        { icon: "\uD83D\uDCE4", label: "Finan\u00e7as", tone: "money", cycle: today, href: "financas.html" }
+        { icon: "ico-arrow-up-from-line", label: "Finan\u00e7as", tone: "money", cycle: today, href: "financas.html" }
       ));
     }
     if (financeCounts.dueIn > 0) {
       notifications.unshift(createNotification(
         FINANCE_NOTIF_PREFIX + "debit-in",
         "Finan\u00e7as: " + financeCounts.dueIn + " entrada" + (financeCounts.dueIn === 1 ? " agendada caiu hoje." : "s agendadas ca\u00edram hoje."),
-        { icon: "\uD83D\uDCB0", label: "Finan\u00e7as", tone: "money", cycle: today, href: "financas.html" }
+        { icon: "ico-wallet", label: "Finan\u00e7as", tone: "money", cycle: today, href: "financas.html" }
       ));
     }
 
@@ -4480,28 +4499,28 @@ window.SoterUtils = window.SoterUtils || (function () {
       notifications.unshift(createNotification(
         TASK_NOTIF_PREFIX + "overdue",
         "Planejamento: " + tasksOverdueCount + " tarefa" + (tasksOverdueCount === 1 ? " est\u00e1 vencida." : "s est\u00e3o vencidas."),
-        { icon: "\u23F0", label: "Planejamento", tone: "danger", cycle: today, href: "tarefas.html" }
+        { icon: "ico-alarm-clock", label: "Planejamento", tone: "danger", cycle: today, href: "tarefas.html" }
       ));
     }
     if (tasksTodayCount > 0) {
       notifications.unshift(createNotification(
         TASK_NOTIF_PREFIX + "today",
         "Planejamento: " + tasksTodayCount + " tarefa" + (tasksTodayCount === 1 ? " \u00e9 para hoje." : "s s\u00e3o para hoje."),
-        { icon: "\uD83D\uDDD3\uFE0F", label: "Planejamento", tone: "plan", cycle: today, href: "tarefas.html" }
+        { icon: "ico-calendar", label: "Planejamento", tone: "plan", cycle: today, href: "tarefas.html" }
       ));
     }
     if (tasksSoonCount > 0) {
       notifications.unshift(createNotification(
         TASK_NOTIF_PREFIX + "soon",
         "Planejamento: " + tasksSoonCount + " prazo" + (tasksSoonCount === 1 ? " est\u00e1 chegando." : "s est\u00e3o chegando."),
-        { icon: "\u231B", label: "Planejamento", tone: "warn", cycle: today, href: "tarefas.html" }
+        { icon: "ico-hourglass", label: "Planejamento", tone: "warn", cycle: today, href: "tarefas.html" }
       ));
     }
     if (tasksWithoutDateCount > 0) {
       notifications.unshift(createNotification(
         TASK_NOTIF_PREFIX + "nodate",
         "Planejamento: " + tasksWithoutDateCount + " tarefa" + (tasksWithoutDateCount === 1 ? " segue sem data." : "s seguem sem data."),
-        { icon: "\uD83D\uDCCC", label: "Planejamento", tone: "plan", cycle: today, href: "tarefas.html" }
+        { icon: "ico-pin", label: "Planejamento", tone: "plan", cycle: today, href: "tarefas.html" }
       ));
     }
 
@@ -4513,7 +4532,7 @@ window.SoterUtils = window.SoterUtils || (function () {
       notifications.unshift(createNotification(
         GYM_NOTIF_ID,
         "Academia: h\u00e1 treino previsto para hoje.",
-        { icon: "\uD83C\uDFCB\uFE0F", label: "Academia", tone: "gym", cycle: today, href: "academia.html" }
+        { icon: "ico-dumbbell", label: "Academia", tone: "gym", cycle: today, href: "academia.html" }
       ));
     }());
 
@@ -4782,7 +4801,7 @@ window.SoterUtils = window.SoterUtils || (function () {
       notifications.unshift(createNotification(
         REVIEW_DUE_NOTIF_ID,
         "Revis\u00e3o: h\u00e1 " + reviewDueCount + " card" + (reviewDueCount === 1 ? "" : "s") + " para revisar hoje.",
-        { icon: "\uD83E\uDDE0", label: "Revis\u00e3o", tone: "study", cycle: getNotificationCycleDate(), href: "revisao.html" }
+        { icon: "ico-brain", label: "Revis\u00e3o", tone: "study", cycle: getNotificationCycleDate(), href: "revisao.html" }
       ));
     }
 
@@ -5519,12 +5538,12 @@ window.SoterUtils = window.SoterUtils || (function () {
     var breakdown = getRpgBreakdown(state);
     var total = breakdown.total;
     return [
-      { icon: "\uD83E\uDDE0", label: "Intelecto", val: scaleTo100(breakdown.livros * 0.5 + breakdown.estudos * 0.65 + breakdown.revisao * 0.55 + breakdown.mangas * 0.18 + breakdown.cinema * 0.12, 1250), color: "#c8a96e" },
-      { icon: "\uD83D\uDCAA", label: "Forca", val: scaleTo100(breakdown.treinos * 1.05 + breakdown.tarefas * 0.1, 980), color: "#e06b8b" },
-      { icon: "\uD83E\uDDED", label: "Sabedoria", val: scaleTo100(breakdown.sonhos * 0.72 + breakdown.financas * 0.82 + breakdown.estudos * 0.24 + breakdown.revisao * 0.2 + breakdown.wishlist * 0.28, 1180), color: "#4ab0e8" },
-      { icon: "\u26A1", label: "Disciplina", val: scaleTo100(breakdown.tarefas * 0.58 + breakdown.treinos * 0.18 + breakdown.estudos * 0.14 + breakdown.revisao * 0.24 + breakdown.financas * 0.35, 1180), color: "#5ec4a8" },
-      { icon: "\uD83C\uDF0D", label: "Exploracao", val: scaleTo100(breakdown.viagens * 1 + breakdown.cinema * 0.22 + breakdown.mangas * 0.08, 780), color: "#7c6fcd" },
-      { icon: "\u2728", label: "Prestigio", val: scaleTo100(total, 7600), color: "#e8864a" }
+      { icon: "ico-brain", label: "Intelecto", val: scaleTo100(breakdown.livros * 0.5 + breakdown.estudos * 0.65 + breakdown.revisao * 0.55 + breakdown.mangas * 0.18 + breakdown.cinema * 0.12, 1250), color: "#c8a96e" },
+      { icon: "ico-dumbbell", label: "Forca", val: scaleTo100(breakdown.treinos * 1.05 + breakdown.tarefas * 0.1, 980), color: "#e06b8b" },
+      { icon: "ico-compass", label: "Sabedoria", val: scaleTo100(breakdown.sonhos * 0.72 + breakdown.financas * 0.82 + breakdown.estudos * 0.24 + breakdown.revisao * 0.2 + breakdown.wishlist * 0.28, 1180), color: "#4ab0e8" },
+      { icon: "ico-zap", label: "Disciplina", val: scaleTo100(breakdown.tarefas * 0.58 + breakdown.treinos * 0.18 + breakdown.estudos * 0.14 + breakdown.revisao * 0.24 + breakdown.financas * 0.35, 1180), color: "#5ec4a8" },
+      { icon: "ico-globe", label: "Exploracao", val: scaleTo100(breakdown.viagens * 1 + breakdown.cinema * 0.22 + breakdown.mangas * 0.08, 780), color: "#7c6fcd" },
+      { icon: "ico-sparkles", label: "Prestigio", val: scaleTo100(total, 7600), color: "#e8864a" }
     ];
   }
 
@@ -5534,47 +5553,47 @@ window.SoterUtils = window.SoterUtils || (function () {
     var gymStats = getGymCompletionStats(state);
     var reviewStats = getReviewStats(state);
     getLivros(state).filter(function (item) { return getLivroPagesRead(item) > 0; }).slice(-3).forEach(function (item) {
-      entries.push({ icon: "\uD83D\uDCD6", text: 'Leitura registrada: "' + (item.titulo || item.title || "Livro") + '"', xp: calcLivroXp(item), t: item.updatedAt || item.id || now });
+      entries.push({ icon: "ico-book-open", text: 'Leitura registrada: "' + (item.titulo || item.title || "Livro") + '"', xp: calcLivroXp(item), t: item.updatedAt || item.id || now });
     });
     getCinema(state).filter(function (item) { return calcCinemaXp(item) > 0; }).slice(-3).forEach(function (item) {
-      entries.push({ icon: "\uD83C\uDFAC", text: 'Tela atualizada: "' + (item.titulo || item.title || "Titulo") + '"', xp: calcCinemaXp(item), t: item.updatedAt || item.id || now });
+      entries.push({ icon: "ico-clapperboard", text: 'Tela atualizada: "' + (item.titulo || item.title || "Titulo") + '"', xp: calcCinemaXp(item), t: item.updatedAt || item.id || now });
     });
     getMangas(state).filter(function (item) { return getMangaChaptersRead(item) > 0; }).slice(-3).forEach(function (item) {
-      entries.push({ icon: "\uD83D\uDDBC", text: 'Manga atualizado: "' + (item.titulo || item.title || "Manga") + '"', xp: calcMangaXp(item), t: item.updatedAt || item.id || now });
+      entries.push({ icon: "ico-book-image", text: 'Manga atualizado: "' + (item.titulo || item.title || "Manga") + '"', xp: calcMangaXp(item), t: item.updatedAt || item.id || now });
     });
     if (gymStats.completedTrainingDays > 0) {
       entries.push({
-        icon: "\uD83D\uDCAA",
+        icon: "ico-dumbbell",
         text: "Academia em rota: " + gymStats.completedTrainingDays + " dia(s) de treino conclu\u00eddos e sequ\u00eancia de " + gymStats.streak + ".",
         xp: calcGymXp(state),
         t: now
       });
     }
     getEstudos(state).slice(-3).forEach(function (item) {
-      entries.push({ icon: "\uD83C\uDF93", text: "Estudo registrado" + (item.materia ? " - " + item.materia : ""), xp: calcEstudoXp(item), t: item.updatedAt || item.id || now });
+      entries.push({ icon: "ico-graduation-cap", text: "Estudo registrado" + (item.materia ? " - " + item.materia : ""), xp: calcEstudoXp(item), t: item.updatedAt || item.id || now });
     });
     if (reviewStats.totalCards > 0) {
       entries.push({
-        icon: "\uD83E\uDDE0",
+        icon: "ico-brain",
         text: "Revis\u00e3o ativa: " + reviewStats.totalCards + " cards revistos em " + reviewStats.activeDays + " dia(s).",
         xp: calcReviewXp(state),
         t: now - 1
       });
     }
     getTasks(state).filter(isDoneTask).slice(-3).forEach(function (item) {
-      entries.push({ icon: "\u2705", text: 'Tarefa concluida: "' + (item.nome || "Tarefa") + '"', xp: calcTaskXp(item, getTasks(state)), t: item.doneAt || item.updatedAt || item.id || now });
+      entries.push({ icon: "ico-circle-check", text: 'Tarefa concluida: "' + (item.nome || "Tarefa") + '"', xp: calcTaskXp(item, getTasks(state)), t: item.doneAt || item.updatedAt || item.id || now });
     });
     getSonhos(state).slice(-2).forEach(function (item) {
-      entries.push({ icon: "\uD83C\uDF19", text: 'Sonho revisado: "' + (item.titulo || "Sonho") + '"', xp: calcDreamXp(item), t: item.updatedAt || item.id || now });
+      entries.push({ icon: "ico-moon", text: 'Sonho revisado: "' + (item.titulo || "Sonho") + '"', xp: calcDreamXp(item), t: item.updatedAt || item.id || now });
     });
     getViagens(state).filter(isVisitedViagem).slice(-2).forEach(function (item) {
-      entries.push({ icon: "\u2708\uFE0F", text: "Destino concluido: " + (item.dest || item.destino || "Viagem"), xp: calcViagemXp(item), t: item.updatedAt || item.id || now });
+      entries.push({ icon: "ico-plane", text: "Destino concluido: " + (item.dest || item.destino || "Viagem"), xp: calcViagemXp(item), t: item.updatedAt || item.id || now });
     });
     getFinanceTxs(state).slice(-2).forEach(function (item) {
-      entries.push({ icon: "\uD83D\uDCB0", text: "Movimento financeiro registrado", xp: RPG_XP.financaTx + (item.type === "save" ? RPG_XP.financaSave : 0), t: item.updatedAt || item.id || now });
+      entries.push({ icon: "ico-wallet", text: "Movimento financeiro registrado", xp: RPG_XP.financaTx + (item.type === "save" ? RPG_XP.financaSave : 0), t: item.updatedAt || item.id || now });
     });
     getWishlistHistory(state).slice(-2).forEach(function (item) {
-      entries.push({ icon: "\uD83C\uDF20", text: 'Wishlist avan\u00e7ou: "' + (item.name || "Item") + '"', xp: RPG_XP.wishlistAquisicao, t: item.acquiredAt || item.id || now });
+      entries.push({ icon: "ico-gift", text: 'Wishlist avan\u00e7ou: "' + (item.name || "Item") + '"', xp: RPG_XP.wishlistAquisicao, t: item.acquiredAt || item.id || now });
     });
     return entries.sort(function (a, b) { return b.t - a.t; }).slice(0, 12);
   }
@@ -5592,14 +5611,14 @@ window.SoterUtils = window.SoterUtils || (function () {
   function getDailyMissionsForState(state) {
     var today = getRpgDailyCycleDate();
     var pool = [
-      { id: "m_leitura", icon: "\uD83D\uDCDA", name: "Sess\u00e3o de Leitura", desc: "Abra a Livraria e registre progresso real.", xp: RPG_MISSION_XP.m_leitura, color: "#c8a96e" },
-      { id: "m_treino", icon: "\uD83D\uDCAA", name: "Treino do Dia", desc: "Complete o treino previsto na Academia.", xp: RPG_MISSION_XP.m_treino, color: "#e06b8b" },
-      { id: "m_tarefa", icon: "\u2705", name: "Conclua uma Tarefa", desc: "Feche ao menos uma tarefa do planejamento.", xp: RPG_MISSION_XP.m_tarefa, color: "#5ec4a8" },
-      { id: "m_estudo", icon: "\uD83E\uDDE0", name: "Hora de Estudo", desc: "Registre estudo ou revis\u00e3o consistente.", xp: RPG_MISSION_XP.m_estudo, color: "#4ab0e8" },
-      { id: "m_sonho", icon: "\uD83C\uDF19", name: "Registro de Sonho", desc: "Avance em um sonho com plano, nota ou meta.", xp: RPG_MISSION_XP.m_sonho, color: "#7c6fcd" },
-      { id: "m_cinema", icon: "\uD83C\uDFAC", name: "Sess\u00e3o de Cinema", desc: "Atualize filme, s\u00e9rie ou epis\u00f3dio assistido.", xp: RPG_MISSION_XP.m_cinema, color: "#e8864a" },
-      { id: "m_manga", icon: "\uD83D\uDCDA", name: "Cap\u00edtulo de Mang\u00e1", desc: "Atualize seu progresso de mang\u00e1.", xp: RPG_MISSION_XP.m_manga, color: "#e06b8b" },
-      { id: "m_wishlist", icon: "\uD83C\uDF20", name: "Atualizar Wishlist", desc: "Detalhe ou revise um item da wishlist.", xp: RPG_MISSION_XP.m_wishlist, color: "#7c6fcd" }
+      { id: "m_leitura", icon: "ico-library", name: "Sess\u00e3o de Leitura", desc: "Abra a Livraria e registre progresso real.", xp: RPG_MISSION_XP.m_leitura, color: "#c8a96e" },
+      { id: "m_treino", icon: "ico-dumbbell", name: "Treino do Dia", desc: "Complete o treino previsto na Academia.", xp: RPG_MISSION_XP.m_treino, color: "#e06b8b" },
+      { id: "m_tarefa", icon: "ico-circle-check", name: "Conclua uma Tarefa", desc: "Feche ao menos uma tarefa do planejamento.", xp: RPG_MISSION_XP.m_tarefa, color: "#5ec4a8" },
+      { id: "m_estudo", icon: "ico-brain", name: "Hora de Estudo", desc: "Registre estudo ou revis\u00e3o consistente.", xp: RPG_MISSION_XP.m_estudo, color: "#4ab0e8" },
+      { id: "m_sonho", icon: "ico-moon", name: "Registro de Sonho", desc: "Avance em um sonho com plano, nota ou meta.", xp: RPG_MISSION_XP.m_sonho, color: "#7c6fcd" },
+      { id: "m_cinema", icon: "ico-clapperboard", name: "Sess\u00e3o de Cinema", desc: "Atualize filme, s\u00e9rie ou epis\u00f3dio assistido.", xp: RPG_MISSION_XP.m_cinema, color: "#e8864a" },
+      { id: "m_manga", icon: "ico-library", name: "Cap\u00edtulo de Mang\u00e1", desc: "Atualize seu progresso de mang\u00e1.", xp: RPG_MISSION_XP.m_manga, color: "#e06b8b" },
+      { id: "m_wishlist", icon: "ico-gift", name: "Atualizar Wishlist", desc: "Detalhe ou revise um item da wishlist.", xp: RPG_MISSION_XP.m_wishlist, color: "#7c6fcd" }
     ];
     var seed = parseInt(String(today).replace(/-/g, ""), 10) % pool.length;
     return [0, 1, 2, 3].map(function (offset) {
@@ -6225,7 +6244,7 @@ window.SoterUtils = window.SoterUtils || (function () {
       '  <nav class="header-nav" id="header-nav">',
       '    <div style="flex:1"></div>',
       '    <div class="hn-dropdown" id="dd-pessoal">',
-      '      <button class="hn-dropdown-trigger" type="button" tabindex="0" aria-expanded="false">Pessoal <span class="hn-chevron">\u25be</span></button>',
+      '      <button class="hn-dropdown-trigger" type="button" tabindex="0" aria-expanded="false">Pessoal <span class="hn-chevron"><i class="ico ico-chevron-down" aria-hidden="true"></i></span></button>',
       '      <div class="hn-menu">',
       '        <a class="hn-menu-item" data-page="sonhos" href="sonhos.html">Sonhos</a>',
       '        <a class="hn-menu-item" data-page="viagens" href="viagens.html">Viagens</a>',
@@ -6236,13 +6255,13 @@ window.SoterUtils = window.SoterUtils || (function () {
       '      </div>',
       '    </div>',
       '    <div class="hn-dropdown" id="dd-estudos">',
-      '      <button class="hn-dropdown-trigger" type="button" tabindex="0" aria-expanded="false">Estudos <span class="hn-chevron">\u25be</span></button>',
+      '      <button class="hn-dropdown-trigger" type="button" tabindex="0" aria-expanded="false">Estudos <span class="hn-chevron"><i class="ico ico-chevron-down" aria-hidden="true"></i></span></button>',
       '      <div class="hn-menu">',
       '        <a class="hn-menu-item" data-page="revisao" href="revisao.html">Revis\u00e3o</a>',
       '      </div>',
       '    </div>',
       '    <div class="hn-dropdown" id="dd-biblioteca">',
-      '      <button class="hn-dropdown-trigger" type="button" tabindex="0" aria-expanded="false">Biblioteca <span class="hn-chevron">\u25be</span></button>',
+      '      <button class="hn-dropdown-trigger" type="button" tabindex="0" aria-expanded="false">Biblioteca <span class="hn-chevron"><i class="ico ico-chevron-down" aria-hidden="true"></i></span></button>',
       '      <div class="hn-menu">',
       '        <a class="hn-menu-item" data-page="livros" href="livros.html">Livraria</a>',
       '        <a class="hn-menu-item" data-page="cinema" href="cinema.html">Cinema</a>',
@@ -6250,7 +6269,7 @@ window.SoterUtils = window.SoterUtils || (function () {
       '      </div>',
       '    </div>',
       '    <div class="hn-dropdown" id="dd-livro">',
-      '      <button class="hn-dropdown-trigger" type="button" tabindex="0" aria-expanded="false">Livro <span class="hn-chevron">\u25be</span></button>',
+      '      <button class="hn-dropdown-trigger" type="button" tabindex="0" aria-expanded="false">Livro <span class="hn-chevron"><i class="ico ico-chevron-down" aria-hidden="true"></i></span></button>',
       '      <div class="hn-menu">',
       '        <a class="hn-menu-item" data-page="projetos" href="projetos.html">Projetos</a>',
       '      </div>',
@@ -6258,7 +6277,7 @@ window.SoterUtils = window.SoterUtils || (function () {
       '  </nav>',
       '  <div class="header-desktop-actions">',
       '  <div class="hn-dropdown hn-notif" id="dd-notif">',
-      '    <button class="hn-dropdown-trigger hn-notif-trigger" type="button" tabindex="0" aria-label="Notifica\u00e7\u00f5es" aria-expanded="false">\ud83d\udd14 <span class="hn-notif-badge" id="notif-count">0</span></button>',
+      '    <button class="hn-dropdown-trigger hn-notif-trigger" type="button" tabindex="0" aria-label="Notifica\u00e7\u00f5es" aria-expanded="false"><i class="ico ico-bell" aria-hidden="true"></i> <span class="hn-notif-badge" id="notif-count">0</span></button>',
       '    <div class="hn-menu hn-notif-menu">',
       '      <div class="hn-notif-head"><span>Notifica\u00e7\u00f5es</span><button type="button" class="hn-notif-clear" id="notif-clear-btn">Limpar</button></div>',
       '      <div class="hn-notif-list" id="notif-list"></div>',
@@ -6283,7 +6302,7 @@ window.SoterUtils = window.SoterUtils || (function () {
       '          <div class="profile-xp-bar"><div class="profile-xp-fill" id="header-xp-fill" style="width:0%"></div></div>',
       '        </div>',
       '      </div>',
-      '      <span class="profile-chevron">\u25be</span>',
+      '      <span class="profile-chevron"><i class="ico ico-chevron-down" aria-hidden="true"></i></span>',
       '    </button>',
       '    <div class="profile-menu" id="profile-menu">',
       '      <div class="pm-header">',
@@ -6437,7 +6456,7 @@ window.SoterUtils = window.SoterUtils || (function () {
           '<div class="hn-notif-group-head"><span>' + escapeHtml(groupName) + '</span><span>' + items.length + '</span></div>' +
           items.map(function (notification) {
             return '<div class="hn-notif-item tone-' + escapeHtml(notification.tone) + '" data-notif-href="' + escapeHtml(notification.href) + '" tabindex="0" role="button" aria-label="' + escapeHtml(notification.label + ": " + notification.text) + '">' +
-              '<div class="hn-notif-icon" aria-hidden="true">' + escapeHtml(notification.icon) + '</div>' +
+              '<div class="hn-notif-icon" aria-hidden="true">' + window.SoterUtils.icon(notification.icon) + '</div>' +
               '<div class="hn-notif-copy"><div class="hn-notif-label-row"><div class="hn-notif-label">' + escapeHtml(notification.label) + '</div><span class="hn-notif-chip tone-' + escapeHtml(notification.tone) + '">' + escapeHtml(getNotificationTonePillLabel(notification)) + '</span></div><span class="hn-notif-text">' + escapeHtml(notification.text) + '</span><span class="hn-notif-linkhint">Abrir</span></div>' +
               '<button type="button" class="hn-notif-remove" data-notif-id="' + escapeHtml(notification.id) + '" aria-label="Remover notifica\u00e7\u00e3o">\u00d7</button></div>';
           }).join("") +
@@ -6686,6 +6705,15 @@ window.SoterUtils = window.SoterUtils || (function () {
     "…": "Mais opções", "⠇": "Mais opções", "⠿": "Mover",
     "🗑": "Excluir", "🗑️": "Excluir", "⭐": "Favorito"
   };
+  // botões só com ícone (<i class="ico ico-x">): nome pelo ícone quando não há title
+  var A11Y_ICON_LABELS = {
+    "x": "Fechar", "pencil": "Editar", "trash-2": "Excluir", "plus": "Adicionar",
+    "chevron-left": "Anterior", "chevron-right": "Próximo", "arrow-left": "Voltar", "arrow-right": "Avançar",
+    "menu": "Menu", "ellipsis": "Mais opções", "grip-vertical": "Mover", "settings": "Configurações",
+    "search": "Buscar", "heart": "Favorito", "heart-fill": "Favorito", "star": "Favorito",
+    "check": "Concluir", "save": "Salvar", "link": "Link", "image": "Imagem", "upload": "Enviar",
+    "download": "Baixar", "rotate-ccw": "Desfazer", "rotate-cw": "Refazer", "maximize-2": "Expandir"
+  };
   var a11yFieldSeq = 0;
 
   function a11yHasText(text) {
@@ -6699,7 +6727,13 @@ window.SoterUtils = window.SoterUtils || (function () {
     if (el.querySelector && el.querySelector("img[alt]:not([alt=''])")) return;
     var title = String(el.getAttribute("title") || "").trim();
     var star = el.getAttribute("data-v") || el.getAttribute("data-value");
-    var label = title || (/^[★☆]$/.test(text) && star ? star + (star === "1" ? " estrela" : " estrelas") : A11Y_GLYPH_LABELS[text]);
+    var starIcon = !text && el.querySelector && el.querySelector(".ico-star, .ico-star-fill");
+    var label = title || ((/^[★☆]$/.test(text) || starIcon) && star ? star + (star === "1" ? " estrela" : " estrelas") : A11Y_GLYPH_LABELS[text]);
+    if (!label && !text && el.querySelector) {
+      var ico = el.querySelector(".ico");
+      var m = ico && /(?:^|\s)ico-([a-z0-9-]+)/.exec(ico.className);
+      if (m) label = A11Y_ICON_LABELS[m[1]];
+    }
     if (label) el.setAttribute("aria-label", label);
   }
 
@@ -7320,7 +7354,8 @@ window.createLiquidBar = function (canvas, opts) {
     active = true;
     resize();
     raf = requestAnimationFrame(tick);
-    window.addEventListener('resize', resize);
+    // mudar o tamanho do canvas apaga o desenho: redesenha mesmo com a animação parada
+    window.addEventListener('resize', function () { resize(); lastDraw = 0; resume(); });
     document.addEventListener('visibilitychange', resume);
     if (window.IntersectionObserver) {
       new IntersectionObserver(function (entries) {

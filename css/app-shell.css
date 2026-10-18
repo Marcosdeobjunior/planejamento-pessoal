@@ -383,7 +383,7 @@ body.mobile-drawer-open {
 }
 
 .hn-chevron {
-  font-size: 8px;
+  font-size: 11px;
   opacity: 0.5;
   transition: transform 0.22s ease, opacity 0.2s;
   display: inline-block;
@@ -1021,7 +1021,8 @@ body.mobile-drawer-open {
 }
 
 .profile-chevron {
-  font-size: 8px;
+  font-size: 11px;
+  line-height: 1;
   color: var(--muted);
   transition: transform 0.22s ease;
   margin-left: 2px;
@@ -1398,7 +1399,12 @@ body.mobile-drawer-open {
 
   .header-desktop-actions .hn-notif-trigger {
     min-width: 42px;
-    padding: 0 10px;
+    padding: 0 20px 0 8px; /* espaço à direita para o contador não cobrir o sino */
+  }
+
+  .header-desktop-actions .hn-notif-badge {
+    top: 8px;
+    right: 0;
   }
 
   .header-mobile-toggle {
@@ -1854,6 +1860,7 @@ body.mobile-drawer-open {
   transition: background .2s;
   line-height: 1;
   font-size: 16px;
+  color: rgba(255,255,255,.72);
 }
 
 .lm-eye-btn:hover {

@@ -287,13 +287,14 @@ function toggleMobileNav() {
   const btn = document.getElementById('hamburger-btn');
   const open = nav.classList.toggle('open');
   overlay.classList.toggle('open', open);
-  btn.textContent = open ? '✕' : '☰';
+  if (btn) btn.innerHTML = open ? '<i class="ico ico-x" aria-hidden="true"></i>' : '<i class="ico ico-menu" aria-hidden="true"></i>';
 }
 
 function closeMobileNav() {
   document.getElementById('mobile-nav').classList.remove('open');
   document.getElementById('overlay').classList.remove('open');
-  document.getElementById('hamburger-btn').textContent = '☰';
+  const btn = document.getElementById('hamburger-btn');
+  if (btn) btn.innerHTML = '<i class="ico ico-menu" aria-hidden="true"></i>';
 }
 
 function updateGoalDisplay(prefix, done, target) {
@@ -605,7 +606,17 @@ function updateCinemaTypeFields() {
 
 function updateFavToggle(cb) {
   const icon = cb.nextElementSibling;
-  if (icon) icon.textContent = cb.checked ? '❤️' : '🤍';
+  if (icon) icon.innerHTML = libFavIcon(cb.checked);
+}
+
+// ícone de favorito (coração vazio/preenchido) e estrelas de nota como ícones
+function libFavIcon(on) {
+  return on ? '<i class="ico ico-heart-fill" aria-hidden="true"></i>' : '<i class="ico ico-heart" aria-hidden="true"></i>';
+}
+
+function libStars(n, total) {
+  const v = Math.max(0, Math.min(5, parseInt(n, 10) || 0));
+  return '<i class="ico ico-star-fill" aria-hidden="true"></i>'.repeat(v) + '<i class="ico ico-star" aria-hidden="true"></i>'.repeat(Math.max(0, (total || 0) - v));
 }
 
 function closeModal() { document.getElementById('tracker-modal').classList.remove('open'); }
@@ -650,7 +661,7 @@ function applyImgUrl() {
 function setModalStar(n) {
   modalStarVal = n;
   document.querySelectorAll('.mstar').forEach(b => b.classList.toggle('on', +b.dataset.v <= n));
-  const labels = ['','★ Fraco','★★ Regular','★★★ Bom','★★★★ Ótimo','★★★★★ Incrível!'];
+  const labels = ['','Fraco','Regular','Bom','Ótimo','Incrível!'];
   document.getElementById('modal-star-label').textContent = labels[n]||'Sem nota';
 }
 
@@ -1280,7 +1291,7 @@ function renderModalRelated(tracker, currentItem) {
   else label.textContent='Do mesmo autor';
   const cfg=TRACKER_CFG[tracker];
   scroll.innerHTML=related.map(({item})=>{
-    const stars=item.nota?'★'.repeat(item.nota):'';
+    const stars=item.nota?libStars(item.nota):'';
     const statusColor=cfg.statusColors[item.status]||'#858099';
     const thumb=item.img?`<img loading="lazy" decoding="async" src="${escUrl(item.img)}" alt="${esc(item.titulo)}">`:`<span style="font-size:24px;opacity:.5">${cfg.icon}</span>`;
     return `<div class="rel-card" onclick="openModal('${tracker}',${escJs(item.id)})" title="${esc(item.titulo)}">
