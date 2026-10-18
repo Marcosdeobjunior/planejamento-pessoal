@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://apis.google.com https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://unpkg.com; font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.google.com https://nominatim.openstreetmap.org https://api.open-meteo.com https://geocoding-api.open-meteo.com; frame-src https://*.firebaseapp.com https://www.google.com https://recaptcha.google.com https://www.youtube.com https://player.vimeo.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://apis.google.com https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://unpkg.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.google.com https://nominatim.openstreetmap.org https://api.open-meteo.com https://geocoding-api.open-meteo.com; frame-src https://*.firebaseapp.com https://www.google.com https://recaptcha.google.com https://www.youtube.com https://player.vimeo.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#04040c">
   <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
@@ -12,6 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/icons.css">
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/app-shell.css">
   <link rel="stylesheet" href="css/wishlist.css">
@@ -200,7 +201,7 @@
     <div class="ws-md">
       <div class="ws-mdh">
         <h3 class="ws-mdt" id="mo-title">Novo Item</h3>
-        <button class="ws-mdc" id="mo-close" type="button">&#10005;</button>
+        <button class="ws-mdc" id="mo-close" type="button" aria-label="Fechar"><i class="ico ico-x" aria-hidden="true"></i></button>
       </div>
       <form id="wform" autocomplete="off">
         <div class="ws-fr">
@@ -211,21 +212,21 @@
           <div class="ws-fg">
             <label class="ws-fl">Categoria</label>
             <select class="ws-fs" id="f-cat">
-              <option value="Tecnologia">&#128187; Tecnologia</option>
-              <option value="Roupas">&#128087; Roupas / Moda</option>
-              <option value="Livros">&#128218; Livros</option>
-              <option value="Games">&#127918; Games</option>
-              <option value="Casa">&#127968; Casa / Decoracao</option>
-              <option value="Esporte">&#9917; Esporte / Saude</option>
-              <option value="Outros">&#10024; Outros</option>
+              <option value="Tecnologia">Tecnologia</option>
+              <option value="Roupas">Roupas / Moda</option>
+              <option value="Livros">Livros</option>
+              <option value="Games">Games</option>
+              <option value="Casa">Casa / Decoracao</option>
+              <option value="Esporte">Esporte / Saude</option>
+              <option value="Outros">Outros</option>
             </select>
           </div>
           <div class="ws-fg">
             <label class="ws-fl">Prioridade</label>
             <select class="ws-fs" id="f-prio">
-              <option value="alta">&#128308; Alta</option>
-              <option value="media" selected>&#128993; Media</option>
-              <option value="baixa">&#128994; Baixa</option>
+              <option value="alta">Alta</option>
+              <option value="media" selected>Media</option>
+              <option value="baixa">Baixa</option>
             </select>
           </div>
         </div>
@@ -261,7 +262,7 @@
         </div>
         <div class="ws-list-modal-actions">
           <button class="ws-btn ws-btn-g" id="ws-list-modal-edit" type="button">Editar Lista</button>
-          <button class="ws-mdc" id="ws-list-modal-close" type="button">&#10005;</button>
+          <button class="ws-mdc" id="ws-list-modal-close" type="button" aria-label="Fechar"><i class="ico ico-x" aria-hidden="true"></i></button>
         </div>
       </div>
       <div class="ws-list-modal-grid" id="ws-list-modal-grid"></div>
@@ -272,7 +273,7 @@
     <div class="ws-md ws-list-edit-md">
       <div class="ws-mdh">
         <h3 class="ws-mdt" id="ws-list-edit-title">Nova Lista</h3>
-        <button class="ws-mdc" id="ws-list-edit-close" type="button">&#10005;</button>
+        <button class="ws-mdc" id="ws-list-edit-close" type="button" aria-label="Fechar"><i class="ico ico-x" aria-hidden="true"></i></button>
       </div>
       <form id="ws-list-form" autocomplete="off">
         <div class="ws-fr">

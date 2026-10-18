@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://apis.google.com https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://unpkg.com; font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.google.com https://nominatim.openstreetmap.org https://api.open-meteo.com https://geocoding-api.open-meteo.com; frame-src https://*.firebaseapp.com https://www.google.com https://recaptcha.google.com https://www.youtube.com https://player.vimeo.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://apis.google.com https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://unpkg.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.google.com https://nominatim.openstreetmap.org https://api.open-meteo.com https://geocoding-api.open-meteo.com; frame-src https://*.firebaseapp.com https://www.google.com https://recaptcha.google.com https://www.youtube.com https://player.vimeo.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#04040c">
   <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
@@ -12,6 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/icons.css">
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/app-shell.css">
   <link rel="stylesheet" href="css/biblioteca-tracker.css">
@@ -31,15 +32,15 @@
 <!-- MOBILE NAV -->
 <div class="mobile-nav" id="mobile-nav">
   <div class="mobile-nav-label">Biblioteca</div>
-  <button class="nav-tab" onclick="goTo('livros');closeMobileNav()">📚 Livraria</button>
-  <button class="nav-tab" onclick="goTo('cinema');closeMobileNav()">🎬 Cinema</button>
-  <button class="nav-tab" onclick="goTo('mangas');closeMobileNav()">📖 Mangás</button>
+  <button class="nav-tab" onclick="goTo('livros');closeMobileNav()"><i class="ico ico-library" aria-hidden="true"></i> Livraria</button>
+  <button class="nav-tab" onclick="goTo('cinema');closeMobileNav()"><i class="ico ico-clapperboard" aria-hidden="true"></i> Cinema</button>
+  <button class="nav-tab" onclick="goTo('mangas');closeMobileNav()"><i class="ico ico-book-open" aria-hidden="true"></i> Mangás</button>
 </div>
 
 <!-- MODAL -->
 <div class="modal-backdrop" id="tracker-modal" onclick="closeModalOutside(event)">
   <div class="modal">
-    <button class="modal-close" onclick="closeModal()" title="Fechar" aria-label="Fechar modal">✕</button>
+    <button class="modal-close" onclick="closeModal()" title="Fechar" aria-label="Fechar modal"><i class="ico ico-x" aria-hidden="true"></i></button>
 
     <div class="modal-hero">
       <div class="modal-hero-blur" id="modal-hero-blur"></div>
@@ -55,11 +56,11 @@
         <div class="img-upload-zone" id="img-zone" onclick="document.getElementById('modal-img-input').click()">
           <img id="modal-preview" src="" alt="preview">
           <div class="upload-hint">
-            <span class="uh-icon">🖼️</span>
+            <span class="uh-icon"><i class="ico ico-image" aria-hidden="true"></i></span>
             <span class="uh-text">Clique para<br>enviar capa</span>
             <span class="uh-sub">JPG · PNG · WebP</span>
           </div>
-          <div class="img-change-btn">✎ trocar</div>
+          <div class="img-change-btn"><i class="ico ico-pencil" aria-hidden="true"></i> trocar</div>
         </div>
         <input type="file" id="modal-img-input" accept="image/*" onchange="handleImgUpload(event)">
         <div class="img-url-row">
@@ -68,7 +69,7 @@
         </div>
         <label class="fav-toggle">
           <input type="checkbox" id="m-fav" onchange="updateFavToggle(this)">
-          <span class="fav-icon">🤍</span>
+          <span class="fav-icon"><i class="ico ico-heart" aria-hidden="true"></i></span>
           <span>Favorito</span>
         </label>
       </div>
@@ -102,7 +103,7 @@
           <div class="form-row" style="margin-bottom:10px">
             <label class="fav-toggle" style="width:100%;justify-content:flex-start" for="m-saga-enabled">
               <input type="checkbox" id="m-saga-enabled" onchange="toggleModalSagaFields()">
-              <span class="fav-icon">🔗</span>
+              <span class="fav-icon"><i class="ico ico-link" aria-hidden="true"></i></span>
               <span id="m-saga-toggle-label">Vincular este título a uma saga</span>
             </label>
           </div>
@@ -162,11 +163,11 @@
         <div class="mlabel">Avaliação</div>
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
           <div class="modal-stars" id="modal-stars">
-            <button class="mstar" data-v="1" onclick="setModalStar(1)">★</button>
-            <button class="mstar" data-v="2" onclick="setModalStar(2)">★</button>
-            <button class="mstar" data-v="3" onclick="setModalStar(3)">★</button>
-            <button class="mstar" data-v="4" onclick="setModalStar(4)">★</button>
-            <button class="mstar" data-v="5" onclick="setModalStar(5)">★</button>
+            <button class="mstar" data-v="1" onclick="setModalStar(1)"><i class="ico ico-star-fill" aria-hidden="true"></i></button>
+            <button class="mstar" data-v="2" onclick="setModalStar(2)"><i class="ico ico-star-fill" aria-hidden="true"></i></button>
+            <button class="mstar" data-v="3" onclick="setModalStar(3)"><i class="ico ico-star-fill" aria-hidden="true"></i></button>
+            <button class="mstar" data-v="4" onclick="setModalStar(4)"><i class="ico ico-star-fill" aria-hidden="true"></i></button>
+            <button class="mstar" data-v="5" onclick="setModalStar(5)"><i class="ico ico-star-fill" aria-hidden="true"></i></button>
           </div>
           <span id="modal-star-label" style="font-size:10px;color:var(--muted);font-family:var(--font-mono)">Sem nota</span>
         </div>
@@ -185,9 +186,9 @@
 
     <div class="modal-footer">
       <div class="modal-actions">
-        <button class="btn btn-primary btn-save" onclick="saveModalItem()">✓ &nbsp;Salvar</button>
+        <button class="btn btn-primary btn-save" onclick="saveModalItem()"><i class="ico ico-check" aria-hidden="true"></i> &nbsp;Salvar</button>
         <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
-        <button class="btn btn-danger" id="modal-del-btn" onclick="modalDeleteItem()">🗑</button>
+        <button class="btn btn-danger" id="modal-del-btn" onclick="modalDeleteItem()" title="Excluir" aria-label="Excluir"><i class="ico ico-trash-2" aria-hidden="true"></i></button>
       </div>
     </div>
   </div>
@@ -203,14 +204,14 @@
     <div class="hub-accent-bar"></div>
 
     <div class="hub-nav">
-      <button class="hub-back-btn" onclick="thClose()">← Voltar</button>
+      <button class="hub-back-btn" onclick="thClose()"><i class="ico ico-arrow-left" aria-hidden="true"></i> Voltar</button>
       <div class="hub-nav-actions">
-        <button class="hub-nav-btn edit" onclick="thDrawerOpen()">✎ Editar</button>
+        <button class="hub-nav-btn edit" onclick="thDrawerOpen()"><i class="ico ico-pencil" aria-hidden="true"></i> Editar</button>
       </div>
     </div>
 
     <div class="hub-hero-content">
-      <div class="hub-icon-bubble" id="th-icon">📚</div>
+      <div class="hub-icon-bubble" id="th-icon"><i class="ico ico-library" aria-hidden="true"></i></div>
       <div class="hub-title-block">
         <div class="hub-cat-badge" id="th-badge">Livro</div>
         <div class="hub-title" id="th-title">Título</div>
@@ -223,21 +224,21 @@
   <div id="th-drawer">
     <div class="hd-stripe"></div>
     <div class="hd-head">
-      <div class="hd-head-icon" id="th-drawer-icon">✦</div>
+      <div class="hd-head-icon" id="th-drawer-icon"><i class="ico ico-library" aria-hidden="true"></i></div>
       <div class="hd-head-info">
         <div class="hd-head-title" id="th-drawer-title">Editar</div>
         <div class="hd-head-sub">Alterações salvas ao clicar em salvar</div>
       </div>
-      <button class="hd-close-btn" onclick="thDrawerClose()" aria-label="Fechar painel">✕</button>
+      <button class="hd-close-btn" onclick="thDrawerClose()" aria-label="Fechar painel"><i class="ico ico-x" aria-hidden="true"></i></button>
     </div>
     <div class="hd-body">
       <div class="hd-cover-zone" id="th-cover-zone" onclick="document.getElementById('th-img-input').click()">
         <img class="hd-cover-img" id="th-cover-img" src="" alt="">
         <div class="hd-cover-hint">
-          <div class="hd-cover-hint-icon">🖼️</div>
+          <div class="hd-cover-hint-icon"><i class="ico ico-image" aria-hidden="true"></i></div>
           <div class="hd-cover-hint-txt">Trocar imagem de capa</div>
         </div>
-        <button class="hd-cover-remove" id="th-cover-remove" onclick="event.stopPropagation();thDrawerRemoveImg()" title="Remover">✕</button>
+        <button class="hd-cover-remove" id="th-cover-remove" onclick="event.stopPropagation();thDrawerRemoveImg()" title="Remover" aria-label="Remover capa"><i class="ico ico-x" aria-hidden="true"></i></button>
       </div>
       <input type="file" id="th-img-input" accept="image/*" style="display:none" onchange="thDrawerHandleImg(event)">
 
@@ -266,7 +267,7 @@
           <div class="hd-field">
             <label class="fav-toggle" style="width:100%;justify-content:flex-start" for="th-saga-enabled">
               <input type="checkbox" id="th-saga-enabled" onchange="toggleDrawerSagaFields()">
-              <span class="fav-icon">🔗</span>
+              <span class="fav-icon"><i class="ico ico-link" aria-hidden="true"></i></span>
               <span id="th-saga-toggle-label">Título faz parte de uma saga</span>
             </label>
           </div>
@@ -308,11 +309,11 @@
         <div class="hd-field">
           <div class="hd-field-lbl">Sua nota</div>
           <div class="th-stars" id="th-stars-edit">
-            <span class="th-star" onclick="thSetStar(1)">★</span>
-            <span class="th-star" onclick="thSetStar(2)">★</span>
-            <span class="th-star" onclick="thSetStar(3)">★</span>
-            <span class="th-star" onclick="thSetStar(4)">★</span>
-            <span class="th-star" onclick="thSetStar(5)">★</span>
+            <span class="th-star" data-v="1" onclick="thSetStar(1)"><i class="ico ico-star-fill" aria-hidden="true"></i></span>
+            <span class="th-star" data-v="2" onclick="thSetStar(2)"><i class="ico ico-star-fill" aria-hidden="true"></i></span>
+            <span class="th-star" data-v="3" onclick="thSetStar(3)"><i class="ico ico-star-fill" aria-hidden="true"></i></span>
+            <span class="th-star" data-v="4" onclick="thSetStar(4)"><i class="ico ico-star-fill" aria-hidden="true"></i></span>
+            <span class="th-star" data-v="5" onclick="thSetStar(5)"><i class="ico ico-star-fill" aria-hidden="true"></i></span>
           </div>
         </div>
       </div>
@@ -326,10 +327,10 @@
     </div>
 
     <div class="hd-footer">
-      <button class="hd-save-btn" onclick="thDrawerSalvar()">✓ Salvar alterações</button>
+      <button class="hd-save-btn" onclick="thDrawerSalvar()"><i class="ico ico-check" aria-hidden="true"></i> Salvar alterações</button>
       <div class="hd-footer-row">
         <button class="hd-cancel-btn" onclick="thDrawerClose()">Cancelar</button>
-        <button class="hd-del-btn" onclick="thDeleteItem()">🗑 Excluir</button>
+        <button class="hd-del-btn" onclick="thDeleteItem()"><i class="ico ico-trash-2" aria-hidden="true"></i> Excluir</button>
       </div>
     </div>
   </div>
@@ -338,7 +339,7 @@
     <div>
       <div class="hub-section" id="th-obs-section">
         <div class="hub-section-hd">
-          <div class="hub-section-hd-icon">✦</div>
+          <div class="hub-section-hd-icon"><i class="ico ico-notebook-pen" aria-hidden="true"></i></div>
           <span class="hub-section-label">Observações</span>
         </div>
         <div id="th-obs-display"></div>
@@ -346,7 +347,7 @@
 
       <div class="hub-section" id="th-related-section" style="display:none">
         <div class="hub-section-hd">
-          <div class="hub-section-hd-icon">◈</div>
+          <div class="hub-section-hd-icon"><i class="ico ico-layers" aria-hidden="true"></i></div>
           <span class="hub-section-label">Também na sua coleção</span>
         </div>
         <div class="related-scroll" id="th-related-scroll"></div>
@@ -354,7 +355,7 @@
 
       <div class="hub-section" id="th-adapt-section" style="display:none">
         <div class="hub-section-hd">
-          <div class="hub-section-hd-icon">⇄</div>
+          <div class="hub-section-hd-icon"><i class="ico ico-arrow-left-right" aria-hidden="true"></i></div>
           <span class="hub-section-label">Origem & adaptações</span>
         </div>
         <div class="adapt-grid" id="th-adapt-grid"></div>
@@ -364,7 +365,7 @@
     <div>
       <div class="hub-section">
         <div class="hub-section-hd">
-          <div class="hub-section-hd-icon">★</div>
+          <div class="hub-section-hd-icon"><i class="ico ico-star" aria-hidden="true"></i></div>
           <span class="hub-section-label">Avaliação</span>
         </div>
         <div class="th-stars" id="th-stars-display" style="margin-bottom:10px"></div>
@@ -373,7 +374,7 @@
 
       <div class="hub-section" id="th-sidebar-prog" style="display:none">
         <div class="hub-section-hd">
-          <div class="hub-section-hd-icon">◎</div>
+          <div class="hub-section-hd-icon"><i class="ico ico-gauge" aria-hidden="true"></i></div>
           <span class="hub-section-label" id="th-sidebar-prog-lbl">Progresso</span>
         </div>
         <div class="th-progress-section">
@@ -398,7 +399,7 @@
 
       <div class="hub-section">
         <div class="hub-section-hd">
-          <div class="hub-section-hd-icon">▸</div>
+          <div class="hub-section-hd-icon"><i class="ico ico-circle-play" aria-hidden="true"></i></div>
           <span class="hub-section-label">Status</span>
         </div>
         <div id="th-status-display"></div>
@@ -406,7 +407,7 @@
 
       <div class="hub-section hub-abandon-card" id="th-abandon-card">
         <div class="hub-section-hd">
-          <div class="hub-section-hd-icon">⚠</div>
+          <div class="hub-section-hd-icon"><i class="ico ico-triangle-alert" aria-hidden="true"></i></div>
           <span class="hub-section-label">Ante-abandono</span>
         </div>
         <div class="hub-abandon-top">
@@ -419,14 +420,14 @@
 
       <div class="hub-section">
         <button class="th-fav-btn" id="th-fav-btn" onclick="thToggleFav()">
-          <span id="th-fav-icon">🤍</span>
+          <span id="th-fav-icon"><i class="ico ico-heart" aria-hidden="true"></i></span>
           <span id="th-fav-lbl">Adicionar aos favoritos</span>
         </button>
       </div>
 
       <div class="hub-section" id="th-timeline-section">
         <div class="hub-section-hd">
-          <div class="hub-section-hd-icon">⏺</div>
+          <div class="hub-section-hd-icon"><i class="ico ico-clock" aria-hidden="true"></i></div>
           <span class="hub-section-label">Timeline</span>
         </div>
         <div class="hub-timeline" id="th-timeline"></div>
@@ -434,7 +435,7 @@
 
       <div class="hub-section" id="th-history-section">
         <div class="hub-section-hd">
-          <div class="hub-section-hd-icon">▤</div>
+          <div class="hub-section-hd-icon"><i class="ico ico-list" aria-hidden="true"></i></div>
           <span class="hub-section-label">Histórico de progresso</span>
         </div>
         <div class="hub-history-list" id="th-history"></div>
@@ -573,10 +574,10 @@
           <div style="font-size:14px;font-weight:700">Todos os livros</div>
           <div class="tracker-count" id="lv-count-label"></div>
         </div>
-        <div style="display:flex;gap:8px">
-          <input class="inp" id="lv-search" placeholder="🔍 Buscar…" style="min-width:150px;flex:unset" oninput="renderTracker('livros')">
+        <div class="lib-toolbar" style="display:flex;gap:8px">
+          <input class="inp" id="lv-search" placeholder="Buscar…" style="min-width:150px;flex:unset" oninput="renderTracker('livros')">
           <div class="filter-wrap" id="lv-filter-wrap">
-            <button class="btn-filter" id="lv-filter-btn" onclick="toggleFilterPanel('livros')">⚙ Filtros <span class="filter-badge" id="lv-filter-badge">0</span></button>
+            <button class="btn-filter" id="lv-filter-btn" onclick="toggleFilterPanel('livros')"><i class="ico ico-sliders-horizontal" aria-hidden="true"></i> Filtros <span class="filter-badge" id="lv-filter-badge">0</span></button>
             <div class="filter-panel" id="lv-filter-panel">
               <div class="filter-layout">
                 <div class="filter-col filter-col-left">
@@ -591,16 +592,16 @@
                   </div>
                   <div class="filter-section-title">Avaliação mínima</div>
                   <div class="filter-chips" id="lv-chips-nota">
-                    <button class="filter-chip" data-filter="nota" data-val="1" onclick="toggleFilterChip('livros',this)">★ 1+</button>
-                    <button class="filter-chip" data-filter="nota" data-val="2" onclick="toggleFilterChip('livros',this)">★ 2+</button>
-                    <button class="filter-chip" data-filter="nota" data-val="3" onclick="toggleFilterChip('livros',this)">★ 3+</button>
-                    <button class="filter-chip" data-filter="nota" data-val="4" onclick="toggleFilterChip('livros',this)">★ 4+</button>
-                    <button class="filter-chip" data-filter="nota" data-val="5" onclick="toggleFilterChip('livros',this)">★ 5</button>
+                    <button class="filter-chip" data-filter="nota" data-val="1" onclick="toggleFilterChip('livros',this)"><i class="ico ico-star-fill" aria-hidden="true"></i> 1+</button>
+                    <button class="filter-chip" data-filter="nota" data-val="2" onclick="toggleFilterChip('livros',this)"><i class="ico ico-star-fill" aria-hidden="true"></i> 2+</button>
+                    <button class="filter-chip" data-filter="nota" data-val="3" onclick="toggleFilterChip('livros',this)"><i class="ico ico-star-fill" aria-hidden="true"></i> 3+</button>
+                    <button class="filter-chip" data-filter="nota" data-val="4" onclick="toggleFilterChip('livros',this)"><i class="ico ico-star-fill" aria-hidden="true"></i> 4+</button>
+                    <button class="filter-chip" data-filter="nota" data-val="5" onclick="toggleFilterChip('livros',this)"><i class="ico ico-star-fill" aria-hidden="true"></i> 5</button>
                   </div>
                   <div class="filter-section-title">Outros</div>
                   <div class="filter-chips">
-                    <button class="filter-chip" data-filter="fav" data-val="true" onclick="toggleFilterChip('livros',this)">⭐ Favoritos</button>
-                    <button class="filter-chip" data-filter="comImg" data-val="true" onclick="toggleFilterChip('livros',this)">🖼 Com capa</button>
+                    <button class="filter-chip" data-filter="fav" data-val="true" onclick="toggleFilterChip('livros',this)"><i class="ico ico-heart" aria-hidden="true"></i> Favoritos</button>
+                    <button class="filter-chip" data-filter="comImg" data-val="true" onclick="toggleFilterChip('livros',this)"><i class="ico ico-image" aria-hidden="true"></i> Com capa</button>
                   </div>
                 </div>
                 <div class="filter-col filter-col-right">
@@ -623,12 +624,12 @@
               </div>
               <div class="filter-divider"></div>
               <div class="filter-actions">
-                <button class="btn btn-primary" onclick="applyFilters('livros')">✓ Aplicar</button>
-                <button class="btn btn-ghost" onclick="clearFilters('livros')">✕ Limpar</button>
+                <button class="btn btn-primary" onclick="applyFilters('livros')"><i class="ico ico-check" aria-hidden="true"></i> Aplicar</button>
+                <button class="btn btn-ghost" onclick="clearFilters('livros')"><i class="ico ico-x" aria-hidden="true"></i> Limpar</button>
               </div>
             </div>
           </div>
-          <button class="btn btn-primary" onclick="openModal('livros')">+ Adicionar</button>
+          <button class="btn btn-primary" onclick="openModal('livros')"><i class="ico ico-plus" aria-hidden="true"></i> Adicionar</button>
         </div>
       </div>
       <div class="quick-tabs" id="lv-quick-tabs"></div>
@@ -636,7 +637,7 @@
         <div class="filter-chips" id="lv-genre-chips"></div>
       </div>
       <div class="tracker-tabs" id="livros-tabs"></div>
-      <div class="tracker-grid" id="livros-grid"><div class="empty"><div class="empty-icon">📚</div>Adicione seu primeiro livro!</div></div>
+      <div class="tracker-grid" id="livros-grid"><div class="empty"><div class="empty-icon"><i class="ico ico-library" aria-hidden="true"></i></div>Adicione seu primeiro livro!</div></div>
     </div>
   </section>
 
@@ -673,10 +674,10 @@
           <div style="font-size:14px;font-weight:700">Minha lista</div>
           <div class="tracker-count" id="ci-count-label"></div>
         </div>
-        <div style="display:flex;gap:8px">
-          <input class="inp" id="ci-search" placeholder="🔍 Buscar…" style="min-width:150px;flex:unset" oninput="renderTracker('cinema')">
+        <div class="lib-toolbar" style="display:flex;gap:8px">
+          <input class="inp" id="ci-search" placeholder="Buscar…" style="min-width:150px;flex:unset" oninput="renderTracker('cinema')">
           <div class="filter-wrap" id="ci-filter-wrap">
-            <button class="btn-filter" id="ci-filter-btn" onclick="toggleFilterPanel('cinema')">⚙ Filtros <span class="filter-badge" id="ci-filter-badge">0</span></button>
+            <button class="btn-filter" id="ci-filter-btn" onclick="toggleFilterPanel('cinema')"><i class="ico ico-sliders-horizontal" aria-hidden="true"></i> Filtros <span class="filter-badge" id="ci-filter-badge">0</span></button>
             <div class="filter-panel" id="ci-filter-panel">
               <div class="filter-layout">
                 <div class="filter-col filter-col-left">
@@ -696,16 +697,16 @@
                   </div>
                   <div class="filter-section-title">Avaliação mínima</div>
                   <div class="filter-chips">
-                    <button class="filter-chip" data-filter="nota" data-val="1" onclick="toggleFilterChip('cinema',this)">★ 1+</button>
-                    <button class="filter-chip" data-filter="nota" data-val="2" onclick="toggleFilterChip('cinema',this)">★ 2+</button>
-                    <button class="filter-chip" data-filter="nota" data-val="3" onclick="toggleFilterChip('cinema',this)">★ 3+</button>
-                    <button class="filter-chip" data-filter="nota" data-val="4" onclick="toggleFilterChip('cinema',this)">★ 4+</button>
-                    <button class="filter-chip" data-filter="nota" data-val="5" onclick="toggleFilterChip('cinema',this)">★ 5</button>
+                    <button class="filter-chip" data-filter="nota" data-val="1" onclick="toggleFilterChip('cinema',this)"><i class="ico ico-star-fill" aria-hidden="true"></i> 1+</button>
+                    <button class="filter-chip" data-filter="nota" data-val="2" onclick="toggleFilterChip('cinema',this)"><i class="ico ico-star-fill" aria-hidden="true"></i> 2+</button>
+                    <button class="filter-chip" data-filter="nota" data-val="3" onclick="toggleFilterChip('cinema',this)"><i class="ico ico-star-fill" aria-hidden="true"></i> 3+</button>
+                    <button class="filter-chip" data-filter="nota" data-val="4" onclick="toggleFilterChip('cinema',this)"><i class="ico ico-star-fill" aria-hidden="true"></i> 4+</button>
+                    <button class="filter-chip" data-filter="nota" data-val="5" onclick="toggleFilterChip('cinema',this)"><i class="ico ico-star-fill" aria-hidden="true"></i> 5</button>
                   </div>
                   <div class="filter-section-title">Outros</div>
                   <div class="filter-chips">
-                    <button class="filter-chip" data-filter="fav" data-val="true" onclick="toggleFilterChip('cinema',this)">⭐ Favoritos</button>
-                    <button class="filter-chip" data-filter="comImg" data-val="true" onclick="toggleFilterChip('cinema',this)">🖼 Com capa</button>
+                    <button class="filter-chip" data-filter="fav" data-val="true" onclick="toggleFilterChip('cinema',this)"><i class="ico ico-heart" aria-hidden="true"></i> Favoritos</button>
+                    <button class="filter-chip" data-filter="comImg" data-val="true" onclick="toggleFilterChip('cinema',this)"><i class="ico ico-image" aria-hidden="true"></i> Com capa</button>
                   </div>
                 </div>
                 <div class="filter-col filter-col-right">
@@ -728,12 +729,12 @@
               </div>
               <div class="filter-divider"></div>
               <div class="filter-actions">
-                <button class="btn btn-primary" onclick="applyFilters('cinema')">✓ Aplicar</button>
-                <button class="btn btn-ghost" onclick="clearFilters('cinema')">✕ Limpar</button>
+                <button class="btn btn-primary" onclick="applyFilters('cinema')"><i class="ico ico-check" aria-hidden="true"></i> Aplicar</button>
+                <button class="btn btn-ghost" onclick="clearFilters('cinema')"><i class="ico ico-x" aria-hidden="true"></i> Limpar</button>
               </div>
             </div>
           </div>
-          <button class="btn btn-primary" onclick="openModal('cinema')">+ Adicionar</button>
+          <button class="btn btn-primary" onclick="openModal('cinema')"><i class="ico ico-plus" aria-hidden="true"></i> Adicionar</button>
         </div>
       </div>
       <div class="quick-tabs" id="ci-quick-tabs"></div>
@@ -741,7 +742,7 @@
         <div class="filter-chips" id="ci-genre-chips"></div>
       </div>
       <div class="tracker-tabs" id="cinema-tabs"></div>
-      <div class="tracker-grid" id="cinema-grid"><div class="empty"><div class="empty-icon">🎬</div>Adicione um filme ou série!</div></div>
+      <div class="tracker-grid" id="cinema-grid"><div class="empty"><div class="empty-icon"><i class="ico ico-clapperboard" aria-hidden="true"></i></div>Adicione um filme ou série!</div></div>
     </div>
   </section>
 
@@ -778,10 +779,10 @@
           <div style="font-size:14px;font-weight:700">Minha coleção</div>
           <div class="tracker-count" id="mg-count-label"></div>
         </div>
-        <div style="display:flex;gap:8px">
-          <input class="inp" id="mg-search" placeholder="🔍 Buscar…" style="min-width:150px;flex:unset" oninput="renderTracker('mangas')">
+        <div class="lib-toolbar" style="display:flex;gap:8px">
+          <input class="inp" id="mg-search" placeholder="Buscar…" style="min-width:150px;flex:unset" oninput="renderTracker('mangas')">
           <div class="filter-wrap" id="mg-filter-wrap">
-            <button class="btn-filter" id="mg-filter-btn" onclick="toggleFilterPanel('mangas')">⚙ Filtros <span class="filter-badge" id="mg-filter-badge">0</span></button>
+            <button class="btn-filter" id="mg-filter-btn" onclick="toggleFilterPanel('mangas')"><i class="ico ico-sliders-horizontal" aria-hidden="true"></i> Filtros <span class="filter-badge" id="mg-filter-badge">0</span></button>
             <div class="filter-panel" id="mg-filter-panel">
               <div class="filter-layout">
                 <div class="filter-col filter-col-left">
@@ -796,16 +797,16 @@
                   </div>
                   <div class="filter-section-title">Avaliação mínima</div>
                   <div class="filter-chips">
-                    <button class="filter-chip" data-filter="nota" data-val="1" onclick="toggleFilterChip('mangas',this)">★ 1+</button>
-                    <button class="filter-chip" data-filter="nota" data-val="2" onclick="toggleFilterChip('mangas',this)">★ 2+</button>
-                    <button class="filter-chip" data-filter="nota" data-val="3" onclick="toggleFilterChip('mangas',this)">★ 3+</button>
-                    <button class="filter-chip" data-filter="nota" data-val="4" onclick="toggleFilterChip('mangas',this)">★ 4+</button>
-                    <button class="filter-chip" data-filter="nota" data-val="5" onclick="toggleFilterChip('mangas',this)">★ 5</button>
+                    <button class="filter-chip" data-filter="nota" data-val="1" onclick="toggleFilterChip('mangas',this)"><i class="ico ico-star-fill" aria-hidden="true"></i> 1+</button>
+                    <button class="filter-chip" data-filter="nota" data-val="2" onclick="toggleFilterChip('mangas',this)"><i class="ico ico-star-fill" aria-hidden="true"></i> 2+</button>
+                    <button class="filter-chip" data-filter="nota" data-val="3" onclick="toggleFilterChip('mangas',this)"><i class="ico ico-star-fill" aria-hidden="true"></i> 3+</button>
+                    <button class="filter-chip" data-filter="nota" data-val="4" onclick="toggleFilterChip('mangas',this)"><i class="ico ico-star-fill" aria-hidden="true"></i> 4+</button>
+                    <button class="filter-chip" data-filter="nota" data-val="5" onclick="toggleFilterChip('mangas',this)"><i class="ico ico-star-fill" aria-hidden="true"></i> 5</button>
                   </div>
                   <div class="filter-section-title">Outros</div>
                   <div class="filter-chips">
-                    <button class="filter-chip" data-filter="fav" data-val="true" onclick="toggleFilterChip('mangas',this)">⭐ Favoritos</button>
-                    <button class="filter-chip" data-filter="comImg" data-val="true" onclick="toggleFilterChip('mangas',this)">🖼 Com capa</button>
+                    <button class="filter-chip" data-filter="fav" data-val="true" onclick="toggleFilterChip('mangas',this)"><i class="ico ico-heart" aria-hidden="true"></i> Favoritos</button>
+                    <button class="filter-chip" data-filter="comImg" data-val="true" onclick="toggleFilterChip('mangas',this)"><i class="ico ico-image" aria-hidden="true"></i> Com capa</button>
                   </div>
                 </div>
                 <div class="filter-col filter-col-right">
@@ -828,12 +829,12 @@
               </div>
               <div class="filter-divider"></div>
               <div class="filter-actions">
-                <button class="btn btn-primary" onclick="applyFilters('mangas')">✓ Aplicar</button>
-                <button class="btn btn-ghost" onclick="clearFilters('mangas')">✕ Limpar</button>
+                <button class="btn btn-primary" onclick="applyFilters('mangas')"><i class="ico ico-check" aria-hidden="true"></i> Aplicar</button>
+                <button class="btn btn-ghost" onclick="clearFilters('mangas')"><i class="ico ico-x" aria-hidden="true"></i> Limpar</button>
               </div>
             </div>
           </div>
-          <button class="btn btn-primary" onclick="openModal('mangas')">+ Adicionar</button>
+          <button class="btn btn-primary" onclick="openModal('mangas')"><i class="ico ico-plus" aria-hidden="true"></i> Adicionar</button>
         </div>
       </div>
       <div class="quick-tabs" id="mg-quick-tabs"></div>
@@ -841,7 +842,7 @@
         <div class="filter-chips" id="mg-genre-chips"></div>
       </div>
       <div class="tracker-tabs" id="mangas-tabs"></div>
-      <div class="tracker-grid" id="mangas-grid"><div class="empty"><div class="empty-icon">📖</div>Adicione seu primeiro mangá!</div></div>
+      <div class="tracker-grid" id="mangas-grid"><div class="empty"><div class="empty-icon"><i class="ico ico-book-open" aria-hidden="true"></i></div>Adicione seu primeiro mangá!</div></div>
     </div>
   </section>
 
@@ -953,7 +954,7 @@ function getCollectionGroups(tracker, items) {
 // ─── TRACKER CONFIG ───────────────────────────────────────────────────────
 const TRACKER_CFG = {
   livros: {
-    key: 'livros', icon: '📚', emptyMsg: 'Adicione seu primeiro livro!',
+    key: 'livros', icon: '<i class="ico ico-library" aria-hidden="true"></i>', emptyMsg: 'Adicione seu primeiro livro!',
     statusOpts: ['lendo','relendo','concluido','quero','pausado','abandonado'],
     statusLabels: { lendo:'Lendo', relendo:'Relendo', concluido:'Concluído', quero:'Quero ler', pausado:'Pausado', abandonado:'Abandonado' },
     statusColors: { lendo:'#c8a96e', relendo:'#f0bf6b', concluido:'#5ec4a8', quero:'#7c6fcd', pausado:'#858099', abandonado:'#d66d6d' },
@@ -962,7 +963,7 @@ const TRACKER_CFG = {
     progressLabel: (item) => item.paginas ? `Pág. ${item.atual||0}/${item.paginas}` : null,
   },
   cinema: {
-    key: 'cinema', icon: '🎬', emptyMsg: 'Adicione um filme ou série!',
+    key: 'cinema', icon: '<i class="ico ico-clapperboard" aria-hidden="true"></i>', emptyMsg: 'Adicione um filme ou série!',
     statusOpts: ['assistindo','reassistindo','concluido','quero','pausado','abandonado'],
     statusLabels: { assistindo:'Assistindo', reassistindo:'Reassistindo', concluido:'Concluído', quero:'Quero ver', pausado:'Pausado', abandonado:'Abandonado' },
     statusColors: { assistindo:'#e8864a', reassistindo:'#f0bf6b', concluido:'#5ec4a8', quero:'#4ab0e8', pausado:'#858099', abandonado:'#d66d6d' },
@@ -991,7 +992,7 @@ const TRACKER_CFG = {
     },
   },
   mangas: {
-    key: 'mangas', icon: '📖', emptyMsg: 'Adicione seu primeiro mangá!',
+    key: 'mangas', icon: '<i class="ico ico-book-open" aria-hidden="true"></i>', emptyMsg: 'Adicione seu primeiro mangá!',
     statusOpts: ['lendo','relendo','concluido','pausado','quero','abandonado'],
     statusLabels: { lendo:'Lendo', relendo:'Relendo', concluido:'Concluído', pausado:'Pausado', quero:'Quero ler', abandonado:'Abandonado' },
     statusColors: { lendo:'#e06b8b', relendo:'#f0bf6b', concluido:'#5ec4a8', pausado:'#858099', quero:'#7c6fcd', abandonado:'#d66d6d' },
@@ -1158,7 +1159,7 @@ function openModal(tracker, editId = null) {
   const imgUrlInput = document.getElementById('m-img-url');
   if (imgUrlInput) imgUrlInput.value = '';
   document.getElementById('m-fav').checked = false;
-  document.querySelector('.fav-toggle .fav-icon').textContent = '🤍';
+  document.querySelector('.fav-toggle .fav-icon').innerHTML = libFavIcon(false);
   resetModalStars(); updateModalProgress(); updateModalHeroImage('');
 
   const heroBadge = document.getElementById('modal-hero-badge');
@@ -1185,7 +1186,7 @@ function openModal(tracker, editId = null) {
       document.getElementById('m-genero').value = item.genero||'';
       document.getElementById('m-obs').value    = item.obs||'';
       document.getElementById('m-status').value = item.status||cfg.statusOpts[0];
-      if (item.fav) { document.getElementById('m-fav').checked=true; document.querySelector('.fav-toggle .fav-icon').textContent='❤️'; }
+      if (item.fav) { document.getElementById('m-fav').checked=true; document.querySelector('.fav-toggle .fav-icon').innerHTML=libFavIcon(true); }
       if (item.nota) setModalStar(item.nota);
       if (tracker==='livros') { document.getElementById('m-paginas').value=item.paginas||''; document.getElementById('m-atual-pag').value=item.atual||''; }
       if (tracker==='cinema') {
@@ -1318,12 +1319,12 @@ function thRender(item, cfg) {
   else { heroImg.src = ''; hero.classList.remove('has-img'); }
 
   const badgeEl = document.getElementById('th-badge');
-  const typeLabel = cfg.key==='livros'?'📚 Livro': cfg.key==='cinema'?'🎬 Cinema':'📖 Mangá';
-  badgeEl.textContent = typeLabel;
+  const typeLabel = cfg.key==='livros'?'Livro': cfg.key==='cinema'?'Cinema':'Mangá';
+  badgeEl.innerHTML = cfg.icon + ' ' + esc(typeLabel);
   badgeEl.style.color = statusColor;
   badgeEl.style.borderColor = statusColor + '44';
   badgeEl.style.background  = statusColor + '18';
-  document.getElementById('th-icon').textContent = cfg.icon;
+  document.getElementById('th-icon').innerHTML = cfg.icon;
   document.getElementById('th-title').textContent = item.titulo;
 
   const chips = [];
@@ -1332,7 +1333,7 @@ function thRender(item, cfg) {
   if (item.sagaNome) chips.push(`<div class="hub-hero-chip">${esc(item.sagaNome)}${item.sagaVolume ? ' · ' + esc(item.sagaVolume) : ''}</div>`);
   if (item.tipo) chips.push(`<div class="hub-hero-chip">${esc(item.tipo)}</div>`);
   chips.push(`<div class="hub-hero-chip" style="color:${statusColor}">${statusLabel}</div>`);
-  if (item.nota) chips.push(`<div class="hub-hero-chip">★ ${esc(item.nota)}/5</div>`);
+  if (item.nota) chips.push(`<div class="hub-hero-chip"><i class="ico ico-star-fill" aria-hidden="true"></i> ${esc(item.nota)}/5</div>`);
   document.getElementById('th-meta').innerHTML = chips.join('');
 
   const obsEl = document.getElementById('th-obs-display');
@@ -1347,7 +1348,7 @@ function thRender(item, cfg) {
 
   const starDisplay = document.getElementById('th-stars-display');
   const starLabel   = document.getElementById('th-stars-label');
-  starDisplay.innerHTML = [1,2,3,4,5].map(i => `<span style="font-size:24px;color:${i<=(item.nota||0)?'var(--accent1)':'rgba(255,255,255,.12)'}">★</span>`).join('');
+  starDisplay.innerHTML = [1,2,3,4,5].map(i => `<span style="font-size:24px;color:${i<=(item.nota||0)?'var(--accent1)':'rgba(255,255,255,.12)'}"><i class="ico ico-star-fill" aria-hidden="true"></i></span>`).join('');
   starLabel.textContent = item.nota ? TH_STAR_LABELS[item.nota] : 'Sem avaliação';
 
   const statusEl = document.getElementById('th-status-display');
@@ -1358,7 +1359,7 @@ function thRender(item, cfg) {
   const favIcon = document.getElementById('th-fav-icon');
   const favLbl  = document.getElementById('th-fav-lbl');
   favBtn.className = 'th-fav-btn' + (isFav ? ' is-fav' : '');
-  favIcon.textContent = isFav ? '❤️' : '🤍';
+  favIcon.innerHTML = libFavIcon(isFav);
   favLbl.textContent  = isFav ? 'Nos favoritos' : 'Adicionar aos favoritos';
 
   const progSidebar = document.getElementById('th-sidebar-prog');
@@ -1424,7 +1425,7 @@ function thRenderRelated(tracker, item) {
   section.style.display = '';
   const cfg = TRACKER_CFG[tracker];
   scroll.innerHTML = related.map(({ item: r }) => {
-    const stars = r.nota ? '★'.repeat(r.nota) : '';
+    const stars = r.nota ? libStars(r.nota) : '';
     const statusColor = cfg.statusColors[r.status] || '#858099';
     return `<div class="rel-card" onclick="thOpen('${tracker}', ${escJs(r.id)})" title="${esc(r.titulo)}"><div class="rel-thumb">${r.img ? `<img loading="lazy" decoding="async" src="${escUrl(r.img)}" alt="${esc(r.titulo)}">` : `<span style="font-size:24px;opacity:.5">${cfg.icon}</span>`}<div class="rel-status-bar" style="background:${statusColor}88"></div></div><div class="rel-name">${esc(r.titulo)}</div>${r.autor ? `<div class="rel-meta">${esc(r.autor)}</div>` : ''}${stars ? `<div class="rel-stars">${stars}</div>` : ''}</div>`;
   }).join('');
@@ -1439,7 +1440,7 @@ function thToggleFav() {
   save(); renderTracker(thTracker);
   const isFav = item.fav;
   document.getElementById('th-fav-btn').className = 'th-fav-btn' + (isFav ? ' is-fav' : '');
-  document.getElementById('th-fav-icon').textContent = isFav ? '❤️' : '🤍';
+  document.getElementById('th-fav-icon').innerHTML = libFavIcon(isFav);
   document.getElementById('th-fav-lbl').textContent  = isFav ? 'Nos favoritos' : 'Adicionar aos favoritos';
 }
 
@@ -1448,7 +1449,7 @@ function thDrawerOpen() {
   const item = (S[thTracker] || []).find(x => x.id === thItemId);
   if (!item) return;
   const cfg = TRACKER_CFG[thTracker];
-  document.getElementById('th-drawer-icon').textContent = cfg.icon;
+  document.getElementById('th-drawer-icon').innerHTML = cfg.icon;
   document.getElementById('th-drawer-title').textContent = item.titulo;
   document.getElementById('th-titulo').value  = item.titulo  || '';
   document.getElementById('th-autor').value   = item.autor   || '';
@@ -1638,7 +1639,7 @@ function buildCard(item, cfg) {
   const statusColor = cfg.statusColors[item.status]||'#858099';
   const ribbonColor = cfg.ribbonColors[item.status]||'rgba(122,117,144,.6)';
   const statusLabel = cfg.statusLabels[item.status]||item.status;
-  const stars = item.nota ? '★'.repeat(item.nota)+'☆'.repeat(5-item.nota) : '';
+  const stars = item.nota ? libStars(item.nota, 5) : '';
   const imgSrc = window.SoterUtils.safeUrl(item.img);
   const imgSection = imgSrc
     ? `<img class="mc-img" src="${esc(imgSrc)}" alt="${esc(item.titulo)}" loading="lazy">`
@@ -1647,7 +1648,7 @@ function buildCard(item, cfg) {
   return `<div class="mc ${item.fav?'fav':''}" onclick="openModal('${cfg.key}',${escJs(item.id)})" oncontextmenu="return openTrackerQuickActions(event,'${cfg.key}',${escJs(item.id)})">
     ${imgSection}
     <div class="mc-ribbon" style="background:${ribbonColor};color:#fff">${esc(statusLabel)}</div>
-    ${item.fav?'<div class="mc-fav-badge">⭐</div>':''}
+    ${item.fav?'<div class="mc-fav-badge" title="Favorito"><i class="ico ico-heart-fill" aria-hidden="true"></i></div>':''}
     <div class="mc-body">
       <div class="mc-title">${esc(item.titulo)}</div>
       ${item.autor?`<div class="mc-author">${esc(item.autor)}</div>`:''}

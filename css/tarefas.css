@@ -2232,3 +2232,8 @@ body.tk-analytics-open .site-header {
   .tk-cal-week .tk-day-tasks { margin-top: calc(24px + var(--tk-span-lanes, 0) * 20px); }
   .tk-cal-span-task { font-size: 9px; padding-left: 4px; padding-right: 4px; }
 }
+
+/* Etapa 11: ícones Lucide no lugar dos emojis */
+.tk-prior-dot { font-size: .62em; vertical-align: .08em; margin-right: 1px; }
+.tk-focus-icon { color: var(--accent, #c8a96e); }
+.tk-list-tab .ico { margin-right: 2px; }

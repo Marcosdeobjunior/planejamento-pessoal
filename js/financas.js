@@ -413,13 +413,13 @@
 
   function toast(msg, type) {
     type = type || "ok";
-    var icons = { ok: "fa-check-circle", err: "fa-exclamation-circle", info: "fa-info-circle" };
+    var icons = { ok: "ico-circle-check", err: "ico-circle-alert", info: "ico-info" };
     var cols = { ok: "var(--fin-teal)", err: "var(--fin-rose)", info: "var(--fin-sky)" };
     var container = document.getElementById("toasts");
     if (!container) return;
     var el = document.createElement("div");
     el.className = "fin-toast " + type;
-    el.innerHTML = '<i class="fas ' + icons[type] + '" style="color:' + cols[type] + '"></i> ' + msg;
+    el.innerHTML = '<i class="ico ' + icons[type] + '" style="color:' + cols[type] + '" aria-hidden="true"></i> ' + msg;
     container.appendChild(el);
     setTimeout(function () {
       el.style.animation = "fin-tOut .3s ease forwards";
@@ -1636,7 +1636,7 @@
           if (daySave > 0) {
             var savEl = document.createElement("div");
             savEl.className = "fin-cal-bal fin-cal-sav pos future";
-            savEl.textContent = "\uD83C\uDFE6 " + fmtR(daySave).replace("R$ ", "");
+            savEl.innerHTML = '<i class="ico ico-piggy-bank" aria-hidden="true"></i> ' + fmtR(daySave).replace("R$ ", "");
             savEl.title = "Poupança em " + fmtD(ds) + ": " + fmtR(daySave) + (ds > todayStr ? " (projetado)" : "");
             cell.classList.add("has-sav");
             cell.appendChild(savEl);
@@ -1668,7 +1668,7 @@
     filtered.sort(function (a, b) { return b.date.localeCompare(a.date); });
 
     if (!filtered.length) {
-      list.innerHTML = '<div class="fin-empty"><i class="fas fa-receipt"></i><p>Nenhuma transação este mês</p></div>';
+      list.innerHTML = '<div class="fin-empty"><i class="ico ico-receipt" aria-hidden="true"></i><p>Nenhuma transação este mês</p></div>';
       return;
     }
 
@@ -1684,7 +1684,7 @@
         '<div class="fin-tx-dot ' + txClass + '" style="background:rgba(' + hexToRgb(catClr) + ',.15)">' + catIco + "</div>" +
         '<div class="fin-tx-body">' +
           '<div class="fin-tx-name">' + esc(tx.description) + '<span class="fin-tx-cat-badge" style="background:rgba(' + hexToRgb(catClr) + ',.15);color:' + catClr + '">' + esc(tx.category) + "</span></div>" +
-          '<div class="fin-tx-meta">' + fmtD(tx.date) + (tx.recurrence ? ' · <span style="color:var(--fin-amber)">↻ ' + (tx.recurrence === "monthly" ? "Mensal" : "Semanal") + "</span>" : "") + "</div>" +
+          '<div class="fin-tx-meta">' + fmtD(tx.date) + (tx.recurrence ? ' · <span style="color:var(--fin-amber)"><i class="ico ico-repeat" aria-hidden="true"></i> ' + (tx.recurrence === "monthly" ? "Mensal" : "Semanal") + "</span>" : "") + "</div>" +
         "</div>" +
         '<div class="fin-tx-amt ' + txClass + '">' + getTxSign(tx.type) + fmtR(tx.value) + "</div>";
       div.addEventListener("click", function () {
@@ -1711,7 +1711,7 @@
     var total = entries.reduce(function (sum, entry) { return sum + entry.val; }, 0) || 1;
     var list = document.getElementById("cat-list");
     if (!entries.length) {
-      list.innerHTML = '<div class="fin-empty" style="padding:20px"><i class="fas fa-tags"></i><p>Sem saídas este mês</p></div>';
+      list.innerHTML = '<div class="fin-empty" style="padding:20px"><i class="ico ico-tags" aria-hidden="true"></i><p>Sem saídas este mês</p></div>';
       return;
     }
 
@@ -1780,6 +1780,9 @@
 
     var maxVal = Math.max.apply(null, ins.concat(outs).concat([1]));
     var pad = { l: 14, r: 14, t: 16, b: 32 };
+    // rótulos do eixo Y alinhados à direita de pad.l: a margem tem de caber o maior deles
+    ctx.font = "10px DM Mono, monospace";
+    pad.l = Math.max(pad.l, Math.ceil(ctx.measureText(fmtR(maxVal).replace("R$ ", "")).width) + 8);
     var bw = Math.floor((W - pad.l - pad.r) / labels.length);
     var bPad = Math.floor(bw * 0.18);
     var bInner = bw - bPad * 2;
@@ -1848,6 +1851,8 @@
     var maxV = Math.max.apply(null, points.map(function (point) { return point.val; }));
     var range = Math.max(maxV - minV, 1);
     var pad = { l: 14, r: 14, t: 16, b: 28 };
+    ctx.font = "10px DM Mono, monospace";
+    pad.l = Math.max(pad.l, Math.ceil(Math.max(ctx.measureText(fmtR(minV).replace("R$ ", "")).width, ctx.measureText(fmtR(minV + range).replace("R$ ", "")).width)) + 8);
     var cW = W - pad.l - pad.r;
     var cH = H - pad.t - pad.b;
 
@@ -2039,7 +2044,7 @@
     row.className = "fin-cat-manager-row" + (locked ? " locked" : "");
     row.innerHTML =
       '<input type="text" class="fin-fi fin-cat-manager-input" value="' + esc(category) + '"' + (locked ? " disabled" : "") + ">" +
-      '<button class="fin-btn fin-btn-rose fin-btn-sm fin-cat-manager-del" type="button"' + (locked ? " disabled" : "") + '><i class="fas fa-trash"></i></button>';
+      '<button class="fin-btn fin-btn-rose fin-btn-sm fin-cat-manager-del" type="button" aria-label="Excluir categoria"' + (locked ? " disabled" : "") + '><i class="ico ico-trash-2" aria-hidden="true"></i></button>';
     row.dataset.original = category;
     row.dataset.type = type;
     container.appendChild(row);
@@ -2304,7 +2309,7 @@
     editId = null;
     txType = "in";
     document.getElementById("mtx-title").textContent = "Nova Transação";
-    document.getElementById("mtx-save").innerHTML = '<i class="fas fa-plus"></i> Adicionar';
+    document.getElementById("mtx-save").innerHTML = '<i class="ico ico-plus" aria-hidden="true"></i> Adicionar';
     document.getElementById("mtx-del").style.display = "none";
     document.getElementById("mtx-desc").value = "";
     document.getElementById("mtx-val").value = "";
@@ -2321,7 +2326,7 @@
     editId = id;
     setTxType(tx.type);
     document.getElementById("mtx-title").textContent = "Editar Transação";
-    document.getElementById("mtx-save").innerHTML = '<i class="fas fa-save"></i> Salvar';
+    document.getElementById("mtx-save").innerHTML = '<i class="ico ico-save" aria-hidden="true"></i> Salvar';
     document.getElementById("mtx-del").style.display = "inline-flex";
     document.getElementById("mtx-desc").value = tx.description;
     document.getElementById("mtx-val").value = tx.value;

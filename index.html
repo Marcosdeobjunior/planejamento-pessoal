@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://apis.google.com https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://unpkg.com; font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.google.com https://nominatim.openstreetmap.org https://api.open-meteo.com https://geocoding-api.open-meteo.com; frame-src https://*.firebaseapp.com https://www.google.com https://recaptcha.google.com https://www.youtube.com https://player.vimeo.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://apis.google.com https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://unpkg.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.google.com https://nominatim.openstreetmap.org https://api.open-meteo.com https://geocoding-api.open-meteo.com; frame-src https://*.firebaseapp.com https://www.google.com https://recaptcha.google.com https://www.youtube.com https://player.vimeo.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#04040c">
   <meta name="description" content="Sól de Sóter — painel principal do espaço pessoal. Biblioteca, sonhos, finanças, planejamento e evolução reunidos.">
@@ -23,6 +23,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Josefin+Sans:wght@200;300;400;500&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/icons.css">
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/app-shell.css">
   <link rel="stylesheet" href="css/index.css">
@@ -43,7 +44,7 @@
       </p>
 
       <div class="hero-actions">
-        <a href="rpg.html" class="btn-primary">&#9884; Abrir Usu&aacute;rio</a>
+        <a href="rpg.html" class="btn-primary"><i class="ico ico-user" aria-hidden="true"></i> Abrir Usu&aacute;rio</a>
         <a href="tarefas.html" class="btn-ghost">Ver Planejamento</a>
         <a href="livros.html" class="btn-ghost">Biblioteca &rarr;</a>
       </div>
@@ -77,25 +78,25 @@
 
       <div class="const-grid">
         <a href="livros.html" class="const-card">
-          <div class="const-icon">&#128218;</div>
+          <div class="const-icon"><i class="ico ico-library" aria-hidden="true"></i></div>
           <div class="const-title">Biblioteca</div>
           <div class="const-desc">Livros, cinema e mang&aacute;s em um acervo unificado, com hist&oacute;rico e continuidade real de leitura.</div>
           <div class="const-meta" data-stat="library-detail">0 m&iacute;dias</div>
         </a>
         <a href="sonhos.html" class="const-card">
-          <div class="const-icon">&#127769;</div>
+          <div class="const-icon"><i class="ico ico-moon" aria-hidden="true"></i></div>
           <div class="const-title">Pessoal</div>
           <div class="const-desc">Sonhos, viagens, wishlist e finan&ccedil;as conectam desejo, planejamento e execu&ccedil;&atilde;o em um s&oacute; fluxo.</div>
           <div class="const-meta" data-stat="personal-detail">0 metas</div>
         </a>
         <a href="tarefas.html" class="const-card">
-          <div class="const-icon">&#9989;</div>
+          <div class="const-icon"><i class="ico ico-circle-check" aria-hidden="true"></i></div>
           <div class="const-title">Planejamento</div>
           <div class="const-desc">Tarefas, revis&atilde;o e treino transformam inten&ccedil;&atilde;o em rotina consistente e mensur&aacute;vel.</div>
           <div class="const-meta" data-stat="planning-detail">0 frentes</div>
         </a>
         <a href="rpg.html" class="const-card">
-          <div class="const-icon">&#9876;</div>
+          <div class="const-icon"><i class="ico ico-swords" aria-hidden="true"></i></div>
           <div class="const-title">Evolu&ccedil;&atilde;o</div>
           <div class="const-desc">O RPG consolida esfor&ccedil;o, n&iacute;vel, atributos, conquistas e leitura do seu avan&ccedil;o real.</div>
           <div class="const-meta">N&iacute;vel <span id="constellation-rpg-level">1</span> &middot; <span id="constellation-rpg-title">Iniciante</span></div>
@@ -202,32 +203,32 @@
 
       <div class="ind-grid">
         <a class="ind-item" href="livros.html">
-          <div class="ind-icon">&#128218;</div>
+          <div class="ind-icon"><i class="ico ico-library" aria-hidden="true"></i></div>
           <div class="ind-val" id="ht-livros">0</div>
           <div class="ind-lbl">Livros</div>
         </a>
         <a class="ind-item" href="cinema.html">
-          <div class="ind-icon">&#127916;</div>
+          <div class="ind-icon"><i class="ico ico-clapperboard" aria-hidden="true"></i></div>
           <div class="ind-val" id="ht-cinema">0</div>
           <div class="ind-lbl">Filmes</div>
         </a>
         <a class="ind-item" href="mangas.html">
-          <div class="ind-icon">&#128214;</div>
+          <div class="ind-icon"><i class="ico ico-book-open" aria-hidden="true"></i></div>
           <div class="ind-val" id="ht-mangas">0</div>
           <div class="ind-lbl">Mang&aacute;s</div>
         </a>
         <a class="ind-item" href="tarefas.html">
-          <div class="ind-icon">&#9989;</div>
+          <div class="ind-icon"><i class="ico ico-circle-check" aria-hidden="true"></i></div>
           <div class="ind-val" id="ht-tarefas">0</div>
           <div class="ind-lbl">Tarefas</div>
         </a>
         <a class="ind-item" href="sonhos.html">
-          <div class="ind-icon">&#127769;</div>
+          <div class="ind-icon"><i class="ico ico-moon" aria-hidden="true"></i></div>
           <div class="ind-val" id="hs-dreams">0</div>
           <div class="ind-lbl">Sonhos</div>
         </a>
         <a class="ind-item" href="wishlist.html">
-          <div class="ind-icon">&#127919;</div>
+          <div class="ind-icon"><i class="ico ico-target" aria-hidden="true"></i></div>
           <div class="ind-val" id="hs-wishlist">0</div>
           <div class="ind-lbl">Wishlist</div>
         </a>

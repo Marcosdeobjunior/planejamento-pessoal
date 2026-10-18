@@ -561,6 +561,8 @@ body[data-page="wishlist"] .app-content {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 10px;
 }
 
 .ws-card-price {
@@ -603,6 +605,11 @@ body[data-page="wishlist"] .app-content {
   flex-shrink: 0;
   background: transparent;
   cursor: pointer;
+  /* sem padding: o padding padrão do botão espremia o ícone até virar um ponto */
+  padding: 0;
+  margin-left: auto;
+  color: var(--ws-muted);
+  font-size: 12px;
 }
 
 .ws-empty {

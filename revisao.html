@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://apis.google.com https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://unpkg.com; font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.google.com https://nominatim.openstreetmap.org https://api.open-meteo.com https://geocoding-api.open-meteo.com; frame-src https://*.firebaseapp.com https://www.google.com https://recaptcha.google.com https://www.youtube.com https://player.vimeo.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://apis.google.com https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://unpkg.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.google.com https://nominatim.openstreetmap.org https://api.open-meteo.com https://geocoding-api.open-meteo.com; frame-src https://*.firebaseapp.com https://www.google.com https://recaptcha.google.com https://www.youtube.com https://player.vimeo.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#04040c">
 <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
@@ -11,8 +11,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.0.0-beta3/css/all.min.css" integrity="sha384-5e2ESR8Ycmos6g3gAKr1Jvwye8sW4U1u/cAKulfVJnkakCcMqhOudbtPnvJ+nbv7" crossorigin="anonymous">
 <link rel="stylesheet" href="css/design-system.css">
+<link rel="stylesheet" href="css/icons.css">
 <link rel="stylesheet" href="css/components.css">
 <link rel="stylesheet" href="css/app-shell.css">
 <style>
@@ -375,14 +375,15 @@ canvas.achart{width:100%;display:block;}
 
 /* ── MISC ── */
 .empty{padding:40px 20px;text-align:center;color:var(--muted);}
-.empty i{font-size:30px;display:block;margin-bottom:12px;opacity:.3;}
+.empty i{font-size:30px;display:block;margin:0 auto 12px;opacity:.3;}
 .empty p{font-size:12px;font-family:var(--fm);}
 .seg{display:flex;gap:0;background:rgba(255,255,255,.04);border:1px solid var(--bord);border-radius:9px;overflow:hidden;}
 .seg-btn{background:none;border:none;color:var(--muted);font-family:var(--fu);font-size:11.5px;font-weight:700;padding:6px 14px;cursor:pointer;transition:all .2s;}
 .seg-btn.active{background:rgba(200,169,110,.15);color:var(--gold);}
 
 @media(max-width:1000px){.stat-tiles{grid-template-columns:repeat(3,1fr);}.dash-grid,.analytics-grid{grid-template-columns:1fr;}.dash-grid-3,.analytics-grid-3{grid-template-columns:1fr 1fr;}.hdr{padding:0 20px;}.footer{padding:18px;}}
-@media(max-width:640px){.tabs-inner{overflow-x:auto;}.stat-tiles{grid-template-columns:1fr 1fr;}.dash-grid-3,.analytics-grid-3{grid-template-columns:1fr;}.rating-area{gap:8px;}.rating-btn{min-width:80px;padding:12px 16px;}.hnav{display:none;}.frow{grid-template-columns:1fr;}}
+@media(max-width:640px){.tabs-inner{overflow-x:auto;width:100%;}.tab{flex:1 0 auto;padding:13px 8px;font-size:12px;}.stat-tiles{grid-template-columns:1fr 1fr;}.dash-grid-3,.analytics-grid-3{grid-template-columns:1fr;}.rating-area{gap:8px;}.rating-btn{min-width:80px;padding:12px 16px;}.hnav{display:none;}.frow{grid-template-columns:1fr;}}
+@media(max-width:420px){.tab .ico{display:none;}.tab{padding:13px 6px;letter-spacing:0;}}
 </style>
 </head>
 <body data-page="revisao">
@@ -394,10 +395,10 @@ canvas.achart{width:100%;display:block;}
   <!-- TABS -->
   <nav class="tabs">
     <div class="tabs-inner">
-      <button class="tab active" data-view="dash"><i class="fas fa-home" style="margin-right:6px;font-size:11px"></i>Dashboard</button>
-      <button class="tab" data-view="decks"><i class="fas fa-layer-group" style="margin-right:6px;font-size:11px"></i>Decks</button>
-      <button class="tab" data-view="review" id="tab-review"><i class="fas fa-brain" style="margin-right:6px;font-size:11px"></i>Revisar <span class="tab-badge" id="due-badge">0</span></button>
-      <button class="tab" data-view="analytics"><i class="fas fa-chart-bar" style="margin-right:6px;font-size:11px"></i>Analytics</button>
+      <button class="tab active" data-view="dash"><i class="ico ico-house" style="margin-right:6px;font-size:11px" aria-hidden="true"></i>Dashboard</button>
+      <button class="tab" data-view="decks"><i class="ico ico-layers" style="margin-right:6px;font-size:11px" aria-hidden="true"></i>Decks</button>
+      <button class="tab" data-view="review" id="tab-review"><i class="ico ico-brain" style="margin-right:6px;font-size:11px" aria-hidden="true"></i>Revisar <span class="tab-badge" id="due-badge">0</span></button>
+      <button class="tab" data-view="analytics"><i class="ico ico-chart-column" style="margin-right:6px;font-size:11px" aria-hidden="true"></i>Analytics</button>
     </div>
   </nav>
 
@@ -413,22 +414,22 @@ canvas.achart{width:100%;display:block;}
 
     <!-- Stats -->
     <div class="stat-tiles">
-      <div class="stile s-rose"><div class="stile-lbl">Para Revisar Hoje</div><div class="stile-val" id="st-due" style="color:var(--rose)">0</div><div class="stile-sub">cards vencidos</div><i class="fas fa-clock stile-ico"></i></div>
-      <div class="stile s-teal"><div class="stile-lbl">Novos Hoje</div><div class="stile-val" id="st-new" style="color:var(--teal)">0</div><div class="stile-sub">cards disponíveis</div><i class="fas fa-sparkles stile-ico"></i></div>
-      <div class="stile s-gold"><div class="stile-lbl">Total de Cards</div><div class="stile-val" id="st-total">0</div><div class="stile-sub">em todos os decks</div><i class="fas fa-cards stile-ico"></i></div>
-      <div class="stile s-vio"><div class="stile-lbl">Streak</div><div class="stile-val" id="st-streak" style="color:var(--vio)">0🔥</div><div class="stile-sub">dias consecutivos</div><i class="fas fa-fire stile-ico"></i></div>
-      <div class="stile s-amb"><div class="stile-lbl">Revisões Hoje</div><div class="stile-val" id="st-today-done" style="color:var(--amb)">0</div><div class="stile-sub">concluídas</div><i class="fas fa-check-circle stile-ico"></i></div>
+      <div class="stile s-rose"><div class="stile-lbl">Para Revisar Hoje</div><div class="stile-val" id="st-due" style="color:var(--rose)">0</div><div class="stile-sub">cards vencidos</div><i class="ico ico-clock stile-ico" aria-hidden="true"></i></div>
+      <div class="stile s-teal"><div class="stile-lbl">Novos Hoje</div><div class="stile-val" id="st-new" style="color:var(--teal)">0</div><div class="stile-sub">cards disponíveis</div><i class="ico ico-sparkles stile-ico" aria-hidden="true"></i></div>
+      <div class="stile s-gold"><div class="stile-lbl">Total de Cards</div><div class="stile-val" id="st-total">0</div><div class="stile-sub">em todos os decks</div><i class="ico ico-layers stile-ico" aria-hidden="true"></i></div>
+      <div class="stile s-vio"><div class="stile-lbl">Streak</div><div class="stile-val" id="st-streak" style="color:var(--vio)">0</div><div class="stile-sub">dias consecutivos</div><i class="ico ico-flame stile-ico" aria-hidden="true"></i></div>
+      <div class="stile s-amb"><div class="stile-lbl">Revisões Hoje</div><div class="stile-val" id="st-today-done" style="color:var(--amb)">0</div><div class="stile-sub">concluídas</div><i class="ico ico-circle-check stile-ico" aria-hidden="true"></i></div>
     </div>
 
     <!-- CTA -->
     <div class="review-cta" id="review-cta">
-      <div class="cta-pulse">🧠</div>
+      <div class="cta-pulse"><i class="ico ico-brain" aria-hidden="true"></i></div>
       <div class="cta-info">
         <div class="cta-lbl">Hora de estudar</div>
         <div class="cta-title">Você tem <em id="cta-count">0</em> cards para revisar</div>
         <div class="cta-sub" id="cta-sub">Mantenha sua sequência de estudos!</div>
       </div>
-      <button class="btn btn-gold btn-lg" id="btn-start-review"><i class="fas fa-play"></i> Iniciar Revisão</button>
+      <button class="btn btn-gold btn-lg" id="btn-start-review"><i class="ico ico-play" aria-hidden="true"></i> Iniciar Revisão</button>
     </div>
 
     <div class="dash-grid">
@@ -485,7 +486,7 @@ canvas.achart{width:100%;display:block;}
   <div class="wrap">
     <div class="decks-ph">
       <div><h2>Meus <em>Decks</em></h2></div>
-      <button class="btn btn-gold" id="btn-new-deck"><i class="fas fa-plus"></i> Novo Deck</button>
+      <button class="btn btn-gold" id="btn-new-deck"><i class="ico ico-plus" aria-hidden="true"></i> Novo Deck</button>
     </div>
     <div class="decks-grid" id="decks-grid"></div>
   </div>
@@ -495,12 +496,12 @@ canvas.achart{width:100%;display:block;}
   <div class="view" id="view-cards">
   <div class="wrap">
     <div class="cards-ph">
-      <button class="back-btn" id="btn-back-decks"><i class="fas fa-arrow-left"></i> Decks</button>
+      <button class="back-btn" id="btn-back-decks"><i class="ico ico-arrow-left" aria-hidden="true"></i> Decks</button>
       <h2 id="cards-deck-title">Deck</h2>
-      <button class="btn btn-ghost btn-sm" id="btn-edit-deck"><i class="fas fa-pen"></i> Editar</button>
-      <button class="btn btn-ghost btn-sm" id="btn-new-subdeck"><i class="fas fa-folder-plus"></i> Novo Subdeck</button>
-      <button class="btn btn-gold" id="btn-new-card"><i class="fas fa-plus"></i> Novo Card</button>
-      <button class="btn btn-teal btn-sm" id="btn-study-deck"><i class="fas fa-play"></i> Estudar Deck</button>
+      <button class="btn btn-ghost btn-sm" id="btn-edit-deck"><i class="ico ico-pencil" aria-hidden="true"></i> Editar</button>
+      <button class="btn btn-ghost btn-sm" id="btn-new-subdeck"><i class="ico ico-folder-plus" aria-hidden="true"></i> Novo Subdeck</button>
+      <button class="btn btn-gold" id="btn-new-card"><i class="ico ico-plus" aria-hidden="true"></i> Novo Card</button>
+      <button class="btn btn-teal btn-sm" id="btn-study-deck"><i class="ico ico-play" aria-hidden="true"></i> Estudar Deck</button>
     </div>
     <div class="crumbs" id="deck-crumbs"></div>
     <div class="sub-sec" id="subdecks-sec" style="display:none">
@@ -542,9 +543,9 @@ canvas.achart{width:100%;display:block;}
 <div class="toasts" id="toasts"></div>
 
 <!-- DECK MODAL -->
-<div class="ov" id="modal-deck">
+<div class="ov" id="modal-deck" role="dialog" aria-modal="true" aria-labelledby="mdeck-title">
   <div class="modal">
-    <div class="mhd"><h3 id="mdeck-title">Novo Deck</h3><button class="mcls" data-close="modal-deck"><i class="fas fa-times"></i></button></div>
+    <div class="mhd"><h3 id="mdeck-title">Novo Deck</h3><button class="mcls" data-close="modal-deck" aria-label="Fechar"><i class="ico ico-x" aria-hidden="true"></i></button></div>
     <div class="fg"><label class="fl">Nome do Deck *</label><input type="text" class="fi" id="deck-name" placeholder="Ex: Anatomia, Inglês, Cálculo..."></div>
     <div class="fg"><label class="fl">Descrição</label><input type="text" class="fi" id="deck-desc" placeholder="Opcional"></div>
     <div class="fg"><label class="fl">Deck pai (opcional)</label>
@@ -572,17 +573,17 @@ canvas.achart{width:100%;display:block;}
     </div>
     <div class="fg"><label class="fl">Novos Cards por Dia</label><input type="number" class="fi" id="deck-daily" value="20" min="1" max="200"></div>
     <div class="macts">
-      <button class="btn btn-rose btn-sm" id="deck-del-btn" style="display:none;margin-right:auto"><i class="fas fa-trash"></i> Excluir</button>
+      <button class="btn btn-rose btn-sm" id="deck-del-btn" style="display:none;margin-right:auto"><i class="ico ico-trash-2" aria-hidden="true"></i> Excluir</button>
       <button class="btn btn-ghost btn-sm" data-close="modal-deck">Cancelar</button>
-      <button class="btn btn-gold" id="btn-save-deck"><i class="fas fa-save"></i> Salvar</button>
+      <button class="btn btn-gold" id="btn-save-deck"><i class="ico ico-save" aria-hidden="true"></i> Salvar</button>
     </div>
   </div>
 </div>
 
 <!-- CARD MODAL -->
-<div class="ov" id="modal-card">
+<div class="ov" id="modal-card" role="dialog" aria-modal="true" aria-labelledby="mcard-title">
   <div class="modal">
-    <div class="mhd"><h3 id="mcard-title">Novo Card</h3><button class="mcls" data-close="modal-card"><i class="fas fa-times"></i></button></div>
+    <div class="mhd"><h3 id="mcard-title">Novo Card</h3><button class="mcls" data-close="modal-card" aria-label="Fechar"><i class="ico ico-x" aria-hidden="true"></i></button></div>
     <div class="fg"><label class="fl">Frente (Pergunta) *</label><textarea class="fta" id="card-front" placeholder="O que você quer memorizar?"></textarea></div>
     <div class="fg"><label class="fl">Verso (Resposta) *</label><textarea class="fta" id="card-back" placeholder="A resposta, definição ou conceito."></textarea></div>
     <div class="fg"><label class="fl">Observação (opcional)</label><input type="text" class="fi" id="card-note" placeholder="Dica, mnemônico, contexto..."></div>
@@ -593,9 +594,9 @@ canvas.achart{width:100%;display:block;}
       <div class="fg"><label class="fl">Tag</label><input type="text" class="fi" id="card-tag" placeholder="Ex: cap.1, fórmulas..."></div>
     </div>
     <div class="macts">
-      <button class="btn btn-rose btn-sm" id="card-del-btn" style="display:none;margin-right:auto"><i class="fas fa-trash"></i> Excluir</button>
+      <button class="btn btn-rose btn-sm" id="card-del-btn" style="display:none;margin-right:auto"><i class="ico ico-trash-2" aria-hidden="true"></i> Excluir</button>
       <button class="btn btn-ghost btn-sm" data-close="modal-card">Cancelar</button>
-      <button class="btn btn-gold" id="btn-save-card"><i class="fas fa-save"></i> Salvar</button>
+      <button class="btn btn-gold" id="btn-save-card"><i class="ico ico-save" aria-hidden="true"></i> Salvar</button>
     </div>
   </div>
 </div>
@@ -889,11 +890,11 @@ function getStreak(){
 
 function toast(msg,type){
   type=type||'ok';
-  var icons={ok:'fa-check-circle',err:'fa-exclamation-circle',info:'fa-info-circle'};
+  var icons={ok:'ico-circle-check',err:'ico-circle-alert',info:'ico-info'};
   var cols={ok:'var(--teal)',err:'var(--rose)',info:'var(--sky)'};
   var c=document.getElementById('toasts'),el=document.createElement('div');
   el.className='tt '+type;
-  el.innerHTML='<i class="fas '+icons[type]+'" style="color:'+cols[type]+'"></i> '+msg;
+  el.innerHTML='<i class="ico '+icons[type]+'" style="color:'+cols[type]+'" aria-hidden="true"></i> '+msg;
   c.appendChild(el);
   setTimeout(function(){el.style.animation='ttOut .3s ease forwards';setTimeout(function(){el.remove();},300);},2600);
 }
@@ -946,7 +947,7 @@ function renderDash(){
   document.getElementById('st-due').textContent       = due.length;
   document.getElementById('st-new').textContent       = Math.min(newC.length, 20);
   document.getElementById('st-total').textContent     = total;
-  document.getElementById('st-streak').textContent    = streak+'🔥';
+  document.getElementById('st-streak').textContent    = streak;
   document.getElementById('st-today-done').textContent= done;
 
   var dueCount = document.getElementById('due-badge');
@@ -958,8 +959,8 @@ function renderDash(){
   var ctaCount = due.length + Math.min(newC.length,20);
   document.getElementById('cta-count').textContent = ctaCount;
   document.getElementById('cta-sub').textContent = ctaCount>0
-    ? (streak>0 ? 'Sequência de '+streak+' dias! Não perca agora! 🔥' : 'Mantenha sua sequência de estudos!')
-    : 'Tudo em dia! Você está ótimo! ✨';
+    ? (streak>0 ? 'Sequência de '+streak+' dias! Não perca agora!' : 'Mantenha sua sequência de estudos!')
+    : 'Tudo em dia! Você está ótimo!';
 
   renderHeatmap();
   renderUpcoming();
@@ -1053,7 +1054,7 @@ function renderUpcoming(){
       '<span class="uitem-q">'+escHtml(c.front)+'</span><span class="uitem-due '+cls+'">'+dLabel+'</span>';
     list.appendChild(el);
   });
-  if(list.children.length===0) list.innerHTML='<div class="empty"><i class="fas fa-check-double"></i><p>Nenhuma revisão pendente!</p></div>';
+  if(list.children.length===0) list.innerHTML='<div class="empty"><i class="ico ico-check-check" aria-hidden="true"></i><p>Nenhuma revisão pendente!</p></div>';
 }
 
 // ── FORECAST CHART ──
@@ -1182,13 +1183,13 @@ function buildDeckCard(deck){
     '<div class="deck-top" style="margin-top:6px">'+
       '<div class="deck-icon">'+escHtml(deck.icon)+'</div>'+
       '<div class="deck-actions">'+
-        (deckDepth(deck)<MAX_DECK_DEPTH?'<button class="deck-menu-btn" data-addsub="'+deck.id+'" title="Novo subdeck"><i class="fas fa-folder-plus"></i></button>':'')+
-        '<button class="deck-menu-btn" data-deck="'+deck.id+'" title="Editar deck"><i class="fas fa-pen"></i></button>'+
+        (deckDepth(deck)<MAX_DECK_DEPTH?'<button class="deck-menu-btn" data-addsub="'+deck.id+'" title="Novo subdeck"><i class="ico ico-folder-plus" aria-hidden="true"></i></button>':'')+
+        '<button class="deck-menu-btn" data-deck="'+deck.id+'" title="Editar deck"><i class="ico ico-pencil" aria-hidden="true"></i></button>'+
       '</div>'+
     '</div>'+
     '<div class="deck-name">'+escHtml(deck.name)+'</div>'+
     '<div class="deck-desc">'+escHtml(deck.desc||'')+'</div>'+
-    (subCount>0?'<div class="deck-sub-chip"><i class="fas fa-sitemap"></i> '+subCount+(subCount===1?' subdeck':' subdecks')+'</div>':'')+
+    (subCount>0?'<div class="deck-sub-chip"><i class="ico ico-network" aria-hidden="true"></i> '+subCount+(subCount===1?' subdeck':' subdecks')+'</div>':'')+
     '<div class="deck-stats">'+
       '<div class="dstat"><div class="dstat-val" style="color:'+deck.color+'">'+deckCards.length+'</div><div class="dstat-lbl">Total</div></div>'+
       '<div class="dstat"><div class="dstat-val" style="color:var(--rose)">'+dueC.length+'</div><div class="dstat-lbl">Revisão</div></div>'+
@@ -1218,7 +1219,7 @@ function renderDecks(){
 
   // New deck button
   var newBtn=document.createElement('div');newBtn.className='deck-card deck-new';
-  newBtn.innerHTML='<i class="fas fa-plus"></i><span>Criar novo deck</span>';
+  newBtn.innerHTML='<i class="ico ico-plus" aria-hidden="true"></i><span>Criar novo deck</span>';
   newBtn.addEventListener('click',function(){openDeckModal(null);});
   grid.appendChild(newBtn);
 }
@@ -1248,13 +1249,13 @@ function renderCardsList(){
   // breadcrumb + botão voltar
   crumbs.innerHTML='';
   var parent=deck&&deck.parentId?findDeck(deck.parentId):null;
-  backBtn.innerHTML='<i class="fas fa-arrow-left"></i> '+(parent?escHtml(parent.name):'Decks');
+  backBtn.innerHTML='<i class="ico ico-arrow-left" aria-hidden="true"></i> '+(parent?escHtml(parent.name):'Decks');
   if(deck){
     var rootA=document.createElement('a');rootA.textContent='Decks';
     rootA.addEventListener('click',function(){showView('decks');});
     crumbs.appendChild(rootA);
     deckAncestors(deck).forEach(function(a,i,arr){
-      var sep=document.createElement('span');sep.className='sep';sep.innerHTML='<i class="fas fa-chevron-right"></i>';
+      var sep=document.createElement('span');sep.className='sep';sep.innerHTML='<i class="ico ico-chevron-right" aria-hidden="true"></i>';
       crumbs.appendChild(sep);
       if(i===arr.length-1){
         var cur=document.createElement('span');cur.className='cur';cur.textContent=a.name;crumbs.appendChild(cur);
@@ -1288,7 +1289,7 @@ function renderCardsList(){
   var table=document.getElementById('cards-table');
   table.innerHTML='';
   if(deckCards.length===0){
-    table.innerHTML='<div class="empty"><i class="fas fa-cards"></i><p>Nenhum card '+(includeSub?'neste deck ou nos subdecks':'diretamente neste deck')+'.<br>Crie o primeiro!</p></div>';
+    table.innerHTML='<div class="empty"><i class="ico ico-layers" aria-hidden="true"></i><p>Nenhum card '+(includeSub?'neste deck ou nos subdecks':'diretamente neste deck')+'.<br>Crie o primeiro!</p></div>';
     return;
   }
   deckCards.forEach(function(c){
@@ -1306,8 +1307,8 @@ function renderCardsList(){
         '<span class="ctrow-int">Int: '+intLbl+'</span>'+
       '</div>'+
       '<div class="ctrow-actions">'+
-        '<button class="icon-btn" data-id="'+c.id+'"><i class="fas fa-pen"></i></button>'+
-        '<button class="icon-btn del" data-del="'+c.id+'"><i class="fas fa-times"></i></button>'+
+        '<button class="icon-btn" data-id="'+c.id+'" aria-label="Editar card"><i class="ico ico-pencil" aria-hidden="true"></i></button>'+
+        '<button class="icon-btn del" data-del="'+c.id+'" aria-label="Excluir card"><i class="ico ico-x" aria-hidden="true"></i></button>'+
       '</div>';
     row.querySelector('[data-id]').addEventListener('click',function(){openCardModal(c.id);});
     row.querySelector('[data-del]').addEventListener('click',function(){
@@ -1363,12 +1364,12 @@ function renderReviewEmpty(){
   var wrap=document.getElementById('review-session-wrap');
   wrap.innerHTML=
     '<div class="session-done">'+
-      '<div class="done-icon">✨</div>'+
+      '<div class="done-icon"><i class="ico ico-sparkles" aria-hidden="true"></i></div>'+
       '<h2>Tudo em <em>dia!</em></h2>'+
       '<p>Não há cards para revisar agora. Volte mais tarde ou adicione novos cards.</p>'+
       '<div style="margin-top:24px;display:flex;gap:12px;justify-content:center">'+
-        '<button class="btn btn-ghost" id="rdone-decks"><i class="fas fa-layer-group"></i> Ver Decks</button>'+
-        '<button class="btn btn-gold" id="rdone-dash"><i class="fas fa-home"></i> Dashboard</button>'+
+        '<button class="btn btn-ghost" id="rdone-decks"><i class="ico ico-layers" aria-hidden="true"></i> Ver Decks</button>'+
+        '<button class="btn btn-gold" id="rdone-dash"><i class="ico ico-house" aria-hidden="true"></i> Dashboard</button>'+
       '</div>'+
     '</div>';
   document.getElementById('rdone-decks').addEventListener('click',function(){showView('decks');});
@@ -1385,12 +1386,11 @@ function renderReviewCard(){
   var deck=decks.find(function(d){return d.id===card.deckId;})||{name:'Deck',color:'#858099'};
   var pct=Math.round(sessionIdx/sessionQueue.length*100);
   var previews=previewSM2(card);
-  var previewHtml=previews.map(function(p){return '<span class="rb-next-lbl">'+p.display+'</span>';});
 
   var wrap=document.getElementById('review-session-wrap');
   wrap.innerHTML=
     '<div class="review-header">'+
-      '<button class="btn btn-ghost btn-sm" id="rev-exit"><i class="fas fa-times"></i> Sair</button>'+
+      '<button class="btn btn-ghost btn-sm" id="rev-exit"><i class="ico ico-x" aria-hidden="true"></i> Sair</button>'+
       '<div class="review-progress-bar"><div class="review-progress-fill" style="width:'+pct+'%"></div></div>'+
       '<span class="review-count">'+sessionIdx+' / '+sessionQueue.length+'</span>'+
     '</div>'+
@@ -1400,22 +1400,22 @@ function renderReviewCard(){
           '<span class="fc-deck-tag" style="background:rgba('+hexToRgb(deck.color)+',.15);color:'+deck.color+'">'+escHtml(deck.icon)+' '+escHtml(deck.id?deckPath(deck):deck.name)+'</span>'+
           '<span class="fc-label">Pergunta</span>'+
           '<div class="fc-content">'+escHtml(card.front)+'</div>'+
-          (card.note?'<div class="fc-note">💡 '+escHtml(card.note)+'</div>':'')+
-          '<div class="fc-hint"><i class="fas fa-hand-pointer"></i> Clique para revelar a resposta</div>'+
+          (card.note?'<div class="fc-note"><i class="ico ico-lightbulb" aria-hidden="true"></i> '+escHtml(card.note)+'</div>':'')+
+          '<div class="fc-hint"><i class="ico ico-pointer" aria-hidden="true"></i> Clique para revelar a resposta</div>'+
         '</div>'+
         '<div class="fc-face fc-back">'+
           '<span class="fc-deck-tag" style="background:rgba('+hexToRgb(deck.color)+',.15);color:'+deck.color+'">'+escHtml(deck.icon)+' '+escHtml(deck.id?deckPath(deck):deck.name)+'</span>'+
           '<span class="fc-label">Resposta</span>'+
           '<div class="fc-content">'+escHtml(card.back)+'</div>'+
-          (card.note?'<div class="fc-note">💡 '+escHtml(card.note)+'</div>':'')+
+          (card.note?'<div class="fc-note"><i class="ico ico-lightbulb" aria-hidden="true"></i> '+escHtml(card.note)+'</div>':'')+
         '</div>'+
       '</div>'+
     '</div>'+
     '<div class="rating-area" id="rating-area" style="display:none">'+
-      '<button class="rating-btn rb-again" data-q="0" data-idx="0">Again'+previewHtml[0].outerHTML+'<span class="rb-key">1</span></button>'+
-      '<button class="rating-btn rb-hard"  data-q="2" data-idx="1">Hard '+previewHtml[1].outerHTML+'<span class="rb-key">2</span></button>'+
-      '<button class="rating-btn rb-good"  data-q="3" data-idx="2">Good '+previewHtml[2].outerHTML+'<span class="rb-key">3</span></button>'+
-      '<button class="rating-btn rb-easy"  data-q="5" data-idx="3">Easy '+previewHtml[3].outerHTML+'<span class="rb-key">4</span></button>'+
+      '<button class="rating-btn rb-again" data-q="0" data-idx="0">Again<span class="rb-key">1</span></button>'+
+      '<button class="rating-btn rb-hard"  data-q="2" data-idx="1">Hard<span class="rb-key">2</span></button>'+
+      '<button class="rating-btn rb-good"  data-q="3" data-idx="2">Good<span class="rb-key">3</span></button>'+
+      '<button class="rating-btn rb-easy"  data-q="5" data-idx="3">Easy<span class="rb-key">4</span></button>'+
     '</div>'+
     '<p style="text-align:center;font-size:11px;font-family:var(--fm);color:var(--muted);margin-top:12px">Pressione <kbd style="background:rgba(255,255,255,.1);padding:1px 6px;border-radius:4px">Espaço</kbd> para revelar</p>';
 
@@ -1493,7 +1493,7 @@ function renderSessionDone(){
   var wrap=document.getElementById('review-session-wrap');
   wrap.innerHTML=
     '<div class="session-done">'+
-      '<div class="done-icon">🎉</div>'+
+      '<div class="done-icon"><i class="ico ico-party-popper" aria-hidden="true"></i></div>'+
       '<h2>Sessão <em>Concluída!</em></h2>'+
       '<p>Parabéns! Você completou a revisão de hoje.</p>'+
       '<div class="session-stats">'+
@@ -1501,11 +1501,11 @@ function renderSessionDone(){
         '<div class="ss-stat"><div class="ss-val" style="color:var(--teal)">'+retention+'%</div><div class="ss-lbl">Retenção</div></div>'+
         '<div class="ss-stat"><div class="ss-val" style="color:var(--rose)">'+sessionStats.again+'</div><div class="ss-lbl">Again</div></div>'+
         '<div class="ss-stat"><div class="ss-val" style="color:var(--teal)">'+( sessionStats.good+sessionStats.easy)+'</div><div class="ss-lbl">Good+Easy</div></div>'+
-        '<div class="ss-stat"><div class="ss-val" style="color:var(--vio)">'+getStreak()+'🔥</div><div class="ss-lbl">Streak</div></div>'+
+        '<div class="ss-stat"><div class="ss-val" style="color:var(--vio)">'+getStreak()+' <i class="ico ico-flame" aria-hidden="true"></i></div><div class="ss-lbl">Streak</div></div>'+
       '</div>'+
       '<div style="display:flex;gap:12px;justify-content:center">'+
-        '<button class="btn btn-ghost" id="sdone-again"><i class="fas fa-redo"></i> Mais Cards</button>'+
-        '<button class="btn btn-gold" id="sdone-home"><i class="fas fa-home"></i> Dashboard</button>'+
+        '<button class="btn btn-ghost" id="sdone-again"><i class="ico ico-redo-2" aria-hidden="true"></i> Mais Cards</button>'+
+        '<button class="btn btn-gold" id="sdone-home"><i class="ico ico-house" aria-hidden="true"></i> Dashboard</button>'+
       '</div>'+
     '</div>';
   document.getElementById('sdone-again').addEventListener('click',function(){startReview();});
@@ -1738,7 +1738,7 @@ document.getElementById('btn-save-deck').addEventListener('click',function(){
   else decks.push(deck);
   saveAll();renderDecks();
   if(currentView==='cards'&&findDeck(currentDeckId)) renderCardsList();
-  closeOv('modal-deck');toast(editDeckId?'Deck atualizado!':(parentId?'Subdeck criado! 🎉':'Deck criado! 🎉'),'ok');
+  closeOv('modal-deck');toast(editDeckId?'Deck atualizado!':(parentId?'Subdeck criado!':'Deck criado!'),'ok');
 });
 document.getElementById('deck-del-btn').addEventListener('click',function(){
   if(!editDeckId)return;
@@ -1771,7 +1771,7 @@ function openCardModal(id){
   var card=id?cards.find(function(c){return c.id===id;}):null;
   document.getElementById('mcard-title').textContent=card?'Editar Card':'Novo Card';
   document.getElementById('card-del-btn').style.display=card?'inline-flex':'none';
-  document.getElementById('btn-save-card').innerHTML=card?'<i class="fas fa-save"></i> Salvar':'<i class="fas fa-plus"></i> Criar';
+  document.getElementById('btn-save-card').innerHTML=card?'<i class="ico ico-save" aria-hidden="true"></i> Salvar':'<i class="ico ico-plus" aria-hidden="true"></i> Criar';
   document.getElementById('card-front').value=card?card.front:'';
   document.getElementById('card-back').value=card?card.back:'';
   document.getElementById('card-note').value=card?(card.note||''):'';

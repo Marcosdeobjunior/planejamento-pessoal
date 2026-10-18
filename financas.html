@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://apis.google.com https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://unpkg.com; font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.google.com https://nominatim.openstreetmap.org https://api.open-meteo.com https://geocoding-api.open-meteo.com; frame-src https://*.firebaseapp.com https://www.google.com https://recaptcha.google.com https://www.youtube.com https://player.vimeo.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://apis.google.com https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://unpkg.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.google.com https://nominatim.openstreetmap.org https://api.open-meteo.com https://geocoding-api.open-meteo.com; frame-src https://*.firebaseapp.com https://www.google.com https://recaptcha.google.com https://www.youtube.com https://player.vimeo.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#04040c">
   <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
@@ -11,8 +11,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.0.0-beta3/css/all.min.css" integrity="sha384-5e2ESR8Ycmos6g3gAKr1Jvwye8sW4U1u/cAKulfVJnkakCcMqhOudbtPnvJ+nbv7" crossorigin="anonymous">
   <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/icons.css">
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/app-shell.css">
   <link rel="stylesheet" href="css/financas.css">
@@ -30,8 +30,8 @@
             <p>analytics · calendário · projeção de saldo</p>
           </div>
           <div class="fin-ph-right">
-            <button class="fin-analytics-btn" id="btn-open-fin-analytics">📊 Analytics</button>
-            <button class="fin-btn fin-btn-gold" id="btn-add-tx"><i class="fas fa-plus"></i> Transação</button>
+            <button class="fin-analytics-btn" id="btn-open-fin-analytics"><i class="ico ico-chart-column" aria-hidden="true"></i> Analytics</button>
+            <button class="fin-btn fin-btn-gold" id="btn-add-tx"><i class="ico ico-plus" aria-hidden="true"></i> Transação</button>
           </div>
         </div>
 
@@ -42,18 +42,18 @@
               <div class="fin-cal-legend">
                 <span class="fin-cal-legend-in">● Entrada</span>
                 <span class="fin-cal-legend-out">● Saída</span>
-                <span class="fin-cal-legend-future">◌ Futuro</span>
+                <span class="fin-cal-legend-future"><i class="ico ico-circle-dashed" aria-hidden="true"></i> Futuro</span>
               </div>
             </div>
             <div class="fin-cal-wrap">
               <div class="fin-cal-nav">
-                <button class="fin-cal-nav-btn" id="cal-prev" type="button" aria-label="Mês anterior"><i class="fas fa-chevron-left" aria-hidden="true"></i></button>
+                <button class="fin-cal-nav-btn" id="cal-prev" type="button" aria-label="Mês anterior"><i class="ico ico-chevron-left" aria-hidden="true"></i></button>
                 <div>
                   <div class="fin-cal-month" id="cal-title">—</div>
                 </div>
                 <div class="fin-cal-nav-actions">
                   <button class="fin-cal-today-btn" id="cal-today">Hoje</button>
-                  <button class="fin-cal-nav-btn" id="cal-next" type="button" aria-label="Próximo mês"><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
+                  <button class="fin-cal-nav-btn" id="cal-next" type="button" aria-label="Próximo mês"><i class="ico ico-chevron-right" aria-hidden="true"></i></button>
                 </div>
               </div>
               <div class="fin-cal-grid" id="cal-grid"></div>
@@ -66,12 +66,12 @@
                 <div class="fin-tile-lbl">Saldo Atual</div>
                 <div class="fin-tile-val fin-neu" id="st-saldo">R$ 0</div>
                 <div class="fin-tile-sub" id="st-saldo-sub">—</div>
-                <i class="fas fa-wallet fin-tile-icon"></i>
+                <i class="ico ico-wallet fin-tile-icon" aria-hidden="true"></i>
               </div>
             </div>
 
             <div class="fin-best-day-banner" id="best-day-banner">
-              <div class="fin-bd-pulse">💰</div>
+              <div class="fin-bd-pulse"><i class="ico ico-coins" aria-hidden="true"></i></div>
               <div class="fin-bd-info">
                 <div class="fin-bd-title">Melhor dia para compra</div>
                 <div class="fin-bd-day" id="bd-day-text">Calculando...</div>
@@ -105,11 +105,11 @@
               <div class="fin-actions-title">Ações</div>
               <div class="fin-actions-list">
                 <button class="fin-actions-btn" id="fin-manage-categories" type="button">
-                  <i class="fas fa-tags"></i>
+                  <i class="ico ico-tags" aria-hidden="true"></i>
                   <span>Gerenciar categorias</span>
                 </button>
                 <button class="fin-actions-btn" id="fin-manage-recurring" type="button">
-                  <i class="fas fa-repeat"></i>
+                  <i class="ico ico-repeat" aria-hidden="true"></i>
                   <span>Gerenciar recorrências</span>
                 </button>
               </div>
@@ -136,19 +136,19 @@
 
       <div class="san-kpi-row fin-san-kpi-row">
         <div class="san-kpi" style="--kpi-color:#5ec4a8">
-          <div class="san-kpi-icon">↓</div>
+          <div class="san-kpi-icon"><i class="ico ico-arrow-down" aria-hidden="true"></i></div>
           <div class="san-kpi-val fin-pos" id="st-in">R$ 0</div>
           <div class="san-kpi-lbl">Entradas (mês)</div>
           <div class="san-kpi-sub" id="st-in-sub">0 transações</div>
         </div>
         <div class="san-kpi" style="--kpi-color:#e06b8b">
-          <div class="san-kpi-icon">↑</div>
+          <div class="san-kpi-icon"><i class="ico ico-arrow-up" aria-hidden="true"></i></div>
           <div class="san-kpi-val fin-neg" id="st-out">R$ 0</div>
           <div class="san-kpi-lbl">Saídas (mês)</div>
           <div class="san-kpi-sub" id="st-out-sub">0 transações</div>
         </div>
         <div class="san-kpi" style="--kpi-color:#7c6fcd">
-          <div class="san-kpi-icon">↗</div>
+          <div class="san-kpi-icon"><i class="ico ico-trending-up" aria-hidden="true"></i></div>
           <div class="san-kpi-val" id="st-proj" style="color:var(--fin-violet)">R$ 0</div>
           <div class="san-kpi-lbl">Saldo Projetado</div>
           <div class="san-kpi-sub">fim do mês</div>
@@ -163,7 +163,7 @@
 
       <div class="san-charts-row">
         <div class="san-card" style="flex:1">
-          <div class="san-card-title"><span class="san-card-title-icon">📈</span>Fluxo de Caixa</div>
+          <div class="san-card-title"><span class="san-card-title-icon"><i class="ico ico-chart-line" aria-hidden="true"></i></span>Fluxo de Caixa</div>
           <div class="fin-analytics-card-tools">
             <div class="fin-seg" id="seg-chart">
               <button class="fin-seg-btn active" data-v="month">Mês</button>
@@ -174,14 +174,14 @@
           <div class="fin-chart-wrap"><canvas class="fin-chart" id="chart-flux" height="200"></canvas></div>
         </div>
         <div class="san-card" style="flex:1">
-          <div class="san-card-title"><span class="san-card-title-icon">◈</span>Saldo Acumulado no Mês</div>
+          <div class="san-card-title"><span class="san-card-title-icon"><i class="ico ico-chart-area" aria-hidden="true"></i></span>Saldo Acumulado no Mês</div>
           <div class="fin-chart-wrap"><canvas class="fin-chart" id="chart-balance" height="200"></canvas></div>
         </div>
       </div>
 
       <div class="san-charts-row">
         <div class="san-card" style="flex:1">
-          <div class="san-card-title"><span class="san-card-title-icon">📋</span>Transações</div>
+          <div class="san-card-title"><span class="san-card-title-icon"><i class="ico ico-list" aria-hidden="true"></i></span>Transações</div>
           <div class="fin-analytics-card-tools">
             <div class="fin-seg" id="seg-tx">
               <button class="fin-seg-btn active" data-v="all">Todas</button>
@@ -192,7 +192,7 @@
           <div class="fin-tx-list" id="tx-list"></div>
         </div>
         <div class="san-card" style="flex:1">
-          <div class="san-card-title"><span class="san-card-title-icon">🎯</span>Por Categoria (Saídas)</div>
+          <div class="san-card-title"><span class="san-card-title-icon"><i class="ico ico-target" aria-hidden="true"></i></span>Por Categoria (Saídas)</div>
           <div class="fin-cat-list" id="cat-list"></div>
         </div>
       </div>
@@ -201,7 +201,7 @@
 
       <div class="san-charts-row">
         <div class="san-card fin-analytics-savings-card" style="flex:1">
-          <div class="san-card-title"><span class="san-card-title-icon">🏦</span>Poupança</div>
+          <div class="san-card-title"><span class="san-card-title-icon"><i class="ico ico-landmark" aria-hidden="true"></i></span>Poupança</div>
           <div class="fin-analytics-savings-head">
             <div>
               <div class="fin-analytics-savings-amount" id="st-save-amount">R$ 0</div>
@@ -218,7 +218,7 @@
           </div>
         </div>
         <div class="san-card fin-analytics-savings-average-card" style="flex:0 0 260px">
-          <div class="san-card-title"><span class="san-card-title-icon">📈</span>Média mensal</div>
+          <div class="san-card-title"><span class="san-card-title-icon"><i class="ico ico-trending-up" aria-hidden="true"></i></span>Média mensal</div>
           <div class="fin-analytics-savings-average-value" id="st-save-average">R$ 0,00</div>
           <div class="fin-analytics-savings-average-sub">Média dos aportes mensais realizados na poupança.</div>
         </div>
@@ -226,12 +226,12 @@
 
       <div class="san-charts-row">
         <div class="san-card fin-analytics-savings-stat-card" style="flex:1">
-          <div class="san-card-title"><span class="san-card-title-icon">📥</span>Transferido no mês</div>
+          <div class="san-card-title"><span class="san-card-title-icon"><i class="ico ico-arrow-down-to-line" aria-hidden="true"></i></span>Transferido no mês</div>
           <div class="fin-analytics-savings-stat-value" id="st-save-month">R$ 0,00</div>
           <div class="fin-chart-wrap fin-analytics-savings-chart-wrap"><canvas class="fin-chart" id="chart-save-history" height="180"></canvas></div>
         </div>
         <div class="san-card fin-analytics-savings-stat-card" style="flex:1">
-          <div class="san-card-title"><span class="san-card-title-icon">🎯</span>Faltam</div>
+          <div class="san-card-title"><span class="san-card-title-icon"><i class="ico ico-target" aria-hidden="true"></i></span>Faltam</div>
           <div class="fin-analytics-savings-stat-value" id="st-save-missing">R$ 0,00</div>
           <div class="fin-analytics-savings-proj-meta">
             <span id="st-save-days">0 dias</span>
@@ -249,14 +249,14 @@
     <div class="fin-modal">
       <div class="fin-modal-hd">
         <h3 id="mtx-title">Nova Transação</h3>
-        <button class="fin-mclose" id="mtx-close"><i class="fas fa-times"></i></button>
+        <button class="fin-mclose" id="mtx-close" aria-label="Fechar"><i class="ico ico-x" aria-hidden="true"></i></button>
       </div>
 
       <div class="fin-type-toggle">
-        <button class="fin-tt-btn active-in" id="tt-in" data-type="in"><i class="fas fa-arrow-down"></i> Entrada</button>
-        <button class="fin-tt-btn" id="tt-out" data-type="out"><i class="fas fa-arrow-up"></i> Saída</button>
-        <button class="fin-tt-btn" id="tt-save" data-type="save"><i class="fas fa-piggy-bank"></i> Guardar</button>
-        <button class="fin-tt-btn" id="tt-save-withdraw" data-type="save_withdraw"><i class="fas fa-coins"></i> Retirar</button>
+        <button class="fin-tt-btn active-in" id="tt-in" data-type="in"><i class="ico ico-arrow-down" aria-hidden="true"></i> Entrada</button>
+        <button class="fin-tt-btn" id="tt-out" data-type="out"><i class="ico ico-arrow-up" aria-hidden="true"></i> Saída</button>
+        <button class="fin-tt-btn" id="tt-save" data-type="save"><i class="ico ico-piggy-bank" aria-hidden="true"></i> Guardar</button>
+        <button class="fin-tt-btn" id="tt-save-withdraw" data-type="save_withdraw"><i class="ico ico-coins" aria-hidden="true"></i> Retirar</button>
       </div>
 
       <div class="fin-fg">
@@ -296,9 +296,9 @@
       </div>
 
       <div class="fin-modal-acts">
-        <button class="fin-btn fin-btn-rose fin-btn-sm" id="mtx-del" style="display:none;margin-right:auto"><i class="fas fa-trash"></i> Excluir</button>
+        <button class="fin-btn fin-btn-rose fin-btn-sm" id="mtx-del" style="display:none;margin-right:auto"><i class="ico ico-trash-2" aria-hidden="true"></i> Excluir</button>
         <button class="fin-btn fin-btn-ghost fin-btn-sm" id="mtx-cancel">Cancelar</button>
-        <button class="fin-btn fin-btn-gold" id="mtx-save"><i class="fas fa-plus"></i> Adicionar</button>
+        <button class="fin-btn fin-btn-gold" id="mtx-save"><i class="ico ico-plus" aria-hidden="true"></i> Adicionar</button>
       </div>
     </div>
   </div>
@@ -307,7 +307,7 @@
     <div class="fin-modal fin-modal-wide">
       <div class="fin-modal-hd">
         <h3>Gerenciar Categorias</h3>
-        <button class="fin-mclose" id="mc-close"><i class="fas fa-times"></i></button>
+        <button class="fin-mclose" id="mc-close" aria-label="Fechar"><i class="ico ico-x" aria-hidden="true"></i></button>
       </div>
 
       <div class="fin-cat-manager-grid">
@@ -316,7 +316,7 @@
           <div class="fin-cat-manager-list" id="fin-cat-manager-in"></div>
           <div class="fin-cat-manager-add">
             <input type="text" class="fin-fi" id="fin-cat-new-in" placeholder="Nova categoria de entrada">
-            <button class="fin-btn fin-btn-ghost fin-btn-sm" id="fin-cat-add-in" type="button"><i class="fas fa-plus"></i> Adicionar</button>
+            <button class="fin-btn fin-btn-ghost fin-btn-sm" id="fin-cat-add-in" type="button"><i class="ico ico-plus" aria-hidden="true"></i> Adicionar</button>
           </div>
         </section>
 
@@ -325,7 +325,7 @@
           <div class="fin-cat-manager-list" id="fin-cat-manager-out"></div>
           <div class="fin-cat-manager-add">
             <input type="text" class="fin-fi" id="fin-cat-new-out" placeholder="Nova categoria de saída">
-            <button class="fin-btn fin-btn-ghost fin-btn-sm" id="fin-cat-add-out" type="button"><i class="fas fa-plus"></i> Adicionar</button>
+            <button class="fin-btn fin-btn-ghost fin-btn-sm" id="fin-cat-add-out" type="button"><i class="ico ico-plus" aria-hidden="true"></i> Adicionar</button>
           </div>
         </section>
       </div>
@@ -334,7 +334,7 @@
 
       <div class="fin-modal-acts">
         <button class="fin-btn fin-btn-ghost fin-btn-sm" id="mc-cancel">Cancelar</button>
-        <button class="fin-btn fin-btn-gold" id="mc-save"><i class="fas fa-save"></i> Salvar categorias</button>
+        <button class="fin-btn fin-btn-gold" id="mc-save"><i class="ico ico-save" aria-hidden="true"></i> Salvar categorias</button>
       </div>
     </div>
   </div>
@@ -343,14 +343,14 @@
     <div class="fin-modal fin-modal-recurring">
       <div class="fin-modal-hd">
         <h3>Gerenciar Recorrências</h3>
-        <button class="fin-mclose" id="mr-close"><i class="fas fa-times"></i></button>
+        <button class="fin-mclose" id="mr-close" aria-label="Fechar"><i class="ico ico-x" aria-hidden="true"></i></button>
       </div>
 
       <div class="fin-recurring-layout">
         <aside class="fin-recurring-sidebar">
           <div class="fin-recurring-sidebar-head">
             <div class="fin-cat-manager-title">Regras</div>
-            <button class="fin-btn fin-btn-ghost fin-btn-sm" id="mr-new" type="button"><i class="fas fa-plus"></i> Nova</button>
+            <button class="fin-btn fin-btn-ghost fin-btn-sm" id="mr-new" type="button"><i class="ico ico-plus" aria-hidden="true"></i> Nova</button>
           </div>
           <div class="fin-recurring-list" id="fin-recurring-list"></div>
         </aside>
@@ -463,9 +463,9 @@
           </div>
 
           <div class="fin-modal-acts">
-            <button class="fin-btn fin-btn-rose fin-btn-sm" id="mr-delete" type="button" style="display:none;margin-right:auto"><i class="fas fa-trash"></i> Excluir</button>
+            <button class="fin-btn fin-btn-rose fin-btn-sm" id="mr-delete" type="button" style="display:none;margin-right:auto"><i class="ico ico-trash-2" aria-hidden="true"></i> Excluir</button>
             <button class="fin-btn fin-btn-ghost fin-btn-sm" id="mr-cancel" type="button">Cancelar</button>
-            <button class="fin-btn fin-btn-gold" id="mr-save" type="button"><i class="fas fa-save"></i> Salvar regra</button>
+            <button class="fin-btn fin-btn-gold" id="mr-save" type="button"><i class="ico ico-save" aria-hidden="true"></i> Salvar regra</button>
           </div>
         </section>
       </div>

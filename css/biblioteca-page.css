@@ -1207,3 +1207,34 @@
     .filter-layout { grid-template-columns: 1fr; }
     .filter-col-right { border-left:0; padding-left:0; }
   }
+
+  /* ícones (Lucide) no lugar dos emojis: favorito em rosa, estrela acesa com brilho, marcadores neutros */
+  .fav-icon .ico-heart-fill, .mc-fav-badge .ico, #th-fav-icon .ico-heart-fill { color: var(--accent4); }
+  .mstar.on .ico { filter: drop-shadow(0 0 6px rgba(200,169,110,.7)); }
+  .mc-img-placeholder .ph-icon, .empty-icon, .collection-fallback, .upload-hint .uh-icon { color: rgba(200,169,110,.55); }
+  .filter-chip .ico, .btn-filter .ico, .btn .ico { vertical-align: -0.15em; }
+  /* celular: busca em linha própria; Filtros e Adicionar lado a lado sem quebrar o texto */
+  @media (max-width: 600px) {
+    .lib-toolbar { width: 100%; flex-wrap: wrap; }
+    .lib-toolbar > .inp { flex: 1 1 100% !important; min-width: 0 !important; }
+    .lib-toolbar > .filter-wrap { flex: 1; }
+    .lib-toolbar .btn-filter { width: 100%; height: 100%; justify-content: center; }
+    .lib-toolbar > .btn { flex: 1; white-space: nowrap; }
+  }
+  @media (max-width: 600px) {
+    /* painel de filtros ancorado na barra inteira (antes saía da tela pela esquerda) */
+    .lib-toolbar { position: relative; }
+    .lib-toolbar > .filter-wrap { position: static; }
+    .lib-toolbar .filter-panel { left: 0; right: 0; width: auto; }
+  }
+  @media (max-width: 560px) {
+    /* modal: a coluna de campos passava da borda direita */
+    .modal-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+    .modal-fields-col { min-width: 0; }
+    /* capa à esquerda; link da capa e favorito empilhados ao lado (antes o "Usar" saía da tela e o resto do formulário não rolava) */
+    .modal-img-col { display: grid; grid-template-columns: 100px minmax(0, 1fr); grid-template-rows: auto 1fr; align-items: start; gap: 10px 12px; padding-bottom: 8px; }
+    .modal-img-col .img-upload-zone { grid-row: span 2; }
+    /* painel do item: Voltar/Editar na mesma linha e chips lado a lado (regra do sonhos.css empilhava e sobrepunha o título) */
+    #tracker-hub .hub-nav, #collection-hub .hub-nav { flex-direction: row; align-items: center; }
+    #tracker-hub .hub-hero-meta, #collection-hub .hub-hero-meta { flex-direction: row; align-items: center; gap: 6px; }
+  }

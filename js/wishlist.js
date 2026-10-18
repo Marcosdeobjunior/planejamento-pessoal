@@ -644,7 +644,7 @@
     pageState.wishlist = pageData.page;
 
     if (!items.length) {
-      grid.innerHTML = '<div class="ws-empty"><span class="ws-empty-ico">\uD83D\uDED2</span><h4>Nenhum item encontrado</h4><p>' +
+      grid.innerHTML = '<div class="ws-empty"><span class="ws-empty-ico"><i class="ico ico-shopping-cart" aria-hidden="true"></i></span><h4>Nenhum item encontrado</h4><p>' +
         (W.length ? "Tente outro filtro ou busca." : "Adicione seu primeiro desejo!") +
         "</p></div>";
       renderPagination("ws-items-pagination", "wishlist", 1, 0);
@@ -659,7 +659,7 @@
         footerPrice: item.price ? money(item.price, true) : "&ndash;",
         footerExtra: window.SoterUtils.safeUrl(item.link) ? '<a class="ws-card-link" href="' + esc(window.SoterUtils.safeUrl(item.link)) + '" target="_blank" rel="noopener" data-stop-click="true">Ver produto &rarr;</a>' : "",
         actionButton: '<button class="ws-card-check" type="button" title="Registrar aquisicao" data-toggle-index="' + index + '">' +
-          '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>' +
+          '<i class="ico ico-plus" aria-hidden="true"></i>' +
           "</button>"
       });
     }).join("");
@@ -760,7 +760,7 @@
     pageState.listas = pageData.page;
 
     if (!listGroups.length) {
-      grid.innerHTML = '<div class="ws-empty"><span class="ws-empty-ico">\uD83D\uDCC2</span><h4>Nenhuma lista criada</h4><p>Adicione agrupamentos para organizar seus itens.</p></div>';
+      grid.innerHTML = '<div class="ws-empty"><span class="ws-empty-ico"><i class="ico ico-folder-open" aria-hidden="true"></i></span><h4>Nenhuma lista criada</h4><p>Adicione agrupamentos para organizar seus itens.</p></div>';
       renderPagination("ws-lists-pagination", "listas", 1, 0);
       return;
     }
@@ -809,7 +809,7 @@
     }
 
     if (!group || !items.length) {
-      grid.innerHTML = '<div class="ws-empty"><span class="ws-empty-ico">\uD83D\uDED2</span><h4>Nenhum item encontrado</h4><p>Adicione itens da wishlist que se encaixem nesta lista.</p></div>';
+      grid.innerHTML = '<div class="ws-empty"><span class="ws-empty-ico"><i class="ico ico-shopping-cart" aria-hidden="true"></i></span><h4>Nenhum item encontrado</h4><p>Adicione itens da wishlist que se encaixem nesta lista.</p></div>';
       return;
     }
 
@@ -999,11 +999,11 @@
       var index = listGroups.findIndex(function (group) { return group.id === editListGroupId; });
       if (index >= 0) listGroups[index] = payload;
       if (activeListGroupId === editListGroupId) activeListGroupId = payload.id;
-      toast("Lista atualizada! \u2713", "s");
+      toast("Lista atualizada!", "s");
     } else {
       listGroups.push(payload);
       pageState.listas = clampPage(listGroups.length, listGroups.length);
-      toast("Lista criada! \u2713", "s");
+      toast("Lista criada!", "s");
     }
 
     save();
@@ -1063,7 +1063,7 @@
     };
     save();
     renderStats();
-    toast("Meta salva! \u2713", "s");
+    toast("Meta salva!", "s");
   }
 
   function buildItemFromForm() {
@@ -1097,10 +1097,10 @@
     var item = buildItemFromForm();
     if (editIdx >= 0) {
       W[editIdx] = item;
-      toast("Item atualizado! \u2713", "s");
+      toast("Item atualizado!", "s");
     } else {
       W.push(item);
-      toast("Item adicionado! \u2713", "s");
+      toast("Item adicionado!", "s");
     }
 
     save();
@@ -1133,7 +1133,7 @@
       pageState.wishlist = clampPage(pageState.wishlist, W.length);
       toast('"' + item.name + '" saiu da wishlist: estoque zerado.', "i");
     } else {
-      toast("Aquisicao registrada! \u2713", "s");
+      toast("Aquisicao registrada!", "s");
     }
 
     save();

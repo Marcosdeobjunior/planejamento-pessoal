@@ -179,9 +179,14 @@ const SN_CAT_COLORS = {
   criativo:'#b06be8', espiritual:'#c8a96e',
 };
 const SN_CAT_LABELS = {
-  pessoal:'🧠 Pessoal', carreira:'💼 Carreira', financeiro:'💰 Financeiro',
-  saude:'💪 Saúde',     familia:'🏡 Família',   aventura:'🌍 Aventura',
-  criativo:'🎨 Criativo', espiritual:'✨ Espiritual',
+  pessoal:'Pessoal', carreira:'Carreira', financeiro:'Financeiro',
+  saude:'Saúde',     familia:'Família',   aventura:'Aventura',
+  criativo:'Criativo', espiritual:'Espiritual',
+};
+// prioridade com um ponto colorido (HTML: só em innerHTML)
+function snPrioDot(cor) { return '<i class="ico ico-circle-fill" style="color:' + cor + ';font-size:.7em;vertical-align:.05em" aria-hidden="true"></i> '; }
+const SN_PRIO_HTML = {
+  alta: snPrioDot('var(--accent4)') + 'Alta', media: snPrioDot('var(--accent1)') + 'Média', baixa: snPrioDot('var(--accent3)') + 'Baixa',
 };
 
 function snFmtDate(ds) {
@@ -451,17 +456,17 @@ function hubRender(s) {
   const metaRow = document.getElementById('hub-hero-meta');
   if (metaRow) {
     const chips = [];
-    if (s.dataInicio) chips.push(`<div class="hub-hero-chip">📅 ${snFmtDateShort(s.dataInicio)}</div>`);
+    if (s.dataInicio) chips.push(`<div class="hub-hero-chip"><i class="ico ico-calendar" aria-hidden="true"></i> ${snFmtDateShort(s.dataInicio)}</div>`);
     if (s.dataFim) {
       const diff = snDaysDiff(s.dataFim);
       const cls  = !isReal && diff < 0 ? 'warning' : isReal ? 'success' : '';
-      const txt  = isReal ? '✓ ' + snFmtDateShort(s.dataFim)
-                 : diff < 0  ? '⚠ ' + Math.abs(diff) + 'd atrasado'
-                 : diff === 0 ? '✦ Vence hoje!'
-                 : '🏁 ' + diff + 'd restantes';
+      const txt  = isReal ? '<i class="ico ico-check" aria-hidden="true"></i> ' + snFmtDateShort(s.dataFim)
+                 : diff < 0  ? '<i class="ico ico-triangle-alert" aria-hidden="true"></i> ' + Math.abs(diff) + 'd atrasado'
+                 : diff === 0 ? '<i class="ico ico-clock" aria-hidden="true"></i> Vence hoje!'
+                 : '<i class="ico ico-flag" aria-hidden="true"></i> ' + diff + 'd restantes';
       chips.push(`<div class="hub-hero-chip ${cls}">${txt}</div>`);
     }
-    if (s.horizonte) chips.push(`<div class="hub-hero-chip">⏳ ${snEsc(s.horizonte)}</div>`);
+    if (s.horizonte) chips.push(`<div class="hub-hero-chip"><i class="ico ico-hourglass" aria-hidden="true"></i> ${snEsc(s.horizonte)}</div>`);
     metaRow.innerHTML = chips.join('');
   }
 
@@ -511,7 +516,7 @@ function hubRender(s) {
   metas.forEach(m => { pCount[m.prioridade||'media']++; });
   const maxP = Math.max(...Object.values(pCount), 1);
   const pColorMap = {alta:'var(--accent4)',media:'var(--accent1)',baixa:'var(--accent3)'};
-  const pLblMap   = {alta:'🔴 Alta',media:'🟡 Média',baixa:'🟢 Baixa'};
+  const pLblMap   = SN_PRIO_HTML;
   const prioRows = document.getElementById('hub-prio-rows');
   if (prioRows) prioRows.innerHTML = ['alta','media','baixa'].map(p =>
     `<div class="hub-prio-row">
@@ -563,7 +568,7 @@ function hubRenderExtras(s) {
         <span class="hub-jornada-unit">dias de jornada</span>
       </div>` +
       (s.dataFim ? `<div class="hub-jornada-bar"><div class="hub-jornada-fill" style="width:0%" id="hub-jornada-fill"></div></div>
-        <div class="hub-jornada-sub">${restam === 0 ? '🏁 Prazo final hoje!' : restam > 0 ? `Faltam ${restam} dias para o prazo` : `${Math.abs(restam)}d além do prazo`}</div>` : '');
+        <div class="hub-jornada-sub">${restam === 0 ? '<i class="ico ico-flag" aria-hidden="true"></i> Prazo final hoje!' : restam > 0 ? `Faltam ${restam} dias para o prazo` : `${Math.abs(restam)}d além do prazo`}</div>` : '');
     // anima a barra
     if (s.dataFim) setTimeout(() => {
       const fill = document.getElementById('hub-jornada-fill');
@@ -602,7 +607,7 @@ function hubRenderFinance(s) {
       : info.hist.slice().reverse().slice(0,12).map(function (h) {
           return `<div class="hub-fin-item">
             <div><div class="meta">${snEsc(h.mes)}</div><div class="val">${fmt(h.valor)}</div></div>
-            <button class="hub-fin-del" data-sn-act="hub-del-deposito" data-sn-id="${snEsc(h.id)}" title="Remover">✕</button>
+            <button class="hub-fin-del" data-sn-act="hub-del-deposito" data-sn-id="${snEsc(h.id)}" title="Remover"><i class="ico ico-x" aria-hidden="true"></i></button>
           </div>`;
         }).join('');
   }
@@ -806,8 +811,8 @@ function hubRenderDates(s) {
   const ini  = snFmtDate(s.dataInicio), fim = snFmtDate(s.dataFim);
   const iniDiff = snDaysDiff(s.dataInicio), fimDiff = snDaysDiff(s.dataFim);
   grid.innerHTML =
-    `<div class="hub-date-card"><div class="hub-date-lbl">📅 Início</div><div class="hub-date-val">${ini||'—'}</div>${ini&&iniDiff!==null?`<div class="hub-date-sub">${iniDiff<0?Math.abs(iniDiff)+'d atrás':'daqui '+iniDiff+'d'}</div>`:''}</div>` +
-    `<div class="hub-date-card"><div class="hub-date-lbl">🏁 Conclusão</div><div class="hub-date-val" style="${fimDiff!==null&&fimDiff<0&&!s.realizado?'color:var(--accent4)':''}">${fim||'—'}</div>${fim&&fimDiff!==null&&!s.realizado?`<div class="hub-date-sub" style="${fimDiff<0?'color:var(--accent4)':''}">${fimDiff<0?Math.abs(fimDiff)+'d atrasado':fimDiff===0?'Vence hoje':'Faltam '+fimDiff+'d'}</div>`:''}</div>`;
+    `<div class="hub-date-card"><div class="hub-date-lbl"><i class="ico ico-calendar" aria-hidden="true"></i> Início</div><div class="hub-date-val">${ini||'—'}</div>${ini&&iniDiff!==null?`<div class="hub-date-sub">${iniDiff<0?Math.abs(iniDiff)+'d atrás':'daqui '+iniDiff+'d'}</div>`:''}</div>` +
+    `<div class="hub-date-card"><div class="hub-date-lbl"><i class="ico ico-flag" aria-hidden="true"></i> Conclusão</div><div class="hub-date-val" style="${fimDiff!==null&&fimDiff<0&&!s.realizado?'color:var(--accent4)':''}">${fim||'—'}</div>${fim&&fimDiff!==null&&!s.realizado?`<div class="hub-date-sub" style="${fimDiff<0?'color:var(--accent4)':''}">${fimDiff<0?Math.abs(fimDiff)+'d atrasado':fimDiff===0?'Vence hoje':'Faltam '+fimDiff+'d'}</div>`:''}</div>`;
   const tlWrap = document.getElementById('hub-tl-wrap');
   const tlFill = document.getElementById('hub-tl-fill');
   const tlToday = document.getElementById('hub-tl-today');
@@ -829,7 +834,7 @@ function hubRenderMetaList(s) {
   const list  = document.getElementById('hub-meta-list'); if (!list) return;
   const metas = s.metas || [];
   if (!metas.length) {
-    list.innerHTML = `<div class="hub-meta-empty"><span class="hub-meta-empty-icon">◈</span>Nenhuma meta adicionada ainda.<br>Clique em <strong>+ Nova meta</strong> para começar.</div>`;
+    list.innerHTML = `<div class="hub-meta-empty"><span class="hub-meta-empty-icon"><i class="ico ico-list-checks" aria-hidden="true"></i></span>Nenhuma meta adicionada ainda.<br>Clique em <strong>+ Nova meta</strong> para começar.</div>`;
     return;
   }
   const order = {alta:0,media:1,baixa:2};
@@ -841,19 +846,19 @@ function hubRenderMetaList(s) {
     return 0;
   });
   const pColorMap = {alta:'prio-alta',media:'prio-media',baixa:'prio-baixa'};
-  const pLblMap   = {alta:'🔴 Alta',media:'🟡 Média',baixa:'🟢 Baixa'};
+  const pLblMap   = SN_PRIO_HTML;
   list.innerHTML = sorted.map((m, i) => {
     const isLate = snIsLate(m.prazo, m.feita);
     const diff   = snDaysDiff(m.prazo);
     const checkCls = m.feita ? 'done' : isLate ? 'late' : '';
     const chips = [];
-    if (m.dataInicio) chips.push(`<span class="hub-meta-chip date">📅 ${snFmtDateShort(m.dataInicio)}</span>`);
+    if (m.dataInicio) chips.push(`<span class="hub-meta-chip date"><i class="ico ico-calendar" aria-hidden="true"></i> ${snFmtDateShort(m.dataInicio)}</span>`);
     if (m.prazo) {
-      let cls = 'date', lbl = '🏁 ' + snFmtDateShort(m.prazo);
-      if      (m.feita)   { cls='ondone'; lbl='✓ '+snFmtDateShort(m.prazo); }
-      else if (isLate)    { cls='late';   lbl='⚠ '+Math.abs(diff)+'d atrasada'; }
-      else if (diff===0)  { cls='soon';   lbl='🔥 Vence hoje'; }
-      else if (diff<=3)   { cls='soon';   lbl='⏰ '+diff+'d'; }
+      let cls = 'date', lbl = '<i class="ico ico-flag" aria-hidden="true"></i> ' + snFmtDateShort(m.prazo);
+      if      (m.feita)   { cls='ondone'; lbl='<i class="ico ico-check" aria-hidden="true"></i> '+snFmtDateShort(m.prazo); }
+      else if (isLate)    { cls='late';   lbl='<i class="ico ico-triangle-alert" aria-hidden="true"></i> '+Math.abs(diff)+'d atrasada'; }
+      else if (diff===0)  { cls='soon';   lbl='<i class="ico ico-flame" aria-hidden="true"></i> Vence hoje'; }
+      else if (diff<=3)   { cls='soon';   lbl='<i class="ico ico-alarm-clock" aria-hidden="true"></i> '+diff+'d'; }
       chips.push(`<span class="hub-meta-chip ${cls}">${lbl}</span>`);
     }
     chips.push(`<span class="hub-meta-chip ${pColorMap[m.prioridade||'media']}">${pLblMap[m.prioridade||'media']}</span>`);
@@ -864,7 +869,7 @@ function hubRenderMetaList(s) {
         <div class="sn-meta-edit">
           <input type="text" class="sn-me-input" id="hub-me-texto" value="${snEsc(m.texto)}" placeholder="Descrição da meta" aria-label="Descrição da meta">
           <div class="sn-me-row">
-            <label>Prioridade<select id="hub-me-prio">${opt('alta','🔴 Alta')}${opt('media','🟡 Média')}${opt('baixa','🟢 Baixa')}</select></label>
+            <label>Prioridade<select id="hub-me-prio">${opt('alta','Alta')}${opt('media','Média')}${opt('baixa','Baixa')}</select></label>
             <label>Início<input type="date" id="hub-me-inicio" value="${snEsc(m.dataInicio || '')}"></label>
             <label>Prazo<input type="date" id="hub-me-prazo" value="${snEsc(m.prazo || '')}"></label>
           </div>
@@ -876,14 +881,14 @@ function hubRenderMetaList(s) {
       </div>`;
     }
     return `<div class="hub-meta-item" style="animation-delay:${i*0.035}s">
-      <button class="hub-meta-check ${checkCls}" data-sn-act="hub-toggle-meta" data-sn-id="${snEsc(m.id)}" title="${m.feita?'Desmarcar':'Concluir'}">${m.feita?'✓':''}</button>
+      <button class="hub-meta-check ${checkCls}" data-sn-act="hub-toggle-meta" data-sn-id="${snEsc(m.id)}" title="${m.feita?'Desmarcar':'Concluir'}">${m.feita?'<i class="ico ico-check" aria-hidden="true"></i>':''}</button>
       <div class="hub-meta-body">
         <div class="hub-meta-name ${m.feita?'done':''}" data-sn-act="hub-edit-meta" data-sn-id="${snEsc(m.id)}" title="Clique duas vezes para editar">${snEsc(m.texto)}</div>
         ${chips.length ? `<div class="hub-meta-chips">${chips.join('')}</div>` : ''}
       </div>
       <div class="hub-meta-side">
-        <button class="hub-meta-side-btn" data-sn-act="hub-edit-meta" data-sn-id="${snEsc(m.id)}" title="Editar">✎</button>
-        <button class="hub-meta-side-btn" data-sn-act="hub-del-meta" data-sn-id="${snEsc(m.id)}" title="Remover">✕</button>
+        <button class="hub-meta-side-btn" data-sn-act="hub-edit-meta" data-sn-id="${snEsc(m.id)}" title="Editar"><i class="ico ico-pencil" aria-hidden="true"></i></button>
+        <button class="hub-meta-side-btn" data-sn-act="hub-del-meta" data-sn-id="${snEsc(m.id)}" title="Remover"><i class="ico ico-x" aria-hidden="true"></i></button>
       </div>
     </div>`;
   }).join('');
@@ -902,28 +907,28 @@ function hubRenderTips(s) {
   const CG='rgba(200,169,110,.6)',CP='rgba(124,111,205,.6)',
         CT='rgba(94,196,168,.6)', CR='rgba(224,107,139,.6)',CB='rgba(74,176,232,.6)';
   const dyn=[];
-  if(!s.img)      dyn.push({e:'🖼️',n:'Adicione uma imagem de capa',d:'Sonhos com imagem são visualmente mais poderosos. Abra "Editar" e faça upload de uma foto inspiradora.',t:'Visual',c:CG,p:9});
-  if(!s.desc)     dyn.push({e:'📝',n:'Escreva seu "porquê"',d:'A motivação por trás de um sonho é mais forte que o próprio sonho. Descreva o que este objetivo significa para você.',t:'Clareza',c:CP,p:9});
-  if(total===0)   dyn.push({e:'🎯',n:'Quebre em metas menores',d:'Adicione 3 a 7 metas concretas e mensuráveis. Cada pequena conquista gera momentum para a próxima.',t:'Planejamento',c:CT,p:8});
-  if(late>0)      dyn.push({e:'⚠️',n:late+' meta'+(late>1?'s':'')+' atrasada'+(late>1?'s':''),d:'Revise os prazos ou divida em passos menores para voltar ao ritmo.',t:'Urgente',c:CR,p:10});
-  if(noDate>0)    dyn.push({e:'📅',n:'Defina prazos para as metas',d:noDate+' meta'+(noDate>1?'s':'')+' sem prazo. Metas com data têm 2× mais chance de serem concluídas.',t:'Urgência',c:CG,p:7});
-  if(!s.dataFim)  dyn.push({e:'🏁',n:'Defina um prazo final',d:'Sonhos sem data vivem no "algum dia". Escolha uma data e comprometa-se com você mesmo.',t:'Foco',c:CB,p:7});
-  if(pct>=70&&pct<100) dyn.push({e:'🔥',n:'Quase lá! '+pct+'% concluído',d:'Você está na fase final — onde a maioria desiste. Revise o que falta e termine o que começou.',t:'Momentum',c:CT,p:9});
-  if(pct===100&&total>0&&!s.realizado) dyn.push({e:'🎉',n:'100% das metas concluídas!',d:'Parabéns! Clique em "Marcar como realizado" e celebre esta conquista — você merece.',t:'Conquista',c:CT,p:10});
-  if(total>=6&&!metas.find(m=>m.prioridade==='alta')) dyn.push({e:'🔴',n:'Defina prioridades claras',d:'Com '+total+' metas, marque as mais críticas como Alta para focar sua energia onde importa.',t:'Estratégia',c:CP,p:6});
+  if(!s.img)      dyn.push({e:'ico-image',n:'Adicione uma imagem de capa',d:'Sonhos com imagem são visualmente mais poderosos. Abra "Editar" e faça upload de uma foto inspiradora.',t:'Visual',c:CG,p:9});
+  if(!s.desc)     dyn.push({e:'ico-notebook-pen',n:'Escreva seu "porquê"',d:'A motivação por trás de um sonho é mais forte que o próprio sonho. Descreva o que este objetivo significa para você.',t:'Clareza',c:CP,p:9});
+  if(total===0)   dyn.push({e:'ico-target',n:'Quebre em metas menores',d:'Adicione 3 a 7 metas concretas e mensuráveis. Cada pequena conquista gera momentum para a próxima.',t:'Planejamento',c:CT,p:8});
+  if(late>0)      dyn.push({e:'ico-triangle-alert',n:late+' meta'+(late>1?'s':'')+' atrasada'+(late>1?'s':''),d:'Revise os prazos ou divida em passos menores para voltar ao ritmo.',t:'Urgente',c:CR,p:10});
+  if(noDate>0)    dyn.push({e:'ico-calendar',n:'Defina prazos para as metas',d:noDate+' meta'+(noDate>1?'s':'')+' sem prazo. Metas com data têm 2× mais chance de serem concluídas.',t:'Urgência',c:CG,p:7});
+  if(!s.dataFim)  dyn.push({e:'ico-flag',n:'Defina um prazo final',d:'Sonhos sem data vivem no "algum dia". Escolha uma data e comprometa-se com você mesmo.',t:'Foco',c:CB,p:7});
+  if(pct>=70&&pct<100) dyn.push({e:'ico-flame',n:'Quase lá! '+pct+'% concluído',d:'Você está na fase final — onde a maioria desiste. Revise o que falta e termine o que começou.',t:'Momentum',c:CT,p:9});
+  if(pct===100&&total>0&&!s.realizado) dyn.push({e:'ico-party-popper',n:'100% das metas concluídas!',d:'Parabéns! Clique em "Marcar como realizado" e celebre esta conquista — você merece.',t:'Conquista',c:CT,p:10});
+  if(total>=6&&!metas.find(m=>m.prioridade==='alta')) dyn.push({e:'ico-list-ordered',n:'Defina prioridades claras',d:'Com '+total+' metas, marque as mais críticas como Alta para focar sua energia onde importa.',t:'Estratégia',c:CP,p:6});
   const fix=[
-    {e:'🌙',n:'Revisão semanal de 10 min',d:'Todo domingo: revise metas, atualize progresso, defina o próximo passo. Consistência supera intensidade — sempre.',t:'Hábito',c:CG,p:5},
-    {e:'✨',n:'Visualização ativa diária',d:'5 min pela manhã visualizando este sonho já realizado. Ativa o sistema de ativação reticular — seu cérebro começa a buscar oportunidades.',t:'Mentalidade',c:CP,p:4},
-    {e:'🤝',n:'Declare seu sonho',d:'Compartilhar um objetivo com alguém de confiança aumenta em 65% a chance de realizá-lo. Tem alguém que pode te acompanhar?',t:'Accountability',c:CR,p:4},
-    {e:'⚡',n:'Próxima ação em 2 minutos',d:'Qual a menor ação possível que você pode fazer hoje? Identifique agora — não amanhã.',t:'Ação imediata',c:CT,p:5},
-    {e:'📊',n:'Retrospectiva mensal',d:'No último dia do mês: o que avançou, o que travou, o que muda. Ajuste o plano sem abandonar o sonho.',t:'Processo',c:CB,p:3},
-    {e:'🆕',n:'Mais recursos chegando',d:'Notas diárias, gráfico de consistência, conquistas desbloqueáveis e integração com tarefas estão sendo desenvolvidos.',t:'Novidade',c:CP,p:1},
+    {e:'ico-moon',n:'Revisão semanal de 10 min',d:'Todo domingo: revise metas, atualize progresso, defina o próximo passo. Consistência supera intensidade — sempre.',t:'Hábito',c:CG,p:5},
+    {e:'ico-sparkles',n:'Visualização ativa diária',d:'5 min pela manhã visualizando este sonho já realizado. Ativa o sistema de ativação reticular — seu cérebro começa a buscar oportunidades.',t:'Mentalidade',c:CP,p:4},
+    {e:'ico-handshake',n:'Declare seu sonho',d:'Compartilhar um objetivo com alguém de confiança aumenta em 65% a chance de realizá-lo. Tem alguém que pode te acompanhar?',t:'Accountability',c:CR,p:4},
+    {e:'ico-zap',n:'Próxima ação em 2 minutos',d:'Qual a menor ação possível que você pode fazer hoje? Identifique agora — não amanhã.',t:'Ação imediata',c:CT,p:5},
+    {e:'ico-chart-column',n:'Retrospectiva mensal',d:'No último dia do mês: o que avançou, o que travou, o que muda. Ajuste o plano sem abandonar o sonho.',t:'Processo',c:CB,p:3},
+    {e:'ico-rocket',n:'Mais recursos chegando',d:'Notas diárias, gráfico de consistência, conquistas desbloqueáveis e integração com tarefas estão sendo desenvolvidos.',t:'Novidade',c:CP,p:1},
   ];
   const final=[...dyn,...fix].sort((a,b)=>b.p-a.p).slice(0,6);
   document.getElementById('hub-tips-grid').innerHTML=final.map(t=>
     `<div class="hub-tip-card" style="--tip-color:${t.c}">
       <div class="hub-tip-top">
-        <div class="hub-tip-emoji">${t.e}</div>
+        <div class="hub-tip-emoji"><i class="ico ${t.e}" aria-hidden="true"></i></div>
         <span class="hub-tip-badge">${t.t}</span>
       </div>
       <div class="hub-tip-title">${t.n}</div>
@@ -1019,7 +1024,7 @@ function hubToggleRealizado() {
   const s = snFind(hubSonhoId); if (!s) return;
   s.realizado = !s.realizado;
   s.realizadoAt = s.realizado ? new Date().toISOString() : '';
-  if (s.realizado) addNotif('Sonho realizado! 🎉', '"'+s.titulo+'"', 'sonho');
+  if (s.realizado) addNotif('Sonho realizado!', '"'+s.titulo+'"', 'sonho');
   save(); hubRender(s); renderSonhos();
 }
 
@@ -1105,10 +1110,10 @@ function snRenderModalMetas(){
     '<button type="button" class="sn-me-btn ghost" data-sn-act="modal-cancel-meta">Cancelar</button>'+
     '</div>':
     '<div class="sn-meta-item">'+
-    '<button type="button" class="sn-meta-check '+(m.feita?'done':'')+'" data-sn-act="modal-toggle-meta" data-sn-id="'+snEsc(m.id)+'" aria-label="'+(m.feita?'Desmarcar meta':'Concluir meta')+'">'+(m.feita?'✓':'')+'</button>'+
+    '<button type="button" class="sn-meta-check '+(m.feita?'done':'')+'" data-sn-act="modal-toggle-meta" data-sn-id="'+snEsc(m.id)+'" aria-label="'+(m.feita?'Desmarcar meta':'Concluir meta')+'">'+(m.feita?'<i class="ico ico-check" aria-hidden="true"></i>':'')+'</button>'+
     '<span class="sn-meta-text '+(m.feita?'done':'')+'" data-sn-act="modal-edit-meta" data-sn-id="'+snEsc(m.id)+'" title="Clique duas vezes para editar">'+snEsc(m.texto)+'</span>'+
-    '<button type="button" class="sn-meta-del" data-sn-act="modal-edit-meta" data-sn-id="'+snEsc(m.id)+'" aria-label="Editar meta" title="Editar">✎</button>'+
-    '<button type="button" class="sn-meta-del" data-sn-act="modal-del-meta" data-sn-id="'+snEsc(m.id)+'" aria-label="Remover meta">✕</button>'+
+    '<button type="button" class="sn-meta-del" data-sn-act="modal-edit-meta" data-sn-id="'+snEsc(m.id)+'" aria-label="Editar meta" title="Editar"><i class="ico ico-pencil" aria-hidden="true"></i></button>'+
+    '<button type="button" class="sn-meta-del" data-sn-act="modal-del-meta" data-sn-id="'+snEsc(m.id)+'" aria-label="Remover meta"><i class="ico ico-x" aria-hidden="true"></i></button>'+
     '</div>'
   ).join('');
   if(snModalEditId!==null){const ei=document.getElementById('sn-me-texto');if(ei){ei.focus();ei.setSelectionRange(ei.value.length,ei.value.length);}}
@@ -1145,7 +1150,7 @@ function snToggleRealizado(id,e){
   const s=snFind(id);if(!s)return;
   s.realizado=!s.realizado;
   s.realizadoAt = s.realizado ? new Date().toISOString() : '';
-  if(s.realizado)addNotif('Sonho realizado! 🎉','"'+s.titulo+'"','sonho');
+  if(s.realizado)addNotif('Sonho realizado!','"'+s.titulo+'"','sonho');
   save();snMigrateData();renderSonhos();
 }
 function snToggleMeta(sonhoId,metaId,e){
@@ -1196,7 +1201,7 @@ function renderSonhos() {
   setEl('sn-stat-metas',doneMetas+' / '+allMetas);setEl('sn-stat-pct',pctGeral+'%');
 
   if(!total){
-    grid.innerHTML='<div class="empty" style="grid-column:span 3"><div class="empty-icon">🌙</div>Adicione seu primeiro sonho!</div>';
+    grid.innerHTML='<div class="empty" style="grid-column:span 3"><div class="empty-icon"><i class="ico ico-sparkles" aria-hidden="true"></i></div>Adicione seu primeiro sonho!</div>';
     return;
   }
 
@@ -1210,7 +1215,7 @@ function renderSonhos() {
     const isReal=s.realizado;
     const metaRows=metas.slice(0,3).map(m=>
       '<div class="sn-meta-item">'+
-      '<button type="button" class="sn-meta-check '+(m.feita?'done':'')+'" data-sn-act="toggle-card-meta" data-sn-id="'+id+'" data-sn-id2="'+snEsc(m.id)+'" aria-label="'+(m.feita?'Desmarcar meta':'Concluir meta')+'">'+(m.feita?'✓':'')+'</button>'+
+      '<button type="button" class="sn-meta-check '+(m.feita?'done':'')+'" data-sn-act="toggle-card-meta" data-sn-id="'+id+'" data-sn-id2="'+snEsc(m.id)+'" aria-label="'+(m.feita?'Desmarcar meta':'Concluir meta')+'">'+(m.feita?'<i class="ico ico-check" aria-hidden="true"></i>':'')+'</button>'+
       '<span class="sn-meta-text '+(m.feita?'done':'')+'">'+snEsc(m.texto)+'</span>'+
       '</div>'
     ).join('');
@@ -1218,7 +1223,7 @@ function renderSonhos() {
     const finPct=fi.custo>0?Math.min(100,Math.round(fi.atual/fi.custo*100)):0;
     const finHtml=fi.custo>0?
       '<div class="sn-fin-section">'+
-        '<div class="sn-metas-header"><span class="sn-metas-label">💰 Meta financeira</span><span class="sn-metas-pct">'+finPct+'%</span></div>'+
+        '<div class="sn-metas-header"><span class="sn-metas-label"><i class="ico ico-wallet" aria-hidden="true"></i> Meta financeira</span><span class="sn-metas-pct">'+finPct+'%</span></div>'+
         '<div class="sn-progress-bar sn-fin-bar"><div class="sn-progress-fill sn-fin-fill" style="width:'+finPct+'%"></div></div>'+
         '<div class="sn-fin-values"><span>'+snEsc(fmtBRL(fi.atual))+'</span><span>de '+snEsc(fmtBRL(fi.custo))+'</span></div>'+
       '</div>':'';
@@ -1228,15 +1233,15 @@ function renderSonhos() {
         (img?'<img class="sn-cover-img" src="'+snEsc(img)+'" alt="">':'')+
         '<div class="sn-cover-placeholder"><div class="sn-cover-placeholder-icon">'+icon+'</div><div class="sn-cover-placeholder-label">Sem imagem</div></div>'+
         '<div class="sn-cover-overlay" style="background:linear-gradient(180deg,rgba(0,0,0,.05) 0%,'+(isReal?'rgba(10,30,24,.93)':'rgba(12,11,26,.93)')+' 100%)"></div>'+
-        '<span class="sn-horizonte-badge">⏳ '+horizonte+'</span>'+
-        (isReal?'<span class="sn-realizado-badge">✓ Realizado</span>':'')+
+        '<span class="sn-horizonte-badge"><i class="ico ico-hourglass" aria-hidden="true"></i> '+horizonte+'</span>'+
+        (isReal?'<span class="sn-realizado-badge"><i class="ico ico-check" aria-hidden="true"></i> Realizado</span>':'')+
       '</div>'+
       '<div class="sn-body">'+
         '<div class="sn-top">'+
           '<div class="sn-titulo">'+titulo+'</div>'+
           '<div class="sn-actions" data-sn-act="noop">'+
-            '<button type="button" class="sn-action-btn done-btn" data-sn-act="toggle-realizado" data-sn-id="'+id+'" title="'+(isReal?'Marcar como pendente':'Marcar como realizado')+'" aria-label="'+(isReal?'Marcar como pendente':'Marcar como realizado')+'" aria-pressed="'+(isReal?'true':'false')+'">'+(isReal?'✅':'○')+'</button>'+
-            '<button type="button" class="sn-action-btn more-btn" data-sn-act="card-menu" data-sn-id="'+id+'" title="Ações rápidas" aria-label="Ações rápidas" aria-haspopup="menu">⋯</button>'+
+            '<button type="button" class="sn-action-btn done-btn" data-sn-act="toggle-realizado" data-sn-id="'+id+'" title="'+(isReal?'Marcar como pendente':'Marcar como realizado')+'" aria-label="'+(isReal?'Marcar como pendente':'Marcar como realizado')+'" aria-pressed="'+(isReal?'true':'false')+'">'+(isReal?'<i class="ico ico-circle-check" aria-hidden="true"></i>':'<i class="ico ico-circle" aria-hidden="true"></i>')+'</button>'+
+            '<button type="button" class="sn-action-btn more-btn" data-sn-act="card-menu" data-sn-id="'+id+'" title="Ações rápidas" aria-label="Ações rápidas" aria-haspopup="menu"><i class="ico ico-ellipsis" aria-hidden="true"></i></button>'+
           '</div>'+
         '</div>'+
         (s.desc?'<div class="sn-desc">'+snEsc(s.desc)+'</div>':'')+
@@ -1247,7 +1252,7 @@ function renderSonhos() {
             '<div class="sn-progress-bar"><div class="sn-progress-fill" style="width:'+pct+'%"></div></div>'+
             metaRows+moreLabel+
           '</div>'
-        :(fi.custo>0?'':'<div style="font-size:11px;font-family:var(--font-mono);color:rgba(122,117,144,.35);letter-spacing:.5px;margin-top:4px">Clique para ver detalhes</div>'))+
+        :(fi.custo>0?'':'<div style="font-size:11px;font-family:var(--font-mono);color:var(--muted);letter-spacing:.5px;margin-top:4px">Clique para ver detalhes</div>'))+
       '</div>'+
       '<div class="sn-footer">'+
         '<span class="sn-footer-horizonte">'+icon+' '+horizonte+'</span>'+
@@ -1304,15 +1309,15 @@ function sanRender() {
   ) : 0;
 
   const kpis = [
-    { lbl:'Total de sonhos',  val: total,       sub: realizados+' realizados', icon:'🌙', color:'rgba(124,111,205,.5)' },
-    { lbl:'Em andamento',     val: emAndamento, sub: 'sonhos ativos',           icon:'⚡', color:'rgba(200,169,110,.5)' },
-    { lbl:'Realizados',       val: realizados,  sub: total>0?Math.round(realizados/total*100)+'% do total':'',  icon:'✅', color:'rgba(94,196,168,.5)' },
-    { lbl:'Metas concluídas', val: doneMetas,   sub: totalMetas+' no total',   icon:'◈',  color:'rgba(74,176,232,.5)' },
-    { lbl:'Progresso geral',  val: pctGeral+'%',sub: lateMetas>0 ? lateMetas+' metas atrasadas':'Todas em dia', icon:'◎', color: lateMetas>0?'rgba(224,107,139,.5)':'rgba(94,196,168,.5)' },
+    { lbl:'Total de sonhos',  val: total,       sub: realizados+' realizados', icon:'ico-moon', color:'rgba(124,111,205,.5)' },
+    { lbl:'Em andamento',     val: emAndamento, sub: 'sonhos ativos',           icon:'ico-zap', color:'rgba(200,169,110,.5)' },
+    { lbl:'Realizados',       val: realizados,  sub: total>0?Math.round(realizados/total*100)+'% do total':'',  icon:'ico-circle-check', color:'rgba(94,196,168,.5)' },
+    { lbl:'Metas concluídas', val: doneMetas,   sub: totalMetas+' no total',   icon:'ico-list-checks',  color:'rgba(74,176,232,.5)' },
+    { lbl:'Progresso geral',  val: pctGeral+'%',sub: lateMetas>0 ? lateMetas+' metas atrasadas':'Todas em dia', icon:'ico-target', color: lateMetas>0?'rgba(224,107,139,.5)':'rgba(94,196,168,.5)' },
   ];
   kpiRow.innerHTML = kpis.map(k =>
     `<div class="san-kpi" style="--kpi-color:${k.color}">
-      <div class="san-kpi-icon">${k.icon}</div>
+      <div class="san-kpi-icon"><i class="ico ${k.icon}" aria-hidden="true"></i></div>
       <div class="san-kpi-lbl">${k.lbl}</div>
       <div class="san-kpi-val">${k.val}</div>
       <div class="san-kpi-sub">${k.sub}</div>
@@ -1453,7 +1458,7 @@ function sanRender() {
   if (hEl) {
     hEl.innerHTML = hEntries.map(([h,n]) =>
       `<div class="san-bar-item">
-        <div class="san-bar-label" style="width:90px">⏳ ${h}</div>
+        <div class="san-bar-label" style="width:90px"><i class="ico ico-hourglass" aria-hidden="true"></i> ${h}</div>
         <div class="san-bar-track"><div class="san-bar-fill" style="width:0%;background:rgba(124,111,205,.6)" data-w="${n/maxH*100}"></div></div>
         <div class="san-bar-val">${n}</div>
       </div>`
@@ -1465,7 +1470,7 @@ function sanRender() {
   allMetas.forEach(m => { prioMap[m.prioridade||'media']++; });
   const maxPr = Math.max(...Object.values(prioMap), 1);
   const prioColors = {alta:'rgba(224,107,139,.6)',media:'rgba(200,169,110,.6)',baixa:'rgba(94,196,168,.6)'};
-  const prioLabels = {alta:'🔴 Alta prioridade',media:'🟡 Média prioridade',baixa:'🟢 Baixa prioridade'};
+  const prioLabels = {alta:SN_PRIO_HTML.alta+' prioridade',media:SN_PRIO_HTML.media+' prioridade',baixa:SN_PRIO_HTML.baixa+' prioridade'};
   const mpEl = document.getElementById('san-metas-prio');
   if (mpEl) {
     mpEl.innerHTML = ['alta','media','baixa'].map(p =>
