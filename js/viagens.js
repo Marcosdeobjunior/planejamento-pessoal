@@ -334,18 +334,19 @@
     return m[c] || null;
   }
 
+  // miniatura sem imagem: ícone pelo tipo de local
   function em(cat, dest) {
     var c = norm(cat).toLowerCase();
     var d = norm(dest).toLowerCase();
-    if (d.indexOf("praia") >= 0 || d.indexOf("beach") >= 0) return "BR";
-    if (d.indexOf("montanha") >= 0 || d.indexOf("serra") >= 0) return "MT";
-    if (c.indexOf("restaurante") >= 0) return "RS";
-    if (c.indexOf("hotel") >= 0) return "HT";
-    if (c.indexOf("museu") >= 0) return "MS";
-    if (c.indexOf("parque") >= 0) return "PK";
-    if (c.indexOf("ponto") >= 0) return "PT";
-    if (c.indexOf("desejo") >= 0) return "WL";
-    return "VG";
+    if (d.indexOf("praia") >= 0 || d.indexOf("beach") >= 0) return '<i class="ico ico-tree-palm" aria-hidden="true"></i>';
+    if (d.indexOf("montanha") >= 0 || d.indexOf("serra") >= 0 || c.indexOf("montanha") >= 0) return '<i class="ico ico-mountain" aria-hidden="true"></i>';
+    if (c.indexOf("restaurante") >= 0) return '<i class="ico ico-utensils" aria-hidden="true"></i>';
+    if (c.indexOf("hotel") >= 0) return '<i class="ico ico-hotel" aria-hidden="true"></i>';
+    if (c.indexOf("museu") >= 0) return '<i class="ico ico-landmark" aria-hidden="true"></i>';
+    if (c.indexOf("parque") >= 0) return '<i class="ico ico-trees" aria-hidden="true"></i>';
+    if (c.indexOf("ponto") >= 0) return '<i class="ico ico-map-pin" aria-hidden="true"></i>';
+    if (c.indexOf("desejo") >= 0) return '<i class="ico ico-heart" aria-hidden="true"></i>';
+    return '<i class="ico ico-plane" aria-hidden="true"></i>';
   }
 
   function stats() {
@@ -369,7 +370,7 @@
     var f = filtered();
     document.getElementById("c-cnt").textContent = f.length + " destino" + (f.length !== 1 ? "s" : "");
     if (!f.length) {
-      el.innerHTML = '<div class="es"><span class="es-ico">::</span><h4>Nenhuma viagem encontrada</h4><p>' + (filt === "all" ? "Adicione sua primeira viagem!" : "Nenhum destino nesta categoria.") + "</p></div>";
+      el.innerHTML = '<div class="es"><span class="es-ico"><i class="ico ico-plane" aria-hidden="true"></i></span><h4>Nenhuma viagem encontrada</h4><p>' + (filt === "all" ? "Adicione sua primeira viagem!" : "Nenhum destino nesta categoria.") + "</p></div>";
       document.getElementById("pag").style.display = "none";
       return;
     }
@@ -389,7 +390,7 @@
         '<div class="vcb">' +
         '<div class="vct">' + (cover ? '<img src="' + esc(window.SoterUtils.safeUrl(cover)) + '" alt="" loading="lazy">' : em(t.category, t.destination)) + "</div>" +
         '<div class="vci">' +
-        '<div class="vcd">' + esc(t.destination) + (flag ? " " + flag : "") + "</div>" +
+        '<div class="vcd">' + esc(t.destination) + (flag ? ' <span class="vcfl">' + flag + "</span>" : "") + "</div>" +
         '<div class="vcm">' +
         (t.category ? '<span class="vctg ' + tcls(t.category) + '">' + esc(t.category) + "</span>" : "") +
         (isDone ? '<span class="vcst">Concluída</span>' : "") +
