@@ -4096,7 +4096,7 @@ window.SoterUtils = window.SoterUtils || (function () {
     return {
       id: source.id != null ? source.id : (defaults.id != null ? defaults.id : Date.now() + Math.floor(Math.random() * 1000)),
       text: String(source.text || defaults.text || ""),
-      icon: String(source.icon || defaults.icon || "\ud83d\udd14"),
+      icon: String(source.icon || defaults.icon || "ico-bell"),
       label: String(source.label || defaults.label || "Sistema"),
       tone: String(source.tone || defaults.tone || "info"),
       cycle: String(source.cycle || defaults.cycle || "persist"),
@@ -4589,7 +4589,7 @@ window.SoterUtils = window.SoterUtils || (function () {
       ABANDON_NOTIF_PREFIX + tracker + "-" + String(item && item.id != null ? item.id : getTrackerItemTitle(item, tracker)),
       trackerLabel + ': "' + getTrackerItemTitle(item, tracker) + '" est\u00e1 h\u00e1 ' + abandonState.days + " dias sem atualiza\u00e7\u00e3o.",
       {
-        icon: tracker === "livros" ? "\uD83D\uDCDA" : tracker === "mangas" ? "\uD83D\uDCD6" : isSeriesType(item) ? "\uD83D\uDCFA" : "\uD83C\uDFAC",
+        icon: tracker === "livros" ? "ico-library" : tracker === "mangas" ? "ico-book-open" : isSeriesType(item) ? "ico-tv" : "ico-clapperboard",
         label: "Ante-abandono",
         tone: abandonState.key === "critical" ? "danger" : abandonState.key === "risk" ? "warn" : "library",
         cycle: getNotificationCycleDate(),
@@ -4816,7 +4816,7 @@ window.SoterUtils = window.SoterUtils || (function () {
       options.id != null ? options.id : (Date.now() + Math.floor(Math.random() * 1000)),
       text,
       {
-        icon: options.icon || "\u2694",
+        icon: options.icon || "ico-swords",
         label: options.label || "RPG",
         tone: options.tone || "rpg",
         cycle: options.cycle || "persist",

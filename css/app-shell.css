@@ -1686,7 +1686,8 @@ body.mobile-drawer-open {
   font-family: var(--font-mono);
   letter-spacing: 2.5px;
   text-transform: uppercase;
-  color: rgba(255,255,255,.35);
+  color: rgba(255,255,255,.82); /* era .35: sumia sobre as nuvens claras */
+  text-shadow: 0 1px 6px rgba(0,0,0,.55);
   margin-top: 4px;
 }
 
