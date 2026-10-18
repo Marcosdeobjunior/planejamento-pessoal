@@ -433,6 +433,12 @@ body {
   display: block;
 }
 
+/* fundo roxo escuro: a inicial escura do cabeçalho (feita para o avatar dourado) sumia aqui */
+.rpg-char-avatar-wrap .avatar-initials {
+  color: #e8d5a0;
+  font-size: 18px;
+}
+
 .rpg-char-avatar-wrap.has-photo .avatar-initials {
   display: none;
 }
