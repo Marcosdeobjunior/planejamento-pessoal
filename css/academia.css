@@ -201,7 +201,7 @@ canvas#weight-chart { width: 100%; height: 220px; display: block; }
 .day-workout { display: flex; flex-direction: column; }
 .today-tag { font-family: var(--fm); font-size: 11px; color: var(--gold); background: rgba(200,169,110,.12); border: 1px solid rgba(200,169,110,.2); padding: 3px 10px; border-radius: 20px; }
 .rest-msg { padding: 30px 20px; text-align: center; color: var(--muted); }
-.rest-msg i { font-size: 28px; display: block; margin-bottom: 10px; opacity: .3; }
+.rest-msg i { font-size: 28px; display: block; margin: 0 auto 10px; opacity: .3; }
 .rest-msg p { font-size: 12px; font-family: var(--fm); }
 .day-workout-progress {
   padding: 12px 16px 0;
@@ -239,7 +239,7 @@ canvas#weight-chart { width: 100%; height: 220px; display: block; }
   place-items: center;
   gap: 12px;
 }
-.skip-workout-state i {
+.skip-workout-state .skip-workout-ico {
   width: 46px;
   height: 46px;
   border-radius: 14px;
@@ -290,7 +290,7 @@ canvas#weight-chart { width: 100%; height: 220px; display: block; }
 .ex-card:hover .ex-card-del { opacity: 1; }
 .ex-card-del:hover { color: var(--rose); background: rgba(224,107,139,.2); }
 .ex-empty { padding: 40px; text-align: center; color: var(--muted); grid-column: 1/-1; }
-.ex-empty i { font-size: 32px; display: block; margin-bottom: 12px; opacity: .3; }
+.ex-empty i { font-size: 32px; display: block; margin: 0 auto 12px; opacity: .3; }
 .ex-empty p { font-size: 12px; font-family: var(--fm); }
 
 #exercise-hub {

@@ -33,7 +33,7 @@
   var DAYS_FULL = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
   var TAG_LABELS = { peito: "Peito", costas: "Costas", pernas: "Pernas", ombros: "Ombros", triceps: "Tríceps", biceps: "Bíceps", abdomen: "Abdômen", cardio: "Cardio", outro: "Outro" };
   var MEAL_NAMES = { breakfast: "Café da manhã", lunch: "Almoço", snack: "Lanche", dinner: "Jantar" };
-  var MEAL_ICONS = { breakfast: "☕", lunch: "🍽️", snack: "🥜", dinner: "🌙" };
+  var MEAL_ICONS = { breakfast: "ico-coffee", lunch: "ico-utensils", snack: "ico-nut", dinner: "ico-moon" };
 
   function getState() {
     if (window.SoterStorage && window.SoterStorage.getState) return window.SoterStorage.getState();
@@ -359,12 +359,12 @@
 
   function toast(msg, type) {
     type = type || "ok";
-    var icons = { ok: "fa-check-circle", err: "fa-exclamation-circle", info: "fa-info-circle" };
+    var icons = { ok: "ico-circle-check", err: "ico-circle-alert", info: "ico-info" };
     var cols = { ok: "var(--teal)", err: "var(--rose)", info: "var(--sky)" };
     var c = document.getElementById("toasts");
     var el = document.createElement("div");
     el.className = "t " + type;
-    el.innerHTML = '<i class="fas ' + icons[type] + '" style="color:' + cols[type] + '"></i> ' + msg;
+    el.innerHTML = '<i class="ico ' + icons[type] + '" style="color:' + cols[type] + '" aria-hidden="true"></i> ' + msg;
     c.appendChild(el);
     setTimeout(function () {
       el.style.animation = "tOut .3s ease forwards";
@@ -485,8 +485,8 @@
       var recent = weightLog.slice(-3).map(function (x) { return x.weight; });
       var trend = recent[recent.length - 1] - recent[0];
       var el2 = document.getElementById("weight-trend");
-      if (trend < 0) el2.innerHTML = '<i class="fas fa-arrow-down" style="color:var(--teal)"></i> ' + trend.toFixed(1) + "kg";
-      else if (trend > 0) el2.innerHTML = '<i class="fas fa-arrow-up" style="color:var(--rose)"></i> +' + trend.toFixed(1) + "kg";
+      if (trend < 0) el2.innerHTML = '<i class="ico ico-arrow-down" style="color:var(--teal)" aria-hidden="true"></i> ' + trend.toFixed(1) + "kg";
+      else if (trend > 0) el2.innerHTML = '<i class="ico ico-arrow-up" style="color:var(--rose)" aria-hidden="true"></i> +' + trend.toFixed(1) + "kg";
       else el2.textContent = "Estável";
     }
 
@@ -706,7 +706,7 @@
       ["Observações", ex.notes || "Sem observações"]
     ];
 
-    document.getElementById("gym-hub-icon").textContent = getExEmoji(ex.tag);
+    document.getElementById("gym-hub-icon").innerHTML = getExEmoji(ex.tag);
     document.getElementById("gym-hub-badge").textContent = TAG_LABELS[ex.tag] || "Treino";
     document.getElementById("gym-hub-title").textContent = ex.name;
     document.getElementById("gym-hub-meta").textContent = isCardio ? getCardioTypeLabel(ex.cardioType) + " · " + daysLabel : daysLabel;
@@ -752,18 +752,18 @@
     meals.forEach(function (m) {
       var col = document.createElement("div");
       col.className = "meal-col";
-      col.innerHTML = '<div class="meal-header"><span class="meal-icon">' + MEAL_ICONS[m] + '</span><span class="meal-name">' + MEAL_NAMES[m] + '</span></div><div class="meal-items" id="meal-items-' + m + '"></div>';
+      col.innerHTML = '<div class="meal-header"><span class="meal-icon"><i class="ico ' + MEAL_ICONS[m] + '" aria-hidden="true"></i></span><span class="meal-name">' + MEAL_NAMES[m] + '</span></div><div class="meal-items" id="meal-items-' + m + '"></div>';
       var itemsDiv = col.querySelector(".meal-items");
       (diet[m] || []).forEach(function (item, idx) {
         var el = document.createElement("div");
         el.className = "meal-item";
-        el.innerHTML = '<div class="meal-item-left"><span class="meal-item-name">' + esc(item.name) + '</span><span style="font-size:10px;color:var(--muted);margin-left:4px">' + esc(item.qty || "") + '</span></div>' + (item.kcal ? '<span class="meal-item-kcal">' + esc(item.kcal) + ' kcal</span>' : "") + ' <button class="meal-item-del" data-meal="' + m + '" data-idx="' + idx + '"><i class="fas fa-times"></i></button>';
+        el.innerHTML = '<div class="meal-item-left"><span class="meal-item-name">' + esc(item.name) + '</span><span style="font-size:10px;color:var(--muted);margin-left:4px">' + esc(item.qty || "") + '</span></div>' + (item.kcal ? '<span class="meal-item-kcal">' + esc(item.kcal) + ' kcal</span>' : "") + ' <button class="meal-item-del" data-meal="' + m + '" data-idx="' + idx + '" aria-label="Remover alimento"><i class="ico ico-x" aria-hidden="true"></i></button>';
         itemsDiv.appendChild(el);
       });
       var addBtn = document.createElement("button");
       addBtn.className = "meal-add-btn";
       addBtn.dataset.meal = m;
-      addBtn.innerHTML = '<i class="fas fa-plus" style="font-size:10px"></i> Adicionar';
+      addBtn.innerHTML = '<i class="ico ico-plus" style="font-size:10px" aria-hidden="true"></i> Adicionar';
       addBtn.addEventListener("click", function () {
         document.getElementById("meal-target").value = this.dataset.meal;
         document.getElementById("meal-item-name").value = "";
@@ -794,8 +794,8 @@
   }
 
   function getExEmoji(tag) {
-    var m = { peito: "💪", costas: "🏋️", pernas: "🦵", ombros: "🙆", triceps: "💪", biceps: "🦾", abdomen: "🔥", cardio: "🏃", outro: "⚡" };
-    return m[tag] || "⚡";
+    var m = { peito: "ico-biceps-flexed", costas: "ico-dumbbell", pernas: "ico-footprints", ombros: "ico-person-standing", triceps: "ico-biceps-flexed", biceps: "ico-biceps-flexed", abdomen: "ico-flame", cardio: "ico-heart-pulse", outro: "ico-zap" };
+    return '<i class="ico ' + (m[tag] || "ico-zap") + '" aria-hidden="true"></i>';
   }
 
   function renderDayWorkout() {
@@ -806,18 +806,18 @@
     var skippedToday = isTrainingDaySkipped(dateKey);
 
     if (!isTrain) {
-      body.innerHTML = '<div class="rest-msg"><i class="fas fa-moon"></i><p>Dia de descanso.<br>Aproveite a recuperação!</p></div>';
+      body.innerHTML = '<div class="rest-msg"><i class="ico ico-moon" aria-hidden="true"></i><p>Dia de descanso.<br>Aproveite a recuperação!</p></div>';
       return;
     }
 
     var dayExs = exercises.filter(function (e) { return (e.days || []).map(Number).includes(dow); });
     if (dayExs.length === 0) {
-      body.innerHTML = '<div class="rest-msg"><i class="fas fa-dumbbell"></i><p>Nenhum exercício configurado para hoje.<br>Adicione exercícios e selecione este dia.</p></div>';
+      body.innerHTML = '<div class="rest-msg"><i class="ico ico-dumbbell" aria-hidden="true"></i><p>Nenhum exercício configurado para hoje.<br>Adicione exercícios e selecione este dia.</p></div>';
       return;
     }
 
     if (skippedToday) {
-      body.innerHTML = '<div class="skip-workout-state"><i class="fas fa-forward"></i><p>Treino pulado hoje.</p><button class="btn btn-ghost btn-sm" id="btn-unskip-workout"><i class="fas fa-undo"></i> Retomar treino</button></div>';
+      body.innerHTML = '<div class="skip-workout-state"><span class="skip-workout-ico"><i class="ico ico-skip-forward" aria-hidden="true"></i></span><p>Treino pulado hoje.</p><button class="btn btn-ghost btn-sm" id="btn-unskip-workout"><i class="ico ico-undo-2" aria-hidden="true"></i> Retomar treino</button></div>';
       document.getElementById("btn-unskip-workout").addEventListener("click", function () {
         resumeTrainingDay(dateKey);
         renderDayWorkout();
@@ -844,7 +844,7 @@
         "</div>" +
         '<span class="day-ex-tag tag-' + esc(ex.tag) + '">' + esc(TAG_LABELS[ex.tag]) + "</span>" +
         '<div class="done-check' + (isDone ? " done" : "") + '" data-id="' + esc(ex.id) + '">' +
-        '<i class="fas fa-check"></i>' +
+        '<i class="ico ico-check" aria-hidden="true"></i>' +
         "</div>";
       list.appendChild(item);
     });
@@ -852,7 +852,7 @@
 
     var pbar = document.createElement("div");
     pbar.className = "day-workout-progress";
-    pbar.innerHTML = '<div class="day-workout-track"><div class="day-workout-fill" style="width:' + Math.round(done / dayExs.length * 100) + '%"></div></div><span>' + done + "/" + dayExs.length + '</span><button class="btn btn-ghost btn-sm skip-workout-btn" id="btn-skip-workout"><i class="fas fa-forward"></i> Pular treino</button>';
+    pbar.innerHTML = '<div class="day-workout-track"><div class="day-workout-fill" style="width:' + Math.round(done / dayExs.length * 100) + '%"></div></div><span>' + done + "/" + dayExs.length + '</span><button class="btn btn-ghost btn-sm skip-workout-btn" id="btn-skip-workout"><i class="ico ico-skip-forward" aria-hidden="true"></i> Pular treino</button>';
     body.appendChild(pbar);
     body.appendChild(list);
 
@@ -895,7 +895,7 @@
     var filtered = exFilter === "all" ? exercises : exercises.filter(function (e) { return e.tag === exFilter; });
     grid.innerHTML = "";
     if (filtered.length === 0) {
-      grid.innerHTML = '<div class="ex-empty"><i class="fas fa-dumbbell"></i><p>Nenhum exercício' + (exFilter !== "all" ? " nesta categoria" : "") + ".<br>Adicione o primeiro!</p></div>";
+      grid.innerHTML = '<div class="ex-empty"><i class="ico ico-dumbbell" aria-hidden="true"></i><p>Nenhum exercício' + (exFilter !== "all" ? " nesta categoria" : "") + ".<br>Adicione o primeiro!</p></div>";
       return;
     }
     filtered.forEach(function (ex) {
@@ -909,7 +909,7 @@
         '<span class="ex-card-tag tag-' + esc(ex.tag) + '">' + esc(TAG_LABELS[ex.tag]) + "</span>" +
         '<div class="ex-card-sets">' + esc(getExerciseSummary(ex)) + ' <span style="color:var(--muted)">' + daysLabel + "</span></div>" +
         "</div>" +
-        '<button class="ex-card-del" data-id="' + esc(ex.id) + '"><i class="fas fa-times"></i></button>';
+        '<button class="ex-card-del" data-id="' + esc(ex.id) + '" aria-label="Excluir exercício"><i class="ico ico-x" aria-hidden="true"></i></button>';
       card.addEventListener("click", function (e) { if (e.target.closest(".ex-card-del")) return; renderExerciseHub(ex.id); });
       grid.appendChild(card);
     });
@@ -933,7 +933,7 @@
     var ex = id ? exercises.find(function (x) { return x.id === id; }) : null;
     document.getElementById("modal-ex-title").textContent = ex ? "Editar Exercício" : "Novo Exercício";
     document.getElementById("ex-del-btn").style.display = ex ? "inline-flex" : "none";
-    document.getElementById("btn-save-ex").innerHTML = ex ? '<i class="fas fa-save"></i> Salvar' : '<i class="fas fa-plus"></i> Adicionar';
+    document.getElementById("btn-save-ex").innerHTML = ex ? '<i class="ico ico-save" aria-hidden="true"></i> Salvar' : '<i class="ico ico-plus" aria-hidden="true"></i> Adicionar';
 
     setExerciseImagePreview(ex && ex.image ? ex.image : "");
     document.getElementById("ex-img-web").value = ex && ex.image && /^https?:\/\//i.test(ex.image) ? ex.image : "";

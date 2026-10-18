@@ -12,9 +12,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/icons.css">
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/app-shell.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.0.0-beta3/css/all.min.css" integrity="sha384-5e2ESR8Ycmos6g3gAKr1Jvwye8sW4U1u/cAKulfVJnkakCcMqhOudbtPnvJ+nbv7" crossorigin="anonymous">
   <link rel="stylesheet" href="css/academia.css">
 </head>
 <body data-page="academia">
@@ -35,16 +35,16 @@
           <div class="card profile-card">
             <div class="card-hd">
               <span class="card-lbl">Perfil</span>
-              <button class="btn btn-ghost btn-sm" id="btn-edit-profile"><i class="fas fa-pen"></i> Editar</button>
+              <button class="btn btn-ghost btn-sm" id="btn-edit-profile"><i class="ico ico-pencil" aria-hidden="true"></i> Editar</button>
             </div>
             <div class="profile-photo-wrap">
               <div class="profile-photo" id="profile-photo-trigger">
                 <img id="profile-photo-img" src="" alt="">
                 <div class="profile-photo-placeholder" id="profile-photo-placeholder">
-                  <i class="fas fa-camera"></i>
+                  <i class="ico ico-camera" aria-hidden="true"></i>
                   <span>Foto corpo inteiro</span>
                 </div>
-                <div class="profile-photo-overlay"><span><i class="fas fa-camera"></i><br>Alterar foto</span></div>
+                <div class="profile-photo-overlay"><span><i class="ico ico-camera" aria-hidden="true"></i><br>Alterar foto</span></div>
               </div>
               <input type="file" id="profile-photo-input" accept="image/*">
             </div>
@@ -192,7 +192,7 @@
             <div class="card-hd">
               <span class="card-lbl">Ficha Completa</span>
               <div class="card-act">
-                <button class="btn btn-gold btn-sm" id="btn-add-ex2"><i class="fas fa-plus"></i> Adicionar</button>
+                <button class="btn btn-gold btn-sm" id="btn-add-ex2"><i class="ico ico-plus" aria-hidden="true"></i> Adicionar</button>
               </div>
             </div>
             <div class="ex-filters" id="ex-filters">
@@ -224,11 +224,11 @@
         <div class="gym-hub-hero-bg" id="gym-hub-hero-bg"></div>
         <div class="gym-hub-hero-overlay"></div>
         <div class="gym-hub-nav">
-          <button class="gym-hub-back-btn" type="button" data-close="exercise-hub">← Voltar</button>
-          <button class="gym-hub-edit-btn" type="button" id="gym-hub-edit-btn">✎ Editar</button>
+          <button class="gym-hub-back-btn" type="button" data-close="exercise-hub"><i class="ico ico-arrow-left" aria-hidden="true"></i> Voltar</button>
+          <button class="gym-hub-edit-btn" type="button" id="gym-hub-edit-btn"><i class="ico ico-pencil" aria-hidden="true"></i> Editar</button>
         </div>
         <div class="gym-hub-hero-content">
-          <div class="gym-hub-icon" id="gym-hub-icon">🏋️</div>
+          <div class="gym-hub-icon" id="gym-hub-icon"><i class="ico ico-dumbbell" aria-hidden="true"></i></div>
           <div class="gym-hub-title-wrap">
             <div class="gym-hub-badge" id="gym-hub-badge">Treino</div>
             <div class="gym-hub-title" id="gym-hub-title">Exercício</div>
@@ -291,7 +291,7 @@
 
   <div class="overlay" id="modal-profile" role="dialog" aria-modal="true" aria-label="Editar perfil">
     <div class="modal">
-      <div class="modal-hd"><h3>Editar Perfil</h3><button class="mclose" data-close="modal-profile"><i class="fas fa-times"></i></button></div>
+      <div class="modal-hd"><h3>Editar Perfil</h3><button class="mclose" data-close="modal-profile" aria-label="Fechar"><i class="ico ico-x" aria-hidden="true"></i></button></div>
       <div class="frow">
         <div class="fg"><label class="fl">Nome</label><input type="text" class="fi" id="p-name" placeholder="Seu nome"></div>
         <div class="fg"><label class="fl">Idade</label><input type="number" class="fi" id="p-age" placeholder="25" min="10" max="100"></div>
@@ -303,22 +303,22 @@
       <div class="fg"><label class="fl">Meta de kcal/dia</label><input type="number" class="fi" id="p-kcal-goal" placeholder="2000" min="500" max="6000"></div>
       <div class="modal-acts">
         <button class="btn btn-ghost btn-sm" data-close="modal-profile">Cancelar</button>
-        <button class="btn btn-gold" id="btn-save-profile"><i class="fas fa-save"></i> Salvar</button>
+        <button class="btn btn-gold" id="btn-save-profile"><i class="ico ico-save" aria-hidden="true"></i> Salvar</button>
       </div>
     </div>
   </div>
 
   <div class="overlay" id="modal-ex" role="dialog" aria-modal="true" aria-labelledby="modal-ex-title">
     <div class="modal">
-      <div class="modal-hd"><h3 id="modal-ex-title">Novo Exercício</h3><button class="mclose" data-close="modal-ex"><i class="fas fa-times"></i></button></div>
+      <div class="modal-hd"><h3 id="modal-ex-title">Novo Exercício</h3><button class="mclose" data-close="modal-ex" aria-label="Fechar"><i class="ico ico-x" aria-hidden="true"></i></button></div>
       <div class="img-preview" id="ex-img-preview" title="Clique para adicionar imagem">
         <img id="ex-img-preview-img" src="" alt="" style="display:none">
-        <span id="ex-img-preview-label"><i class="fas fa-image" style="margin-right:6px"></i>Clique para adicionar imagem</span>
+        <span id="ex-img-preview-label"><i class="ico ico-image" style="margin-right:6px" aria-hidden="true"></i>Clique para adicionar imagem</span>
       </div>
       <input type="file" id="ex-img-input" accept="image/*" style="display:none">
       <div class="ex-img-web-row">
         <input type="url" class="fi" id="ex-img-web" placeholder="Cole um link web da imagem">
-        <button class="btn btn-ghost btn-sm" type="button" id="btn-use-ex-img-web"><i class="fas fa-link"></i> Usar link</button>
+        <button class="btn btn-ghost btn-sm" type="button" id="btn-use-ex-img-web"><i class="ico ico-link" aria-hidden="true"></i> Usar link</button>
       </div>
       <div class="fg"><label class="fl">Nome do Exercício *</label><input type="text" class="fi" id="ex-name" placeholder="Ex: Supino Reto"></div>
       <div class="frow">
@@ -375,16 +375,16 @@
       <div class="fg ex-strength-fields" id="ex-strength-load-field"><label class="fl">Carga (kg)</label><input type="text" class="fi" id="ex-load" placeholder="Ex: 60kg ou —"></div>
       <div class="fg"><label class="fl">Observações</label><textarea class="fta" id="ex-notes" placeholder="Técnica, progressão..."></textarea></div>
       <div class="modal-acts">
-        <button class="btn btn-rose btn-sm" id="ex-del-btn" style="display:none;margin-right:auto"><i class="fas fa-trash"></i> Excluir</button>
+        <button class="btn btn-rose btn-sm" id="ex-del-btn" style="display:none;margin-right:auto"><i class="ico ico-trash-2" aria-hidden="true"></i> Excluir</button>
         <button class="btn btn-ghost btn-sm" data-close="modal-ex">Cancelar</button>
-        <button class="btn btn-gold" id="btn-save-ex"><i class="fas fa-save"></i> Salvar</button>
+        <button class="btn btn-gold" id="btn-save-ex"><i class="ico ico-save" aria-hidden="true"></i> Salvar</button>
       </div>
     </div>
   </div>
 
   <div class="overlay" id="modal-meal" role="dialog" aria-modal="true" aria-label="Adicionar alimento">
     <div class="modal" style="max-width:400px">
-      <div class="modal-hd"><h3>Adicionar Alimento</h3><button class="mclose" data-close="modal-meal"><i class="fas fa-times"></i></button></div>
+      <div class="modal-hd"><h3>Adicionar Alimento</h3><button class="mclose" data-close="modal-meal" aria-label="Fechar"><i class="ico ico-x" aria-hidden="true"></i></button></div>
       <input type="hidden" id="meal-target">
       <div class="fg"><label class="fl">Nome *</label><input type="text" class="fi" id="meal-item-name" placeholder="Ex: Ovo mexido, Frango grelhado..."></div>
       <div class="frow">
@@ -393,7 +393,7 @@
       </div>
       <div class="modal-acts">
         <button class="btn btn-ghost btn-sm" data-close="modal-meal">Cancelar</button>
-        <button class="btn btn-gold" id="btn-save-meal"><i class="fas fa-plus"></i> Adicionar</button>
+        <button class="btn btn-gold" id="btn-save-meal"><i class="ico ico-plus" aria-hidden="true"></i> Adicionar</button>
       </div>
     </div>
   </div>
