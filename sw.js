@@ -1,4 +1,4 @@
-var CACHE = "soter-v2";
+var CACHE = "soter-v3";
 
 // Respostas maiores que isso não vão para o cache (imagens pesadas, vídeos)
 var MAX_CACHE_BYTES = 1024 * 1024;
@@ -10,6 +10,7 @@ var PRECACHE = [
   "./index.html",
   "./apresentacao.html",
   "./css/design-system.css",
+  "./css/icons.css",
   "./css/app-shell.css",
   "./css/apresentacao.css",
   "./js/firebase-config.js",

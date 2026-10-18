@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "npx serve .",
     "build": "node build.mjs",
+    "icons": "node build-icons.mjs",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -27,6 +28,7 @@
     "three": "^0.184.0"
   },
   "devDependencies": {
-    "esbuild": "^0.28.0"
+    "esbuild": "^0.28.0",
+    "lucide-static": "0.460.0"
   }
 }
