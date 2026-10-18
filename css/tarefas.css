@@ -1187,7 +1187,7 @@ body {
     background: rgba(12,11,24,.7); backdrop-filter: blur(20px);
     border: 1px solid rgba(255,255,255,.07); border-radius: 20px;
     padding: 20px 24px;
-    height: 425px;
+    min-height: 425px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
