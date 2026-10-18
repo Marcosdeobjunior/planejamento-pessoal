@@ -208,7 +208,7 @@ const TK_COLORS = [
   '#4ab0e8','#b06be8','#e8d44a'
 ];
 const TK_PRIOR_COLOR  = { alta:'#e06b8b', media:'#c8a96e', baixa:'#5ec4a8' };
-const TK_PRIOR_LABEL  = { alta:'🔴 Alta', media:'🟡 Média', baixa:'🟢 Baixa' };
+const TK_PRIOR_LABEL  = { alta:'<i class="ico ico-circle-fill tk-prior-dot" aria-hidden="true"></i> Alta', media:'<i class="ico ico-circle-fill tk-prior-dot" aria-hidden="true"></i> Média', baixa:'<i class="ico ico-circle-fill tk-prior-dot" aria-hidden="true"></i> Baixa' };
 const TK_MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
                    'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const TK_MONTHS_SHORT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -291,7 +291,6 @@ function tkGetNationalHolidayEntries(year, month) {
       id: 'holiday-' + ds,
       nome: holiday.name,
       data: ds,
-      icon: '🎉',
       isHoliday: true,
       holidayType: 'Feriado nacional'
     };
@@ -822,12 +821,12 @@ function tkRenderFocus() {
   const pending = tasks.filter(t => !t.done).length;
   const total   = tasks.length;
   if (subEl) {
-    if (!total) subEl.textContent = 'Nenhuma tarefa hoje · aproveite! ✨';
+    if (!total) subEl.textContent = 'Nenhuma tarefa hoje · aproveite!';
     else subEl.textContent = `${pending} pendente${pending!==1?'s':''} · ${total-pending} concluída${(total-pending)!==1?'s':''} hoje`;
   }
 
   if (!tasks.length) {
-    listEl.innerHTML = '<div class="tk-focus-empty">Nenhuma tarefa para hoje ✨ <br><small style="opacity:.5">Use o botão acima para adicionar.</small></div>';
+    listEl.innerHTML = '<div class="tk-focus-empty">Nenhuma tarefa para hoje<br><small style="opacity:.5">Use o botão acima para adicionar.</small></div>';
     return;
   }
 
@@ -840,7 +839,7 @@ function tkRenderFocus() {
       return `<div class="tk-focus-card ${t.done?'done-card':''}" style="--tk-color:${color}"
           onclick="tkOpenGymDay(${tkJs(t.data)})">
         <div class="tk-focus-card-top">
-          <div class="tk-focus-card-check ${t.done?'checked':''}">${t.done?'✓':''}</div>
+          <div class="tk-focus-card-check ${t.done?'checked':''}">${t.done?'<i class="ico ico-check" aria-hidden="true"></i>':''}</div>
           <div class="tk-focus-card-nome">${esc(t.nome)}</div>
         </div>
         <div class="tk-focus-card-meta">
@@ -858,12 +857,12 @@ function tkRenderFocus() {
       <div class="tk-focus-card-top">
         <div class="tk-focus-card-check ${t.done?'checked':''}"
           onclick="event.stopPropagation();tkQuickToggle(${tkJs(t.id)})">
-          ${t.done?'✓':''}
+          ${t.done?'<i class="ico ico-check" aria-hidden="true"></i>':''}
         </div>
         <div class="tk-focus-card-nome">${esc(t.nome)}</div>
       </div>
       <div class="tk-focus-card-meta">
-        ${t.hora ? `<span class="tk-focus-card-hora">🕒 ${esc(t.hora)}</span>` : ''}
+        ${t.hora ? `<span class="tk-focus-card-hora"><i class="ico ico-clock" aria-hidden="true"></i> ${esc(t.hora)}</span>` : ''}
         <span class="tk-focus-card-pill">${TK_PRIOR_LABEL[t.prior]||'•'}</span>
         ${t.cat ? `<span class="tk-focus-card-pill" style="background:rgba(255,255,255,.06);color:var(--muted);border-color:rgba(255,255,255,.1)">${esc(t.cat)}</span>` : ''}
       </div>
@@ -960,13 +959,13 @@ function tkRenderList() {
 
   if (!items.length) {
     const msgs = {
-      pendentes:'Nenhuma tarefa pendente! ✨',hoje:'Nenhuma tarefa para hoje.',
-      vencidas:'Nenhuma tarefa vencida! ⏰',
+      pendentes:'Nenhuma tarefa pendente!',hoje:'Nenhuma tarefa para hoje.',
+      vencidas:'Nenhuma tarefa vencida!',
       'sem-data':'Todas as tarefas têm data definida.',
       concluidas:'Nenhuma tarefa concluída ainda.',todas:'Nenhuma tarefa cadastrada.'
     };
     grid.innerHTML = `<div class="tk-list-empty">
-      <div class="tk-list-empty-icon">${tkListTab==='vencidas'?'⏰':tkListTab==='concluidas'?'✅':'✨'}</div>
+      <div class="tk-list-empty-icon">${tkListTab==='vencidas'?'<i class="ico ico-alarm-clock" aria-hidden="true"></i>':tkListTab==='concluidas'?'<i class="ico ico-circle-check" aria-hidden="true"></i>':'<i class="ico ico-sparkles" aria-hidden="true"></i>'}</div>
       ${msgs[tkListTab]||'Nenhuma tarefa.'}
     </div>`;
     tkRenderListPagination(0, 1, 1);
@@ -1028,10 +1027,10 @@ function tkRenderList() {
       return `<div class="tk-task-card ${t.done?'done-card':''}" style="--tk-color:${color}"
           onclick="tkOpenGymDay(${tkJs(t.data)})">
         <div class="tk-task-card-top">
-          <div class="tk-task-card-check ${t.done?'checked':''}">${t.done?'✓':''}</div>
+          <div class="tk-task-card-check ${t.done?'checked':''}">${t.done?'<i class="ico ico-check" aria-hidden="true"></i>':''}</div>
           <div class="tk-task-card-nome">${esc(t.nome)}</div>
-          <button type="button" class="tk-gym-delete-btn" onclick="event.stopPropagation();tkRequestDeleteGymWorkout(${tkJs(t.data)})" title="Excluir treino">
-            🗑
+          <button type="button" class="tk-gym-delete-btn" onclick="event.stopPropagation();tkRequestDeleteGymWorkout(${tkJs(t.data)})" title="Excluir treino" aria-label="Excluir treino">
+            <i class="ico ico-trash-2" aria-hidden="true"></i>
           </button>
         </div>
         ${t.nota ? `<div class="tk-task-card-nota">${esc(t.nota)}</div>` : ''}
@@ -1063,7 +1062,7 @@ function tkRenderList() {
       <div class="tk-task-card-top">
         <div class="tk-task-card-check ${t.done?'checked':''}"
           onclick="event.stopPropagation();tkQuickToggle(${tkJs(t.id)})">
-          ${t.done?'✓':''}
+          ${t.done?'<i class="ico ico-check" aria-hidden="true"></i>':''}
         </div>
         <div class="tk-task-card-nome">${esc(t.nome)}</div>
       </div>
@@ -1327,24 +1326,24 @@ function tkRenderAnalytics() {
 
       <div class="san-kpi-row">
         <div class="san-kpi" style="--kpi-color:#c8a96e">
-          <div class="san-kpi-icon">📋</div><div class="san-kpi-val">${total}</div>
+          <div class="san-kpi-icon"><i class="ico ico-clipboard-list" aria-hidden="true"></i></div><div class="san-kpi-val">${total}</div>
           <div class="san-kpi-lbl">Total de tarefas</div>
         </div>
         <div class="san-kpi" style="--kpi-color:#e8864a">
-          <div class="san-kpi-icon">⏳</div><div class="san-kpi-val">${pend}</div>
+          <div class="san-kpi-icon"><i class="ico ico-hourglass" aria-hidden="true"></i></div><div class="san-kpi-val">${pend}</div>
           <div class="san-kpi-lbl">Pendentes</div>
         </div>
         <div class="san-kpi" style="--kpi-color:#5ec4a8">
-          <div class="san-kpi-icon">✅</div><div class="san-kpi-val">${done}</div>
+          <div class="san-kpi-icon"><i class="ico ico-circle-check" aria-hidden="true"></i></div><div class="san-kpi-val">${done}</div>
           <div class="san-kpi-lbl">Concluídas</div>
           <div class="san-kpi-sub">${pct}% do total</div>
         </div>
         <div class="san-kpi" style="--kpi-color:#e06b8b">
-          <div class="san-kpi-icon">🔴</div><div class="san-kpi-val">${venc}</div>
+          <div class="san-kpi-icon"><i class="ico ico-circle-alert" aria-hidden="true"></i></div><div class="san-kpi-val">${venc}</div>
           <div class="san-kpi-lbl">Vencidas</div>
         </div>
         <div class="san-kpi" style="--kpi-color:#4ab0e8">
-          <div class="san-kpi-icon">📅</div><div class="san-kpi-val">${hoje}</div>
+          <div class="san-kpi-icon"><i class="ico ico-calendar" aria-hidden="true"></i></div><div class="san-kpi-val">${hoje}</div>
           <div class="san-kpi-lbl">Para hoje</div>
           <div class="san-kpi-sub">${hojeD} concluídas</div>
         </div>
@@ -1352,7 +1351,7 @@ function tkRenderAnalytics() {
 
       <div class="san-charts-row">
         <div class="san-card" style="flex:2">
-          <div class="san-card-title"><span class="san-card-title-icon">📈</span>Atividade mensal - últimos 6 meses</div>
+          <div class="san-card-title"><span class="san-card-title-icon"><i class="ico ico-chart-line" aria-hidden="true"></i></span>Atividade mensal - últimos 6 meses</div>
           <div class="san-bar-chart">
             ${Object.values(monthly).map(m => {
               const pTot = Math.round(m.total / maxMonth * 100);
@@ -1377,7 +1376,7 @@ function tkRenderAnalytics() {
           </div>
         </div>
         <div class="san-card" style="flex:1">
-          <div class="san-card-title"><span class="san-card-title-icon">🗂️</span>Por categoria</div>
+          <div class="san-card-title"><span class="san-card-title-icon"><i class="ico ico-folder-tree" aria-hidden="true"></i></span>Por categoria</div>
           <div class="san-donut-wrap">
             <svg class="san-donut-svg" viewBox="0 0 130 130">
               ${donutPaths}
@@ -1392,7 +1391,7 @@ function tkRenderAnalytics() {
 
       <div class="san-charts-row-3">
         <div class="san-card">
-          <div class="san-card-title"><span class="san-card-title-icon">🎯</span>Taxa por prioridade</div>
+          <div class="san-card-title"><span class="san-card-title-icon"><i class="ico ico-target" aria-hidden="true"></i></span>Taxa por prioridade</div>
           <div class="san-bar-chart" style="gap:12px">
             ${priorRate.map(({ k, tot, dn, pct: p }) => {
               const col = TK_PRIOR_COLOR[k];
@@ -1422,7 +1421,7 @@ function tkRenderAnalytics() {
         </div>
 
         <div class="san-card">
-          <div class="san-card-title"><span class="san-card-title-icon">💠</span>Score de saúde</div>
+          <div class="san-card-title"><span class="san-card-title-icon"><i class="ico ico-heart-pulse" aria-hidden="true"></i></span>Score de saúde</div>
           <div class="san-health-ring-wrap">
             <svg width="120" height="120" viewBox="0 0 80 80">
               <circle cx="40" cy="40" r="32" fill="none" stroke="rgba(255,255,255,.05)" stroke-width="8"/>
@@ -1457,7 +1456,7 @@ function tkRenderAnalytics() {
         </div>
 
         <div class="san-card">
-          <div class="san-card-title"><span class="san-card-title-icon">⏭️</span>Próximas tarefas</div>
+          <div class="san-card-title"><span class="san-card-title-icon"><i class="ico ico-skip-forward" aria-hidden="true"></i></span>Próximas tarefas</div>
           ${proximas.length === 0
             ? '<div style="font-size:12px;color:var(--muted);font-family:var(--font-mono);font-style:italic;padding:12px 0">Nenhuma tarefa futura pendente</div>'
             : `<div class="san-rank-list">
@@ -2098,8 +2097,8 @@ function taskHubRender(t) {
   document.getElementById('taskh-hero-img').src = '';
   heroEl.classList.remove('has-img');
 
-  const priorIcons = { alta:'\u25c6', media:'\u25c8', baixa:'\u2726' };
-  document.getElementById('taskh-icon').textContent = priorIcons[t.prior] || '\u25ce';
+  const priorIcons = { alta:'ico-signal-high', media:'ico-signal-medium', baixa:'ico-signal-low' };
+  document.getElementById('taskh-icon').innerHTML = '<i class="ico ' + (priorIcons[t.prior] || 'ico-circle-dot') + '" aria-hidden="true"></i>';
   const badgeEl = document.getElementById('taskh-badge');
   badgeEl.textContent = t.cat || 'Tarefa';
   badgeEl.style.color = color;
@@ -2113,12 +2112,12 @@ function taskHubRender(t) {
     const diff = tkDaysFromNow(t.data);
     const cls = diff < 0 && !t.done ? 'warning' : diff === 0 ? 'success' : '';
     const lbl = diff === 0 ? 'Hoje' : diff === 1 ? 'Amanhã' : diff < 0 ? `${Math.abs(diff)}d atrasada` : `em ${diff}d`;
-    chips.push(`<div class="hub-hero-chip ${cls}">📅 ${tkFmtDate(t.data)}${t.dataFim ? ' – ' + tkFmtDate(t.dataFim) : ''} · ${lbl}</div>`);
+    chips.push(`<div class="hub-hero-chip ${cls}"><i class="ico ico-calendar" aria-hidden="true"></i> ${tkFmtDate(t.data)}${t.dataFim ? ' – ' + tkFmtDate(t.dataFim) : ''} · ${lbl}</div>`);
   }
-  if (t.hora) chips.push(`<div class="hub-hero-chip">🕒 ${esc(t.hora)}</div>`);
+  if (t.hora) chips.push(`<div class="hub-hero-chip"><i class="ico ico-clock" aria-hidden="true"></i> ${esc(t.hora)}</div>`);
   const subTotal = (t.subtarefas || []).length;
   const subDone = (t.subtarefas || []).filter(s => s.done).length;
-  if (subTotal > 0) chips.push(`<div class="hub-hero-chip">\u25c8 ${subDone}/${subTotal} subtarefas</div>`);
+  if (subTotal > 0) chips.push(`<div class="hub-hero-chip"><i class="ico ico-list-checks" aria-hidden="true"></i> ${subDone}/${subTotal} subtarefas</div>`);
   document.getElementById('taskh-meta').innerHTML = chips.join('');
 
   const notaEl = document.getElementById('taskh-nota-display');
@@ -2149,7 +2148,7 @@ function taskHubRender(t) {
       ${diff !== null ? `<div style="display:flex;justify-content:space-between">
         <span style="font-size:11px;font-family:var(--font-mono);color:var(--muted)">Status</span>
         <span style="font-size:12px;font-weight:700;color:${diff < 0 && !t.done ? 'var(--accent4)' : diff === 0 ? 'var(--accent3)' : 'var(--muted)'}">
-          ${t.done ? '✓ Concluída' : diff === 0 ? 'Hoje' : diff < 0 ? Math.abs(diff) + 'd atrasada' : 'em ' + diff + 'd'}
+          ${t.done ? '<i class="ico ico-check" aria-hidden="true"></i> Concluída' : diff === 0 ? 'Hoje' : diff < 0 ? Math.abs(diff) + 'd atrasada' : 'em ' + diff + 'd'}
         </span>
       </div>` : ''}
     </div>`;
@@ -2192,10 +2191,10 @@ function taskHubRenderSubs(t) {
     ? subs.map((s,i) => `
         <div class="taskh-sub-item">
           <div class="taskh-sub-check ${s.done?'done':''}" onclick="taskHubToggleSub(${i})">
-            ${s.done?'✓':''}
+            ${s.done?'<i class="ico ico-check" aria-hidden="true"></i>':''}
           </div>
           <div class="taskh-sub-text ${s.done?'done':''}">${esc(s.texto)}</div>
-          <button class="taskh-sub-del" onclick="taskHubDelSub(${i})">✕</button>
+          <button class="taskh-sub-del" onclick="taskHubDelSub(${i})" aria-label="Excluir subtarefa"><i class="ico ico-x" aria-hidden="true"></i></button>
         </div>`).join('')
     : '<div style="font-size:12px;color:rgba(122,117,144,.4);font-family:var(--font-mono);font-style:italic;padding:4px 0">Nenhuma subtarefa. Adicione passos menores abaixo.</div>';
 }
@@ -2236,9 +2235,9 @@ function taskHubRenderDoneBtn(t) {
   const navLbl  = document.getElementById('taskh-nav-done-lbl');
   if (!btn) return;
   btn.className = 'taskh-done-btn ' + (t.done ? 'done-state' : 'pending');
-  if (icon) icon.textContent = t.done ? '\u2713' : '\u25cb';
+  if (icon) icon.innerHTML = t.done ? '<i class="ico ico-check" aria-hidden="true"></i>' : '<i class="ico ico-circle" aria-hidden="true"></i>';
   if (lbl)  lbl.textContent  = t.done ? 'Concluída! Clique para reabrir' : 'Marcar como concluída';
-  if (navIcon) navIcon.textContent = t.done ? '\u2713' : '\u25cb';
+  if (navIcon) navIcon.innerHTML = t.done ? '<i class="ico ico-check" aria-hidden="true"></i>' : '<i class="ico ico-circle" aria-hidden="true"></i>';
   if (navLbl)  navLbl.textContent  = t.done ? 'Reabrir' : 'Concluir';
 }
 
@@ -2249,25 +2248,25 @@ function taskHubRenderTips(t) {
   const diff = t.data ? tkDaysFromNow(t.data) : null;
   const tips = [];
 
-  if (!t.nota) tips.push({ icon:'📝', color:'#c8a96e', badge:'Detalhe', title:'Adicione contexto', desc:'Uma boa descrição evita esquecimentos e ajuda a retomar o foco rapidamente.' });
-  if (subs.length === 0) tips.push({ icon:'◈', color:'#7c6fcd', badge:'Estrutura', title:'Divida em subtarefas', desc:'Tarefas com passos menores são concluídas 2x mais rápido.' });
-  if (diff !== null && diff < 0 && !t.done) tips.push({ icon:'⏰', color:'#e06b8b', badge:'Urgente', title:'Tarefa atrasada!', desc:`Esta tarefa está ${Math.abs(diff)} dia(s) atrasada. Priorize agora.` });
-  if (diff !== null && diff === 0 && !t.done) tips.push({ icon:'📍', color:'#e8864a', badge:'Hoje', title:'Vence hoje!', desc:'Foco! Esta tarefa precisa ser concluída antes do fim do dia.' });
-  if (t.prior === 'alta' && !t.done) tips.push({ icon:'🔥', color:'#e06b8b', badge:'Alta prio', title:'Tarefa de alta prioridade', desc:'Considere trabalhar nesta tarefa antes de qualquer outra pendente.' });
-  if (subs.length > 0 && subs.every(s=>s.done) && !t.done) tips.push({ icon:'✅', color:'#5ec4a8', badge:'Quase lá!', title:'Subtarefas 100% concluídas', desc:'Todas as subtarefas foram feitas. Marque a tarefa principal como concluída!' });
+  if (!t.nota) tips.push({ icon:'ico-notebook-pen', color:'#c8a96e', badge:'Detalhe', title:'Adicione contexto', desc:'Uma boa descrição evita esquecimentos e ajuda a retomar o foco rapidamente.' });
+  if (subs.length === 0) tips.push({ icon:'ico-list-checks', color:'#7c6fcd', badge:'Estrutura', title:'Divida em subtarefas', desc:'Tarefas com passos menores são concluídas 2x mais rápido.' });
+  if (diff !== null && diff < 0 && !t.done) tips.push({ icon:'ico-alarm-clock', color:'#e06b8b', badge:'Urgente', title:'Tarefa atrasada!', desc:`Esta tarefa está ${Math.abs(diff)} dia(s) atrasada. Priorize agora.` });
+  if (diff !== null && diff === 0 && !t.done) tips.push({ icon:'ico-map-pin', color:'#e8864a', badge:'Hoje', title:'Vence hoje!', desc:'Foco! Esta tarefa precisa ser concluída antes do fim do dia.' });
+  if (t.prior === 'alta' && !t.done) tips.push({ icon:'ico-flame', color:'#e06b8b', badge:'Alta prio', title:'Tarefa de alta prioridade', desc:'Considere trabalhar nesta tarefa antes de qualquer outra pendente.' });
+  if (subs.length > 0 && subs.every(s=>s.done) && !t.done) tips.push({ icon:'ico-circle-check', color:'#5ec4a8', badge:'Quase lá!', title:'Subtarefas 100% concluídas', desc:'Todas as subtarefas foram feitas. Marque a tarefa principal como concluída!' });
 
   const fixed = [
-    { icon:'⏳', color:'#4ab0e8', badge:'Produtividade', title:'Use a técnica Pomodoro', desc:'25 min de foco + 5 min de pausa. Ideal para tarefas complexas.' },
-    { icon:'🌅', color:'#7c6fcd', badge:'Hábito', title:'Tarefas difíceis pela manhã', desc:'Sua energia e foco são maiores no início do dia.' },
-    { icon:'🔕', color:'#c8a96e', badge:'Foco', title:'Silencie notificações', desc:'Interrupções reduzem produtividade em até 40%.' },
-    { icon:'🎉', color:'#5ec4a8', badge:'Recompensa', title:'Celebre cada conclusão', desc:'Pequenas recompensas reforçam o hábito de completar tarefas.' },
+    { icon:'ico-timer', color:'#4ab0e8', badge:'Produtividade', title:'Use a técnica Pomodoro', desc:'25 min de foco + 5 min de pausa. Ideal para tarefas complexas.' },
+    { icon:'ico-sunrise', color:'#7c6fcd', badge:'Hábito', title:'Tarefas difíceis pela manhã', desc:'Sua energia e foco são maiores no início do dia.' },
+    { icon:'ico-bell-off', color:'#c8a96e', badge:'Foco', title:'Silencie notificações', desc:'Interrupções reduzem produtividade em até 40%.' },
+    { icon:'ico-party-popper', color:'#5ec4a8', badge:'Recompensa', title:'Celebre cada conclusão', desc:'Pequenas recompensas reforçam o hábito de completar tarefas.' },
   ];
   while (tips.length < 6) tips.push(fixed[tips.length % fixed.length]);
   const show = tips.slice(0,6);
   grid.innerHTML = show.map(tp => `
     <div class="hub-tip-card" style="--tip-color:${tp.color}">
       <div class="hub-tip-top">
-        <div class="hub-tip-emoji">${tp.icon}</div>
+        <div class="hub-tip-emoji"><i class="ico ${tp.icon}" aria-hidden="true"></i></div>
         <div class="hub-tip-badge">${tp.badge}</div>
       </div>
       <div class="hub-tip-title">${tp.title}</div>
@@ -2322,7 +2321,7 @@ function taskHubDrawerOpen() {
   tkToggleEndDateFields('tkd');
   document.getElementById('tkd-hora').value  = t.hora  || '';
   document.getElementById('tkd-recorrencia').value = t.recurrence || 'none';
-  document.getElementById('taskh-drawer-icon').textContent  = TK_PRIOR_COLOR[t.prior] ? ({alta:'\u25c6', media:'\u25c8', baixa:'\u2726'}[t.prior]) : '\u2726';
+  document.getElementById('taskh-drawer-icon').innerHTML  = '<i class="ico ' + ({alta:'ico-signal-high', media:'ico-signal-medium', baixa:'ico-signal-low'}[t.prior] || 'ico-pencil') + '" aria-hidden="true"></i>';
   document.getElementById('taskh-drawer-title').textContent = t.nome;
   tkBuildColorPicker('tkd-colors', taskHubDrawerColor, 'taskHubPickColor');
   document.getElementById('taskh-drawer').classList.add('open');
@@ -2754,7 +2753,7 @@ tkCalRender = function () {
         return (a.hora || '99:99').localeCompare(b.hora || '99:99');
       }).map(function (task) {
         if (task.isHoliday) {
-          return `<div class="tk-cal-task-card tk-cal-holiday-card" onclick="event.stopPropagation()" title="${esc(task.holidayType)}: ${esc(task.nome)}"><span class="tk-cal-holiday-icon">${esc(task.icon)}</span>${esc(task.nome)}</div>`;
+          return `<div class="tk-cal-task-card tk-cal-holiday-card" onclick="event.stopPropagation()" title="${esc(task.holidayType)}: ${esc(task.nome)}"><span class="tk-cal-holiday-icon"><i class="ico ico-party-popper" aria-hidden="true"></i></span>${esc(task.nome)}</div>`;
         }
         if (task.isDream) {
           return `<div class="tk-cal-task-card tk-cal-dream-card" style="--tk-color:#7c6fcd" onclick="event.stopPropagation();tkOpenDreamDeadline(${tkJs(String(task.id))})" title="Prazo do sonho: ${esc(task.nome)}"><span class="tk-cal-dream-icon">${esc(task.icon)}</span>${esc(task.nome)}</div>`;
@@ -2764,7 +2763,7 @@ tkCalRender = function () {
         }
         const col = task.cor || TK_PRIOR_COLOR[task.prior] || '#c8a96e';
         if (task.isGym) {
-          return `<div class="tk-cal-task-card ${task.done ? 'done-mini' : ''}" style="--tk-color:${col}" onclick="event.stopPropagation();tkOpenGymDay(${tkJs(task.data)})" title="Treino programado">🏋️ ${esc(task.nome)}</div>`;
+          return `<div class="tk-cal-task-card ${task.done ? 'done-mini' : ''}" style="--tk-color:${col}" onclick="event.stopPropagation();tkOpenGymDay(${tkJs(task.data)})" title="Treino programado"><i class="ico ico-dumbbell" aria-hidden="true"></i> ${esc(task.nome)}</div>`;
         }
         return `<div class="tk-cal-task-card ${task.done ? 'done-mini' : ''} ${tkSelectionHas(task.id) ? 'selected' : ''}"
             data-task-id="${task.id}" data-date="${task.data}" style="--tk-color:${col}"
@@ -2793,14 +2792,14 @@ tkCalRender = function () {
         segment.isEnd ? 'span-end' : 'span-continuation-right'
       ].filter(Boolean).join(' ');
       const titleText = task.nome || 'Tarefa';
-      const shownName = segment.isStart ? titleText : '↤ ' + titleText;
+      const shownName = segment.isStart ? esc(titleText) : '<i class="ico ico-corner-down-right" aria-hidden="true"></i> ' + esc(titleText);
       const timeLabel = segment.isStart && task.hora ? `<span class="tk-cal-span-time">${esc(task.hora)}</span>` : '';
       return `<div class="${classes}" data-task-id="${task.id}" data-span-start="${segment.segmentStartDate}"
           style="--tk-color:${col};grid-column:${segment.startCol + 1}/span ${segment.endCol - segment.startCol + 1};grid-row:${segment.lane + 1}"
           oncontextmenu="return tkQuickActionsOpen(event, ${tkJs(task.id)})"
           onclick="tkCalCardActivate(event, ${tkJs(task.id)})"
           onpointerdown="tkCalCardPointerDown(event, ${tkJs(task.id)})"
-          title="${titleText} · ${tkFmtDate(task.data)} – ${tkFmtDate(task.dataFim)}">${timeLabel}${shownName}</div>`;
+          title="${esc(titleText)} · ${tkFmtDate(task.data)} – ${tkFmtDate(task.dataFim)}">${timeLabel}${shownName}</div>`;
     }).join('');
 
     weekMarkup.push(`<div class="tk-cal-week" style="--tk-span-lanes:${laneCount}">
@@ -2859,9 +2858,9 @@ taskHubRenderDoneBtn = function (task) {
   btn.disabled = blocked;
   btn.style.opacity = blocked ? '.58' : '';
   btn.title = blocked ? 'Conclua todas as tarefas filhas antes.' : '';
-  if (icon) icon.textContent = task.done ? '\u2713' : '\u25cb';
+  if (icon) icon.innerHTML = task.done ? '<i class="ico ico-check" aria-hidden="true"></i>' : '<i class="ico ico-circle" aria-hidden="true"></i>';
   if (lbl) lbl.textContent = task.done ? 'Concluída! Clique para reabrir' : blocked ? 'Conclua as tarefas filhas primeiro' : 'Marcar como concluída';
-  if (navIcon) navIcon.textContent = task.done ? '\u2713' : '\u25cb';
+  if (navIcon) navIcon.innerHTML = task.done ? '<i class="ico ico-check" aria-hidden="true"></i>' : '<i class="ico ico-circle" aria-hidden="true"></i>';
   if (navLbl) navLbl.textContent = task.done ? 'Reabrir' : blocked ? 'Bloqueada' : 'Concluir';
 };
 
@@ -3107,17 +3106,17 @@ taskHubRenderSubs = function (task) {
     return `
       <div class="taskh-sub-item">
         <div class="taskh-sub-check ${sub.done ? 'done' : ''}" onclick="taskHubToggleSub(${index})">
-          ${sub.done ? '\u2713' : ''}
+          ${sub.done ? '<i class="ico ico-check" aria-hidden="true"></i>' : ''}
         </div>
         <div class="taskh-sub-text ${sub.done ? 'done' : ''}">${esc(sub.texto)}</div>
-        <button class="taskh-sub-del" onclick="taskHubDelSub(${index})">\u2715</button>
+        <button class="taskh-sub-del" onclick="taskHubDelSub(${index})" aria-label="Excluir subtarefa"><i class="ico ico-x" aria-hidden="true"></i></button>
       </div>`;
   }).join('');
   const childMarkup = childTasks.map(function (child) {
     return `
       <button class="taskh-sub-item taskh-sub-item-linked" type="button" onclick="taskHubOpen(${tkJs(child.id)})">
         <div class="taskh-sub-check ${child.done ? 'done' : ''}">
-          ${child.done ? '\u2713' : '\u2192'}
+          ${child.done ? '<i class="ico ico-check" aria-hidden="true"></i>' : '<i class="ico ico-arrow-right" aria-hidden="true"></i>'}
         </div>
         <div class="taskh-sub-text ${child.done ? 'done' : ''}">
           ${esc(child.nome)}

@@ -762,7 +762,7 @@
     var mood = String(data.homeMood || "");
     var note = String(data.homeQuickNote || "");
     var noteInput = document.getElementById("quickNote");
-    setText("moodDisplay", mood || "â€”");
+    setText("moodDisplay", mood || "—");
     if (noteInput && noteInput.value !== note) noteInput.value = note;
     document.querySelectorAll(".humor-btn").forEach(function (btn) {
       btn.classList.toggle("is-active", btn.textContent === mood);

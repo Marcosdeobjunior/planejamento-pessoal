@@ -12,6 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/design-system.css">
+  <link rel="stylesheet" href="css/icons.css">
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/app-shell.css">
   <link rel="stylesheet" href="css/sonhos.css">
@@ -30,8 +31,8 @@
         <div class="page-subtitle">Calendário, foco e gestão de tarefas</div>
       </div>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-ghost" onclick="tkOpenAnalytics()" style="display:flex;align-items:center;gap:6px">📊 Analytics</button>
-        <button class="btn btn-primary" onclick="tkModalOpenForDate(tkCalState.selected)">✦ &nbsp;Nova Tarefa</button>
+        <button class="btn btn-ghost" onclick="tkOpenAnalytics()" style="display:flex;align-items:center;gap:6px"><i class="ico ico-chart-column" aria-hidden="true"></i> Analytics</button>
+        <button class="btn btn-primary" onclick="tkModalOpenForDate(tkCalState.selected)"><i class="ico ico-plus" aria-hidden="true"></i> Nova Tarefa</button>
       </div>
     </div>
 
@@ -50,12 +51,12 @@
       <div class="tk-list-section">
         <div class="tk-list-hd">
           <div class="tk-list-tabs" id="tk-list-tabs">
-            <button class="tk-list-tab active" data-tab="hoje"       onclick="tkListSetTab('hoje')">📅 Hoje <span class="tk-tab-count" id="tktc-hoje"></span></button>
-            <button class="tk-list-tab"        data-tab="pendentes"  onclick="tkListSetTab('pendentes')">⏳ Pendentes <span class="tk-tab-count" id="tktc-pendentes"></span></button>
-            <button class="tk-list-tab"        data-tab="vencidas"   onclick="tkListSetTab('vencidas')">🔴 Vencidas <span class="tk-tab-count" id="tktc-vencidas"></span></button>
-            <button class="tk-list-tab"        data-tab="sem-data"   onclick="tkListSetTab('sem-data')">🕳 Sem data <span class="tk-tab-count" id="tktc-sem-data"></span></button>
-            <button class="tk-list-tab"        data-tab="concluidas" onclick="tkListSetTab('concluidas')">✅ Concluídas <span class="tk-tab-count" id="tktc-concluidas"></span></button>
-            <button class="tk-list-tab"        data-tab="todas"      onclick="tkListSetTab('todas')">📋 Todas <span class="tk-tab-count" id="tktc-todas"></span></button>
+            <button class="tk-list-tab active" data-tab="hoje"       onclick="tkListSetTab('hoje')"><i class="ico ico-calendar" aria-hidden="true"></i> Hoje <span class="tk-tab-count" id="tktc-hoje"></span></button>
+            <button class="tk-list-tab"        data-tab="pendentes"  onclick="tkListSetTab('pendentes')"><i class="ico ico-hourglass" aria-hidden="true"></i> Pendentes <span class="tk-tab-count" id="tktc-pendentes"></span></button>
+            <button class="tk-list-tab"        data-tab="vencidas"   onclick="tkListSetTab('vencidas')"><i class="ico ico-circle-alert" aria-hidden="true"></i> Vencidas <span class="tk-tab-count" id="tktc-vencidas"></span></button>
+            <button class="tk-list-tab"        data-tab="sem-data"   onclick="tkListSetTab('sem-data')"><i class="ico ico-calendar-off" aria-hidden="true"></i> Sem data <span class="tk-tab-count" id="tktc-sem-data"></span></button>
+            <button class="tk-list-tab"        data-tab="concluidas" onclick="tkListSetTab('concluidas')"><i class="ico ico-circle-check" aria-hidden="true"></i> Concluídas <span class="tk-tab-count" id="tktc-concluidas"></span></button>
+            <button class="tk-list-tab"        data-tab="todas"      onclick="tkListSetTab('todas')"><i class="ico ico-list" aria-hidden="true"></i> Todas <span class="tk-tab-count" id="tktc-todas"></span></button>
           </div>
           <span class="tk-list-count" id="tk-list-count"></span>
         </div>
@@ -67,7 +68,7 @@
       <div class="tk-focus-wrap" id="tk-focus-wrap">
         <div class="tk-focus-hd">
           <div class="tk-focus-hd-left">
-            <div class="tk-focus-icon">⚡</div>
+            <div class="tk-focus-icon"><i class="ico ico-zap" aria-hidden="true"></i></div>
             <div>
               <div class="tk-focus-title">Foco de Hoje</div>
               <div class="tk-focus-sub" id="tk-focus-sub">—</div>
@@ -76,7 +77,7 @@
           <button class="tk-focus-add-btn" onclick="tkModalOpenForDate(tkToday())">+ Hoje</button>
         </div>
         <div class="tk-focus-list" id="tk-focus-list" style="display:flex;flex-direction:column;gap:8px">
-          <div class="tk-focus-empty">Nenhuma tarefa para hoje 🎉</div>
+          <div class="tk-focus-empty">Nenhuma tarefa para hoje</div>
         </div>
       </div>
 
@@ -125,16 +126,16 @@
       <div class="hub-hero-lines"></div>
       <div class="hub-accent-bar" id="taskh-accent-bar"></div>
       <div class="hub-nav">
-        <button class="hub-back-btn" onclick="taskHubClose()"><span class="taskh-symbol" aria-hidden="true">&larr;</span><span>Voltar</span></button>
+        <button class="hub-back-btn" onclick="taskHubClose()"><span class="taskh-symbol" aria-hidden="true"><i class="ico ico-arrow-left" aria-hidden="true"></i></span><span>Voltar</span></button>
         <div class="hub-nav-actions">
           <button class="hub-nav-btn done-btn" id="taskh-nav-done" onclick="taskHubToggleDone()">
-            <span class="taskh-symbol" id="taskh-nav-done-icon" aria-hidden="true">&#9675;</span><span id="taskh-nav-done-lbl">Concluir</span>
+            <span class="taskh-symbol" id="taskh-nav-done-icon" aria-hidden="true"><i class="ico ico-circle" aria-hidden="true"></i></span><span id="taskh-nav-done-lbl">Concluir</span>
           </button>
-          <button class="hub-nav-btn edit" onclick="taskHubDrawerOpen()">&#9998; Editar</button>
+          <button class="hub-nav-btn edit" onclick="taskHubDrawerOpen()"><i class="ico ico-pencil" aria-hidden="true"></i> Editar</button>
         </div>
       </div>
       <div class="hub-hero-content">
-        <div class="hub-icon-bubble" id="taskh-icon">&#10022;</div>
+        <div class="hub-icon-bubble" id="taskh-icon"><i class="ico ico-circle-dot" aria-hidden="true"></i></div>
         <div class="hub-title-block">
           <div class="hub-cat-badge" id="taskh-badge">Tarefa</div>
           <div class="hub-title" id="taskh-title">Tarefa</div>
@@ -148,12 +149,12 @@
     <div id="taskh-drawer">
       <div class="hd-stripe"></div>
       <div class="hd-head">
-        <div class="hd-head-icon" id="taskh-drawer-icon">&#10022;</div>
+        <div class="hd-head-icon" id="taskh-drawer-icon"><i class="ico ico-pencil" aria-hidden="true"></i></div>
         <div class="hd-head-info">
           <div class="hd-head-title" id="taskh-drawer-title">Editar tarefa</div>
           <div class="hd-head-sub">Alterações salvas ao clicar em salvar</div>
         </div>
-        <button class="hd-close-btn" onclick="taskHubDrawerClose()">&#10005;</button>
+        <button class="hd-close-btn" onclick="taskHubDrawerClose()" aria-label="Fechar"><i class="ico ico-x" aria-hidden="true"></i></button>
       </div>
       <div class="hd-body">
         <div class="hd-section">
@@ -173,9 +174,9 @@
             <div class="hd-field">
               <div class="hd-field-lbl">Prioridade</div>
               <select class="hd-inp" id="tkd-prior">
-                <option value="alta">🔴 Alta</option>
-                <option value="media">🟡 Média</option>
-                <option value="baixa">🟢 Baixa</option>
+                <option value="alta">Alta</option>
+                <option value="media">Média</option>
+                <option value="baixa">Baixa</option>
               </select>
             </div>
             <div class="hd-field">
@@ -227,10 +228,10 @@
         </div>
       </div>
       <div class="hd-footer">
-        <button class="hd-save-btn" onclick="taskHubDrawerSalvar()">✓ Salvar alterações</button>
+        <button class="hd-save-btn" onclick="taskHubDrawerSalvar()"><i class="ico ico-check" aria-hidden="true"></i> Salvar alterações</button>
         <div class="hd-footer-row">
           <button class="hd-cancel-btn" onclick="taskHubDrawerClose()">Cancelar</button>
-          <button class="hd-del-btn" onclick="taskHubDelete()">🗑 Excluir tarefa</button>
+          <button class="hd-del-btn" onclick="taskHubDelete()"><i class="ico ico-trash-2" aria-hidden="true"></i> Excluir tarefa</button>
         </div>
       </div>
     </div>
@@ -242,7 +243,7 @@
         <!-- Descrição / Nota -->
         <div class="hub-section" id="taskh-nota-section">
           <div class="hub-section-hd">
-            <div class="hub-section-hd-icon">✦</div>
+            <div class="hub-section-hd-icon"><i class="ico ico-file-text" aria-hidden="true"></i></div>
             <span class="hub-section-label">Detalhes</span>
           </div>
           <div id="taskh-nota-display"></div>
@@ -250,7 +251,7 @@
         <!-- Subtarefas -->
         <div class="hub-section">
           <div class="hub-section-hd">
-            <div class="hub-section-hd-icon">◈</div>
+            <div class="hub-section-hd-icon"><i class="ico ico-list-checks" aria-hidden="true"></i></div>
             <span class="hub-section-label">Subtarefas</span>
             <span id="taskh-sub-pct" style="margin-left:auto;font-size:10px;font-family:var(--font-mono);color:var(--muted)"></span>
           </div>
@@ -267,7 +268,7 @@
         <!-- Progresso -->
         <div class="hub-section">
           <div class="hub-section-hd">
-            <div class="hub-section-hd-icon">◎</div>
+            <div class="hub-section-hd-icon"><i class="ico ico-circle-dot" aria-hidden="true"></i></div>
             <span class="hub-section-label">Progresso</span>
           </div>
           <div class="taskh-ring-wrap">
@@ -288,7 +289,7 @@
         <!-- Cronograma -->
         <div class="hub-section" id="taskh-sched-section">
           <div class="hub-section-hd">
-            <div class="hub-section-hd-icon">📅</div>
+            <div class="hub-section-hd-icon"><i class="ico ico-calendar" aria-hidden="true"></i></div>
             <span class="hub-section-label">Cronograma</span>
           </div>
           <div id="taskh-sched-content"></div>
@@ -296,7 +297,7 @@
         <!-- Prioridade + Categoria -->
         <div class="hub-section">
           <div class="hub-section-hd">
-            <div class="hub-section-hd-icon">▸</div>
+            <div class="hub-section-hd-icon"><i class="ico ico-tag" aria-hidden="true"></i></div>
             <span class="hub-section-label">Classificação</span>
           </div>
           <div id="taskh-class-content"></div>
@@ -304,7 +305,7 @@
         <!-- Concluir -->
         <div class="hub-section">
           <button class="taskh-done-btn pending" id="taskh-done-btn" onclick="taskHubToggleDone()">
-            <span class="taskh-symbol" id="taskh-done-icon" aria-hidden="true">&#9675;</span>
+            <span class="taskh-symbol" id="taskh-done-icon" aria-hidden="true"><i class="ico ico-circle" aria-hidden="true"></i></span>
             <span id="taskh-done-lbl">Marcar como concluída</span>
           </button>
         </div>
@@ -314,7 +315,7 @@
     <div class="hub-section taskh-links-stage">
       <div class="hub-section-hd">
         <div style="display:flex;align-items:center;gap:10px">
-          <div class="hub-section-hd-icon">⇄</div>
+          <div class="hub-section-hd-icon"><i class="ico ico-arrow-left-right" aria-hidden="true"></i></div>
           <span class="hub-section-label">Estrutura</span>
         </div>
         <div class="taskh-links-zoom">
@@ -339,7 +340,7 @@
             <div class="taskh-link-picker-title" id="taskh-link-picker-title">Vincular tarefa</div>
             <div class="taskh-link-picker-sub" id="taskh-link-picker-sub">Escolha uma tarefa existente ou crie uma nova.</div>
           </div>
-          <button class="taskh-link-picker-close" type="button" onclick="taskHubLinkPickerClose()" aria-label="Fechar">✕</button>
+          <button class="taskh-link-picker-close" type="button" onclick="taskHubLinkPickerClose()" aria-label="Fechar"><i class="ico ico-x" aria-hidden="true"></i></button>
         </div>
         <div class="taskh-link-picker-tools">
           <input class="taskh-link-picker-search" id="taskh-link-picker-search" placeholder="Pesquisar tarefa..." oninput="taskHubLinkPickerRender()">
@@ -352,7 +353,7 @@
     <!-- Tips / dicas baseadas na tarefa -->
     <div class="hub-tips-wrap">
       <div class="hub-tips-hd">
-        <div class="hub-tips-hd-icon">💡</div>
+        <div class="hub-tips-hd-icon"><i class="ico ico-lightbulb" aria-hidden="true"></i></div>
         <div>
           <div class="hub-tips-hd-title">Dicas para esta tarefa</div>
           <div class="hub-tips-hd-sub">Sugestões baseadas no status e prioridade</div>
@@ -370,7 +371,7 @@
         <div class="tk-modal-head-title">Nova tarefa</div>
         <div class="tk-modal-head-date" id="tk-modal-date-label"></div>
       </div>
-      <button class="tk-modal-close" onclick="tkModalClose()" aria-label="Fechar modal">✕</button>
+      <button class="tk-modal-close" onclick="tkModalClose()" aria-label="Fechar modal"><i class="ico ico-x" aria-hidden="true"></i></button>
     </div>
     <div class="tk-modal-body">
       <div>
@@ -385,9 +386,9 @@
         <div>
           <div class="tk-modal-lbl">Prioridade</div>
           <select class="tk-modal-inp" id="tkm-prior">
-            <option value="alta">🔴 Alta</option>
-            <option value="media" selected>🟡 Média</option>
-            <option value="baixa">🟢 Baixa</option>
+            <option value="alta">Alta</option>
+            <option value="media" selected>Média</option>
+            <option value="baixa">Baixa</option>
           </select>
         </div>
         <div>
@@ -447,10 +448,10 @@
       <div class="tk-delete-stripe"></div>
       <div class="tk-delete-head">
         <div class="tk-delete-kicker" id="tk-delete-kicker">Excluir tarefa</div>
-        <button class="tk-delete-close" type="button" onclick="tkDeletePopupClose()" aria-label="Fechar">✕</button>
+        <button class="tk-delete-close" type="button" onclick="tkDeletePopupClose()" aria-label="Fechar"><i class="ico ico-x" aria-hidden="true"></i></button>
       </div>
       <div class="tk-delete-body">
-        <div class="tk-delete-icon">✦</div>
+        <div class="tk-delete-icon"><i class="ico ico-trash-2" aria-hidden="true"></i></div>
         <div class="tk-delete-title" id="tk-delete-title">Tem certeza?</div>
         <div class="tk-delete-text" id="tk-delete-text">Escolha como deseja excluir esta tarefa.</div>
         <div class="tk-delete-meta" id="tk-delete-meta"></div>
