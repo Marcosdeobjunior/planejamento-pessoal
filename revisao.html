@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://apis.google.com https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://unpkg.com; font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.google.com https://nominatim.openstreetmap.org https://api.open-meteo.com https://geocoding-api.open-meteo.com; frame-src https://*.firebaseapp.com https://www.google.com https://recaptcha.google.com https://www.youtube.com https://player.vimeo.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://apis.google.com https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://unpkg.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.google.com https://nominatim.openstreetmap.org https://api.open-meteo.com https://geocoding-api.open-meteo.com; frame-src https://*.firebaseapp.com https://www.google.com https://recaptcha.google.com https://www.youtube.com https://player.vimeo.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#04040c">
 <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
@@ -382,7 +382,8 @@ canvas.achart{width:100%;display:block;}
 .seg-btn.active{background:rgba(200,169,110,.15);color:var(--gold);}
 
 @media(max-width:1000px){.stat-tiles{grid-template-columns:repeat(3,1fr);}.dash-grid,.analytics-grid{grid-template-columns:1fr;}.dash-grid-3,.analytics-grid-3{grid-template-columns:1fr 1fr;}.hdr{padding:0 20px;}.footer{padding:18px;}}
-@media(max-width:640px){.tabs-inner{overflow-x:auto;}.stat-tiles{grid-template-columns:1fr 1fr;}.dash-grid-3,.analytics-grid-3{grid-template-columns:1fr;}.rating-area{gap:8px;}.rating-btn{min-width:80px;padding:12px 16px;}.hnav{display:none;}.frow{grid-template-columns:1fr;}}
+@media(max-width:640px){.tabs-inner{overflow-x:auto;width:100%;}.tab{flex:1 0 auto;padding:13px 8px;font-size:12px;}.stat-tiles{grid-template-columns:1fr 1fr;}.dash-grid-3,.analytics-grid-3{grid-template-columns:1fr;}.rating-area{gap:8px;}.rating-btn{min-width:80px;padding:12px 16px;}.hnav{display:none;}.frow{grid-template-columns:1fr;}}
+@media(max-width:420px){.tab .ico{display:none;}.tab{padding:13px 6px;letter-spacing:0;}}
 </style>
 </head>
 <body data-page="revisao">
@@ -542,7 +543,7 @@ canvas.achart{width:100%;display:block;}
 <div class="toasts" id="toasts"></div>
 
 <!-- DECK MODAL -->
-<div class="ov" id="modal-deck">
+<div class="ov" id="modal-deck" role="dialog" aria-modal="true" aria-labelledby="mdeck-title">
   <div class="modal">
     <div class="mhd"><h3 id="mdeck-title">Novo Deck</h3><button class="mcls" data-close="modal-deck" aria-label="Fechar"><i class="ico ico-x" aria-hidden="true"></i></button></div>
     <div class="fg"><label class="fl">Nome do Deck *</label><input type="text" class="fi" id="deck-name" placeholder="Ex: Anatomia, Inglês, Cálculo..."></div>
@@ -580,7 +581,7 @@ canvas.achart{width:100%;display:block;}
 </div>
 
 <!-- CARD MODAL -->
-<div class="ov" id="modal-card">
+<div class="ov" id="modal-card" role="dialog" aria-modal="true" aria-labelledby="mcard-title">
   <div class="modal">
     <div class="mhd"><h3 id="mcard-title">Novo Card</h3><button class="mcls" data-close="modal-card" aria-label="Fechar"><i class="ico ico-x" aria-hidden="true"></i></button></div>
     <div class="fg"><label class="fl">Frente (Pergunta) *</label><textarea class="fta" id="card-front" placeholder="O que você quer memorizar?"></textarea></div>
