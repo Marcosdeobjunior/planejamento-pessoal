@@ -881,7 +881,17 @@ let tkQuickActionState = null;
 const tkDeletePopupState = { onChoice: null };
 
 function tkGetListPageSize() {
-  return 8;
+  // quantos cartões cabem no quadro (colunas × linhas): o grid tem altura fixa e esconde o que
+  // passar disso, então uma página maior que o quadro deixava tarefas sem como serem vistas
+  const grid = document.getElementById('tk-list-grid');
+  if (!grid || !grid.clientWidth) return 8;
+  const cs = getComputedStyle(grid);
+  const cols = cs.gridTemplateColumns.split(' ').filter(Boolean).length || 1;
+  const gap = parseFloat(cs.rowGap) || 0;
+  const rowH = parseFloat(cs.gridAutoRows) || 128;
+  const inner = grid.clientHeight - (parseFloat(cs.paddingTop) || 0);
+  const rows = Math.max(1, Math.floor((inner + gap) / (rowH + gap)));
+  return cols * rows;
 }
 
 function tkRenderListPagination(totalItems, pageSize, currentPage) {
