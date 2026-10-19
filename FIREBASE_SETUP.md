@@ -101,6 +101,7 @@ diferente do estado real.
 4. **Regras**: revise `firestore.rules` (na raiz do repositório) e publique pelo console
    (Firestore Database → Regras) ou com `firebase deploy --only firestore:rules`. Detalhes em
    `docs/FIREBASE_SECURITY_RULES.md`.
+   Os lembretes no celular precisam também de chaves e Secrets no GitHub: ver `docs/LEMBRETES.md`.
 5. **Configuração**: edite `js/firebase-config.js`:
 
 ```js

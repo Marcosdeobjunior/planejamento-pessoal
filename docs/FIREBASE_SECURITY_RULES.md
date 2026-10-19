@@ -26,6 +26,10 @@ Regras) ou com `firebase deploy --only firestore:rules`.
   - `images/*`: o campo `data` precisa ser texto com no máximo 950.000 caracteres;
   - `modules/*`: `schema == 2`, `rev` inteiro e `data` como mapa;
   - `rubrica/*`: só os campos `p` (página, mapa), `s` (configuração no `__meta`, mapa) e `em`.
+- **Lembretes no celular** ([LEMBRETES.md](LEMBRETES.md)) ficam fora de `users/`, em
+  `pushSchedules/{uid}` (agenda) e `pushSchedules/{uid}/devices/{id}` (aparelhos). Só o dono lê e
+  grava; a agenda tem no máximo 200 lembretes e o site não grava `sent`/`lastRunAt` (são do envio,
+  que usa conta de serviço); o endereço do aparelho precisa ser `https://`.
 - O site também confere o tamanho antes de enviar. Um módulo acima de ~900 KB (bytes UTF-8) ou uma
   imagem acima de 900 KB mostra um erro claro e não entra em loop de novas tentativas.
 

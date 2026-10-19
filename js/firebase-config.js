@@ -12,6 +12,11 @@ window.SOTER_FIREBASE_CONFIG = {
     emailPassword: true,
     google: false,
     allowGuest: false
+  },
+  // Lembretes no celular (Web Push): chave PÚBLICA VAPID. A chave privada correspondente fica só
+  // nos Secrets do GitHub (VAPID_PRIVATE_KEY). Vazio = recurso escondido. Ver docs/LEMBRETES.md.
+  push: {
+    publicKey: "BOcnVsjs2bpfQ0fRJv7Vg25y3dH7Si0O6pZORJA8v9yagOzNees1TyEBS9sRZnmG3wdAcAHGvHdgzP-7W9FzYb8"
   }
   // Sincronização por módulos (schema 2). Desligada por padrão. Para ligar para todos,
   // descomente a linha abaixo (lembre de colocar a vírgula depois de "auth: {...}").

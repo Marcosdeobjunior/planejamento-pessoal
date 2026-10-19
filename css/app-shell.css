@@ -2219,3 +2219,51 @@ body.auth-modal-open {
   border-color: rgba(60,200,160,.4);
   background: rgba(60,200,160,.08);
 }
+
+/* ── Lembretes no celular (painel aberto pelo menu do perfil) ───────────── */
+.pm-item[hidden],
+.header-mobile-action[hidden] { display: none; }
+button.header-mobile-action { width: 100%; font-family: var(--font-ui); cursor: pointer; gap: 8px; }
+
+.push-modal { position: fixed; inset: 0; z-index: 2500; display: none; align-items: center; justify-content: center; padding: 16px; }
+.push-modal.open { display: flex; }
+body.push-modal-open { overflow: hidden; }
+.push-modal-bd { position: absolute; inset: 0; background: rgba(4, 4, 12, 0.72); backdrop-filter: blur(6px); }
+.push-modal-card {
+  position: relative; width: min(560px, 100%); max-height: calc(100vh - 32px); overflow: auto;
+  background: #0d0c1a; border: 1px solid rgba(200, 169, 110, 0.22); border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55); color: var(--text); font-family: var(--font-ui);
+}
+.push-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.07); }
+.push-modal-head h2 { margin: 0; display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 700; }
+.push-modal-head h2 .ico { color: var(--accent1); }
+.push-modal-close { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.04); color: var(--text); cursor: pointer; }
+.push-modal-body { padding: 16px 20px 20px; }
+.push-status { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 12px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); }
+.push-status > .ico { font-size: 20px; margin-top: 1px; color: var(--muted); }
+.push-status.is-on { border-color: rgba(94, 196, 168, 0.35); background: rgba(94, 196, 168, 0.08); }
+.push-status.is-on > .ico { color: #5ec4a8; }
+.push-status p { margin: 0; font-size: 14px; line-height: 1.45; }
+.push-status .push-devices { margin-top: 4px; font-size: 12px; color: var(--muted); }
+.push-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.push-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 16px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.14); background: rgba(255, 255, 255, 0.05); color: var(--text); font: 600 13px var(--font-ui); cursor: pointer; }
+.push-btn:disabled { opacity: 0.6; cursor: default; }
+.push-btn-primary { background: linear-gradient(135deg, #e0c48a, #c8a96e); border-color: transparent; color: #1a1408; }
+.push-btn-ghost { color: var(--muted); }
+.push-msg { min-height: 18px; margin: 10px 0 0; font-size: 13px; color: var(--accent1); }
+.push-sub { margin: 14px 0 6px; font-size: 11px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted); }
+.push-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
+.push-check { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; min-width: 0; }
+.push-check input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--accent1); flex-shrink: 0; }
+.push-check span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.push-check strong { font-size: 14px; font-weight: 600; }
+.push-check em { font-style: normal; font-size: 12px; color: var(--muted); line-height: 1.4; }
+.push-row-ctrl { display: flex; gap: 6px; flex-shrink: 0; }
+.push-select { min-height: 34px; padding: 0 8px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.14); background: #15131f; color: var(--text); font: 600 12px var(--font-ui); }
+.push-privacy { margin-top: 14px; }
+.push-note { margin: 14px 0 0; font-size: 12px; line-height: 1.5; color: var(--muted); }
+@media (max-width: 520px) {
+  .push-row { flex-direction: column; align-items: stretch; }
+  .push-row-ctrl { padding-left: 28px; }
+  .push-select { flex: 1; }
+}

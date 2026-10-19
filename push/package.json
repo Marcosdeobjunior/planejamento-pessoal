@@ -1,0 +1,13 @@
+{
+  "name": "soter-lembretes",
+  "private": true,
+  "description": "Envia os lembretes do Sól de Sóter (rodado pelo GitHub Actions)",
+  "type": "module",
+  "scripts": {
+    "send": "node send.mjs"
+  },
+  "dependencies": {
+    "firebase-admin": "12.7.0",
+    "web-push": "3.6.7"
+  }
+}
