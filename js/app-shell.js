@@ -215,6 +215,8 @@ window.SoterUtils = window.SoterUtils || (function () {
   }
 
   function saveNotificationDismissalsSnapshot(dismissals) {
+    notificationDismissalsLocalKey = getNotificationDismissalsScopeKey();
+    notificationDismissalsLocal = Object.assign({}, dismissals && typeof dismissals === "object" ? dismissals : {});
     try {
       localStorage.setItem(
         getNotificationDismissalsScopeKey(),
@@ -3492,6 +3494,7 @@ window.SoterUtils = window.SoterUtils || (function () {
   var RPG_ATTR_MAX = 100;
   var RPG_SKILL_MAX = 10;
   var RPG_NOTIFICATION_LIMIT = 120;
+  var RPG_NOTIFY_BATCH_LIMIT = 5;
   var RPG_DAILY_MISSION_COUNT = 4;
   var ABANDON_NOTIF_PREFIX = "tracker-abandon-";
   var BOOK_STREAK_NOTIF_ID = "tracker-reading-streak";
@@ -4073,12 +4076,45 @@ window.SoterUtils = window.SoterUtils || (function () {
     return state.data.notifications;
   }
 
+  // Dispensas ("Limpar" e o × de cada notificação) ficam no estado (sincronizado) e numa cópia
+  // local por conta. Sempre unidas: uma versão de outro aparelho ou da nuvem que ainda não tem
+  // as dispensas deste aparelho não pode trazer de volta o que foi limpo.
+  var notificationDismissalsLocal = null;
+  var notificationDismissalsLocalKey = "";
+
+  function getLocalNotificationDismissals() {
+    var key = getNotificationDismissalsScopeKey();
+    if (!notificationDismissalsLocal || notificationDismissalsLocalKey !== key) {
+      notificationDismissalsLocalKey = key;
+      notificationDismissalsLocal = loadNotificationDismissalsSnapshot();
+    }
+    return notificationDismissalsLocal;
+  }
+
+  // mesma notificação dispensada em ciclos diferentes: fica o mais recente
+  function pickDismissalCycle(a, b) {
+    if (a === undefined) return b;
+    if (b === undefined || a === b) return a;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(a) && /^\d{4}-\d{2}-\d{2}$/.test(b)) return a > b ? a : b;
+    return a;
+  }
+
   function ensureNotificationDismissals(state) {
     if (!state.data || typeof state.data !== "object") state.data = {};
-    if (!state.data.notificationDismissals || typeof state.data.notificationDismissals !== "object") {
-      state.data.notificationDismissals = loadNotificationDismissalsSnapshot();
-    }
-    return state.data.notificationDismissals;
+    var current = state.data.notificationDismissals && typeof state.data.notificationDismissals === "object"
+      ? state.data.notificationDismissals : {};
+    var local = getLocalNotificationDismissals();
+    Object.keys(local).forEach(function (id) {
+      current[id] = pickDismissalCycle(current[id], local[id]);
+    });
+    state.data.notificationDismissals = current;
+    return current;
+  }
+
+  // eventos que acontecem uma vez só (conquista, habilidade, nível, atributo, missão de um dia):
+  // dispensado uma vez, não volta em outro dia mesmo que seja gerado de novo
+  function isOneTimeNotificationId(id) {
+    return /^rpg-(achievement|skill-|level-|attr-|mission-)/.test(String(id));
   }
 
   function escapeHtml(value) {
@@ -4117,7 +4153,9 @@ window.SoterUtils = window.SoterUtils || (function () {
   function isNotificationDismissed(state, notification) {
     var dismissals = ensureNotificationDismissals(state);
     var normalized = normalizeNotification(notification);
-    return dismissals[String(normalized.id)] === String(normalized.cycle);
+    var id = String(normalized.id);
+    if (dismissals[id] === undefined) return false;
+    return dismissals[id] === String(normalized.cycle) || isOneTimeNotificationId(id);
   }
 
   function dismissNotification(state, notification) {
@@ -5325,41 +5363,50 @@ window.SoterUtils = window.SoterUtils || (function () {
       });
     });
 
+    var skillEvents = [];
     Object.keys(nextSkills).forEach(function (skillId) {
       var before = prevSkills[skillId] || { level: 0, unlocked: false };
       var after = nextSkills[skillId];
       if (!after.unlocked) return;
       if (!before.unlocked) {
-        pushNotification(state, 'Habilidade desbloqueada: "' + after.name + '".', {
-          id: "rpg-skill-unlock-" + after.id,
-          cycle: today,
-          href: "rpg.html"
-        });
+        skillEvents.push(['Habilidade desbloqueada: "' + after.name + '".', "rpg-skill-unlock-" + after.id]);
       }
       if (after.level > before.level) {
-        pushNotification(state, '"' + after.name + '" subiu para o n\u00edvel ' + after.level + ".", {
-          id: "rpg-skill-level-" + after.id + "-" + after.level,
-          cycle: today,
-          href: "rpg.html"
-        });
+        skillEvents.push(['"' + after.name + '" subiu para o n\u00edvel ' + after.level + ".", "rpg-skill-level-" + after.id + "-" + after.level]);
         if (before.level < RPG_SKILL_MAX && after.level >= RPG_SKILL_MAX) {
-          pushNotification(state, '"' + after.name + '" atingiu o n\u00edvel m\u00e1ximo.', {
-            id: "rpg-skill-max-" + after.id,
-            cycle: today,
-            href: "rpg.html"
-          });
+          skillEvents.push(['"' + after.name + '" atingiu o n\u00edvel m\u00e1ximo.', "rpg-skill-max-" + after.id]);
         }
       }
     });
+    // mesmo critério das conquistas: muitas de uma vez viram um resumo só
+    if (skillEvents.length > RPG_NOTIFY_BATCH_LIMIT) {
+      skillEvents = [[skillEvents.length + " avan\u00e7os de habilidades. Veja na p\u00e1gina do Usu\u00e1rio.",
+        "rpg-skill-batch-" + quickHash(skillEvents.map(function (e) { return e[1]; }).join(",")).replace(":", "-")]];
+    }
+    skillEvents.forEach(function (event) {
+      pushNotification(state, event[0], { id: event[1], cycle: today, href: "rpg.html" });
+    });
 
-    buildAchievementDefinitions().forEach(function (achievement) {
-      if (nextAchievements[achievement.id] && !prevAchievements[achievement.id]) {
-        pushNotification(state, 'Nova conquista desbloqueada: "' + achievement.name + '" (' + achievement.group + ').', {
-          id: "rpg-achievement-" + achievement.id,
-          cycle: today,
-          href: "rpg.html"
-        });
-      }
+    var unlocked = buildAchievementDefinitions().filter(function (achievement) {
+      return nextAchievements[achievement.id] && !prevAchievements[achievement.id];
+    });
+    // muitas de uma vez não é uma ação da pessoa: são dados chegando da nuvem (entrar na conta,
+    // outro aparelho, importação). Um resumo só, com id fixo para aquele conjunto: dispensado
+    // uma vez, não volta quando os mesmos dados chegarem de novo.
+    if (unlocked.length > RPG_NOTIFY_BATCH_LIMIT) {
+      pushNotification(state, unlocked.length + " conquistas desbloqueadas. Veja na p\u00e1gina do Usu\u00e1rio.", {
+        id: "rpg-achievements-batch-" + quickHash(unlocked.map(function (a) { return a.id; }).join(",")).replace(":", "-"),
+        cycle: today,
+        href: "rpg.html"
+      });
+      return;
+    }
+    unlocked.forEach(function (achievement) {
+      pushNotification(state, 'Nova conquista desbloqueada: "' + achievement.name + '" (' + achievement.group + ').', {
+        id: "rpg-achievement-" + achievement.id,
+        cycle: today,
+        href: "rpg.html"
+      });
     });
   }
 
