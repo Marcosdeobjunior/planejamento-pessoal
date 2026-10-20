@@ -1395,6 +1395,7 @@ body.mobile-drawer-open {
     display: flex;
     margin-left: 8px;
     border-left: 0;
+    border-right: 0; /* sem o separador do desktop: no celular o sino é o último item */
   }
 
   .header-desktop-actions .hn-notif-trigger {
@@ -2266,4 +2267,73 @@ body.push-modal-open { overflow: hidden; }
   .push-row { flex-direction: column; align-items: stretch; }
   .push-row-ctrl { padding-left: 28px; }
   .push-select { flex: 1; }
+}
+
+/* ── Celular: barra de navegação inferior + folha "Mais" ───────────────────
+   A barra aparece no mesmo ponto em que o menu do topo some (≤ 900px). A gaveta antiga
+   (#header-mobile-drawer) vira a folha "Mais", que sobe de baixo. */
+:root { --bottom-nav-h: 0px; }
+.bottom-nav { display: none; }
+
+@media (max-width: 900px) {
+  :root { --bottom-nav-h: calc(62px + env(safe-area-inset-bottom, 0px)); }
+  body.has-bottom-nav { padding-bottom: var(--bottom-nav-h); }
+  .header-mobile-toggle { display: none !important; }
+
+  .bottom-nav {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 175;
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    height: var(--bottom-nav-h); padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: rgba(8, 7, 20, 0.94);
+    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .bn-item {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    min-width: 0; padding: 6px 2px 4px; border: 0; background: none;
+    color: var(--muted); text-decoration: none; cursor: pointer;
+    font: 600 11px/1.1 var(--font-ui); letter-spacing: 0.1px;
+    -webkit-tap-highlight-color: transparent; position: relative;
+  }
+  .bn-item .ico { font-size: 22px; }
+  .bn-item span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bn-item.is-active, .bn-item.is-open { color: var(--accent1); }
+  .bn-item.is-active::before {
+    content: ""; position: absolute; top: 0; left: 50%; width: 28px; height: 2px; margin-left: -14px;
+    border-radius: 0 0 2px 2px; background: var(--accent1);
+  }
+  .bn-item:active .ico { transform: scale(0.92); }
+
+  /* folha "Mais" */
+  .header-mobile-drawer {
+    top: auto; bottom: 0; left: 0; right: 0;
+    box-sizing: border-box; width: 100%; height: auto; max-height: 86vh; max-height: 86dvh;
+    padding: 14px 16px calc(var(--bottom-nav-h) + 14px);
+    border-left: 0; border-top: 1px solid rgba(200, 169, 110, 0.18);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -24px 60px rgba(0, 0, 0, 0.5);
+    transform: translateY(100%);
+    z-index: 172;
+  }
+  .header-mobile-drawer.is-open { transform: translateY(0); }
+  .header-mobile-drawer::before {
+    content: ""; display: block; width: 40px; height: 4px; margin: 0 auto 12px;
+    border-radius: 999px; background: rgba(255, 255, 255, 0.18);
+  }
+  .header-mobile-backdrop { z-index: 171; }
+  .header-mobile-nav { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .header-mobile-link {
+    flex-direction: column; justify-content: center; gap: 6px;
+    min-height: 78px; padding: 10px 6px; text-align: center; font-size: 13px;
+  }
+  .header-mobile-link .ico { font-size: 22px; color: var(--accent1); }
+  .header-mobile-link.active { border-color: rgba(200, 169, 110, 0.45); background: rgba(200, 169, 110, 0.1); }
+  .header-mobile-drawer-actions { margin-top: 12px; }
+  button.header-mobile-action { justify-content: center; }
+  /* os atalhos do rodapé repetem a barra inferior */
+  .footer-links { display: none; }
+}
+
+@media (max-width: 900px) and (prefers-reduced-motion: reduce) {
+  .header-mobile-drawer { transition: none; }
 }
