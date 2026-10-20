@@ -7618,8 +7618,28 @@ window.SoterUtils = window.SoterUtils || (function () {
     return pushWithTimeout(work.catch(function () { return null; }), 12000);
   }
 
+  // o serviço de push recusou a inscrição (o envio apagou o registro): troca por uma nova
+  function pushResubscribe(uid) {
+    if (getPushSupport() !== "ok" || window.Notification.permission !== "granted") return Promise.resolve(null);
+    var keyBytes = pushKeyBytes(getPushPublicKey());
+    var owner = readPushOwner();
+    return getPushRegistration().then(function (reg) {
+      if (!reg || !reg.pushManager) return null;
+      return reg.pushManager.getSubscription().then(function (current) {
+        return current ? current.unsubscribe().catch(function () { return false; }) : false;
+      }).then(function () {
+        return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes });
+      }).then(function (subscription) {
+        if (owner.device) pushDevicesRef(uid).doc(owner.device).delete().catch(function () { });
+        return savePushDevice(uid, subscription);
+      }).then(function (deviceId) {
+        return writePushOwner(uid, deviceId);
+      });
+    });
+  }
+
   // a cada carregamento e troca de conta: a inscrição deste aparelho tem de ser da conta logada
-  function checkPushOwner() {
+  function checkPushOwner(force) {
     var owner = readPushOwner();
     var uid = firebaseCurrentUser ? String(firebaseCurrentUser.uid || "") : "";
     if (!owner.uid) {
@@ -7642,8 +7662,14 @@ window.SoterUtils = window.SoterUtils || (function () {
         return writePushOwner("", "");
       }
       return pushDeviceId(subscription.endpoint).then(function (deviceId) {
-        // mesma inscrição, já confirmada hoje: nada a gravar
-        if (deviceId === owner.device && Date.now() - owner.seen < 86400000) return null;
+        // mesma inscrição, já confirmada hoje: só regrava se o registro sumiu (o envio apaga
+        // inscrições que o serviço de push recusou)
+        if (!force && deviceId === owner.device && Date.now() - owner.seen < 86400000) {
+          return pushDevicesRef(uid).doc(deviceId).get().then(function (snap) {
+            return snap.exists ? null : pushResubscribe(uid);
+          });
+        }
+        if (force) return pushResubscribe(uid);
         // o navegador pode renovar a inscrição: grava a nova e apaga a antiga
         if (deviceId !== owner.device && owner.device) pushDevicesRef(uid).doc(owner.device).delete().catch(function () { });
         return savePushDevice(uid, subscription).then(function (savedId) { return writePushOwner(uid, savedId); });
@@ -7791,9 +7817,17 @@ window.SoterUtils = window.SoterUtils || (function () {
       '<label class="push-check push-privacy"><input type="checkbox" id="push-hide"' + (prefs.hideDetails ? " checked" : "") + '><span><strong>Esconder detalhes na tela bloqueada</strong><em>Mostra só “Lembrete: tarefa”, sem nome nem valores.</em></span></label>' +
       '<p class="push-note">Os avisos saem a cada ~10 minutos, então podem chegar alguns minutos depois do horário. As escolhas valem para todos os aparelhos ativados nesta conta.</p>';
     if (signedIn && firebaseDbInstance) {
-      pushDevicesRef(firebaseCurrentUser.uid).get().then(function (snap) {
-        var el = document.getElementById("push-devices");
-        if (el) el.textContent = snap.size ? "Aparelhos ativados nesta conta: " + snap.size + "." : "Nenhum aparelho ativado nesta conta.";
+      var showDevices = function () {
+        return pushDevicesRef(firebaseCurrentUser.uid).get().then(function (snap) {
+          var el = document.getElementById("push-devices");
+          if (el) el.textContent = snap.size ? "Aparelhos ativados nesta conta: " + snap.size + "." : "Nenhum aparelho ativado nesta conta.";
+          return snap.size;
+        });
+      };
+      showDevices().then(function (count) {
+        // ativo aqui, mas sem registro na conta: grava de novo a inscrição deste aparelho
+        if (!count && active) return checkPushOwner(true).then(showDevices);
+        return null;
       }).catch(function () { });
     }
   }
