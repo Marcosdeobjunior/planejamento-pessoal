@@ -1,0 +1,70 @@
+# App Android: gera o .apk (Trusted Web Activity com Bubblewrap) a partir do site publicado e
+# publica como Release, com link para baixar direto no celular. Rodar em Actions → App Android →
+# Run workflow. Configuração (chave de assinatura e Secrets): docs/APP_ANDROID.md.
+name: App Android
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write   # criar a Release com o .apk
+
+concurrency:
+  group: android
+  cancel-in-progress: false
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: android
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Chave de assinatura
+        env:
+          ANDROID_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_B64" ] || [ -z "$ANDROID_KEYSTORE_PASSWORD" ]; then
+            echo "::error::Faltam os Secrets ANDROID_KEYSTORE_B64 e ANDROID_KEYSTORE_PASSWORD (ver docs/APP_ANDROID.md)."
+            exit 1
+          fi
+          echo "$ANDROID_KEYSTORE_B64" | base64 -d > android/android.keystore
+      - name: Versão (número da execução)
+        run: |
+          cd android
+          VERSION_CODE=$((GITHUB_RUN_NUMBER + 1))
+          jq --argjson code "$VERSION_CODE" --arg name "1.0.$VERSION_CODE" \
+            '.appVersionCode = $code | .appVersionName = $name' twa-manifest.json > m.json && mv m.json twa-manifest.json
+          echo "VERSION_NAME=1.0.$VERSION_CODE" >> "$GITHUB_ENV"
+      - name: Bubblewrap
+        run: |
+          npm install -g @bubblewrap/cli@1.25.0
+          mkdir -p ~/.bubblewrap
+          echo "{\"jdkPath\":\"$JAVA_HOME\",\"androidSdkPath\":\"$ANDROID_HOME\"}" > ~/.bubblewrap/config.json
+      - name: Gerar o projeto e o .apk
+        working-directory: android
+        env:
+          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          yes | bubblewrap update --skipVersionUpgrade
+          yes | bubblewrap build --skipPwaValidation
+          ls -la *.apk *.aab
+      - name: Publicar a Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp android/app-release-signed.apk "sol-de-soter-$VERSION_NAME.apk"
+          gh release create "app-v$VERSION_NAME" "sol-de-soter-$VERSION_NAME.apk" \
+            --repo "${{ github.repository }}" --target "${{ github.sha }}" \
+            --title "App Android $VERSION_NAME" \
+            --notes "Baixe o arquivo .apk abaixo no celular Android e instale (permita instalar apps desta fonte). Atualizações instalam por cima mantendo os dados."
