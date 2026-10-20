@@ -682,6 +682,72 @@ td.nm:hover{color:var(--accent1)}
 .pmcust .tiles button.on,.pmcust .qrow button.on{border-color:rgba(200,169,110,.55);background:rgba(200,169,110,.1);color:var(--accent1)}
 .menu .kbd{margin-left:auto;font-family:var(--font-mono);font-size:9px;font-weight:400;opacity:.55;padding-left:10px;white-space:nowrap}
 
+/* ---------------- seleção de vários blocos ---------------- */
+.blk.selecionado{background:rgba(124,111,205,.13);box-shadow:0 0 0 1px rgba(124,111,205,.35);border-radius:8px}
+.blk.selecionado .gut{opacity:1}
+.blk.selecionado .gut .drag{color:var(--accent2)}
+.selbarra{
+  position:fixed;left:50%;bottom:72px;transform:translateX(-50%);z-index:96;display:flex;align-items:center;gap:2px;
+  padding:5px 6px 5px 14px;background:#0c0b18;border:1px solid rgba(124,111,205,.4);border-radius:999px;
+  box-shadow:0 18px 50px rgba(0,0,0,.6);animation:selsobe .22s cubic-bezier(.2,.8,.2,1);
+  max-width:calc(100vw - 24px);overflow-x:auto;
+}
+@keyframes selsobe{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+.selbarra .n{font-family:var(--font-mono);font-size:10px;letter-spacing:1px;color:var(--accent2);margin-right:8px;white-space:nowrap}
+.selbarra button{
+  height:32px;min-width:32px;padding:0 10px;border-radius:999px;color:var(--muted);display:inline-flex;align-items:center;gap:6px;
+  font-family:var(--font-mono);font-size:9.5px;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;
+}
+.selbarra button:hover{color:var(--text);background:rgba(255,255,255,.06)}
+.selbarra button.perigo:hover{color:var(--accent4)}
+.selbarra .ico{font-size:14px}
+.arraste-fantasma .qtd{
+  position:absolute;top:6px;right:8px;background:var(--accent2);color:#fff;border-radius:999px;
+  font-family:var(--font-mono);font-size:10px;padding:2px 8px;
+}
+.arraste-linha.vertical{width:2px}
+.arraste-linha.vertical::before{left:-3px;top:-4px}
+.selbarra button,.selbarra .n{flex-shrink:0}
+@media (max-width:900px){.selbarra{bottom:calc(var(--bottom-nav-h,0px) + 14px)}}
+@media (max-width:600px){.selbarra .longo,.selbarra .rot{display:none}.selbarra{padding-left:12px}.selbarra button{padding:0 8px}}
+
+/* ---------------- histórico de versões ---------------- */
+.hist{
+  width:min(980px,94vw);height:min(78vh,720px);display:flex;background:rgba(10,9,20,.98);
+  border:1px solid var(--border-2);border-radius:var(--radius);box-shadow:0 30px 80px rgba(0,0,0,.7);overflow:hidden;
+}
+.histlista{width:270px;flex:0 0 270px;border-right:1px solid var(--border);display:flex;flex-direction:column;min-height:0}
+.histlista h3{
+  margin:0;padding:16px 18px 12px;font-family:var(--font-mono);font-size:9.5px;letter-spacing:2.2px;
+  text-transform:uppercase;color:var(--accent1);font-weight:400;border-bottom:1px solid var(--border);
+}
+.histitens{flex:1;overflow-y:auto;padding:6px}
+.histitem{display:block;width:100%;text-align:left;padding:9px 12px;border-radius:9px;color:var(--muted);transition:background .16s,color .16s}
+.histitem:hover{background:rgba(255,255,255,.04);color:var(--text)}
+.histitem.on{background:rgba(200,169,110,.1);color:var(--accent1)}
+.histitem b{display:block;font-size:13px;font-weight:600}
+.histitem small{display:block;font-family:var(--font-mono);font-size:9.5px;opacity:.7;margin-top:2px}
+.histitem small.conf{color:var(--accent5);opacity:1}
+.histcorpo{flex:1;min-width:0;display:flex;flex-direction:column}
+.histbarra{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border)}
+.histbarra .t{flex:1;font-family:var(--font-mono);font-size:10px;letter-spacing:1px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.histbarra button{
+  padding:7px 14px;border-radius:999px;border:1px solid var(--border);font-family:var(--font-mono);
+  font-size:9.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);white-space:nowrap;
+}
+.histbarra button:hover{color:var(--accent1);border-color:rgba(200,169,110,.4)}
+.histbarra button.prim{color:var(--accent1);border-color:rgba(200,169,110,.45)}
+.histbarra button.prim:hover{background:rgba(200,169,110,.12)}
+.histbarra button:disabled{opacity:.35;pointer-events:none}
+.histprev{flex:1;overflow-y:auto;padding:22px 40px 60px;pointer-events:none;user-select:none}
+.histprev .ptitle{font-size:32px;margin-bottom:12px}
+.histprev .gut,.histprev .gridbar,.histprev .dbtabs button[data-vadd]{display:none}
+@media (max-width:760px){
+  .hist{flex-direction:column;height:calc(100% - 24px)}
+  .histlista{width:auto;flex:0 0 38%;border-right:none;border-bottom:1px solid var(--border)}
+  .histprev{padding:16px 18px 40px}
+}
+
 /* ---------------- arrastar (blocos e árvore) ---------------- */
 .gut .drag{touch-action:none}
 .gut .drag:active{cursor:grabbing}
@@ -697,7 +763,7 @@ td.nm:hover{color:var(--accent1)}
 .arraste-fantasma .gut,.arraste-fantasma .add,.arraste-fantasma .cnt{display:none}
 .arraste-fantasma.row{background:rgba(26,26,39,.96);color:var(--text)}
 .arraste-linha{
-  position:fixed;z-index:2000;height:2px;border-radius:2px;background:var(--accent1);pointer-events:none;
+  position:fixed;z-index:2002;height:2px;border-radius:2px;background:var(--accent1);pointer-events:none;
   box-shadow:0 0 10px rgba(200,169,110,.55);transition:top .08s ease,left .08s ease,width .08s ease;
 }
 .arraste-linha::before{
@@ -1205,7 +1271,129 @@ const COL='rubrica';
 const META='__meta';
 const temShell=()=>!!(window.SoterStorage&&typeof window.SoterStorage.getState==='function');
 const espera=ms=>new Promise(r=>setTimeout(r,ms));
-let nuvemErro=false, nuvemOk=false, sincronizado=new Map();
+let nuvemErro=false, nuvemOk=false, sincronizado=new Map(), metaBase;
+
+/* ---- forma canônica e formato da nuvem ----
+   O Firestore não guarda a ordem das chaves, então "mudou?" compara a forma
+   canônica (chaves ordenadas). Ele também recusa lista dentro de lista (as
+   linhas do bloco Tabela): na ida vira {__a:[...]} e na volta é desfeito. */
+const ordena=v=>Array.isArray(v)?v.map(ordena):(v&&typeof v==='object')
+  ?Object.keys(v).sort().reduce((o,k)=>{if(v[k]!==undefined)o[k]=ordena(v[k]);return o},{}):v;
+const canon=v=>v===undefined?'∅':JSON.stringify(ordena(v));
+function paraNuvem(v,dentroDeLista){
+  if(Array.isArray(v)){const a=v.map(x=>paraNuvem(x,true));return dentroDeLista?{__a:a}:a}
+  if(v&&typeof v==='object'){const o={};for(const k in v)if(v[k]!==undefined)o[k]=paraNuvem(v[k],false);return o}
+  return v;
+}
+function deNuvem(v){
+  if(Array.isArray(v))return v.map(deNuvem);
+  if(v&&typeof v==='object'){
+    if(Object.keys(v).length===1&&Array.isArray(v.__a))return v.__a.map(deNuvem);
+    const o={};for(const k in v)o[k]=deNuvem(v[k]);return o;
+  }
+  return v;
+}
+/* chaves do estado geral que são deste aparelho (página aberta, painel...) */
+const LOCAIS=['pages','activeId','peekId','peekMode','view','sideCollapsed','areaAtiva','mapaAtivo','semente'];
+function metaComum(s){const o={};Object.keys(s||{}).forEach(k=>{if(LOCAIS.indexOf(k)<0&&s[k]!==undefined)o[k]=s[k]});return o}
+
+/* ---- mesclagem em três vias ----
+   base = última versão que este aparelho viu na nuvem; local = o que está aqui;
+   remoto = o que outro aparelho gravou. O que só um lado mudou entra; se os dois
+   mudaram a mesma coisa, fica o daqui e a versão do outro vai para o histórico. */
+let houveConflito=false;
+const ehObj=v=>!!v&&typeof v==='object'&&!Array.isArray(v);
+function m3(b,l,r){
+  const cb=canon(b),cl=canon(l),cr=canon(r);
+  if(cl===cr||cr===cb)return l;
+  if(cl===cb)return r;
+  if(Array.isArray(l)&&Array.isArray(r))return mesclaLista(Array.isArray(b)?b:[],l,r);
+  if(ehObj(l)&&ehObj(r)){
+    const o={},bb=ehObj(b)?b:{};
+    new Set(Object.keys(l).concat(Object.keys(r))).forEach(k=>{const v=m3(bb[k],l[k],r[k]);if(v!==undefined)o[k]=v});
+    return o;
+  }
+  houveConflito=true;return l;
+}
+/* listas de blocos, vistas, áreas (por id) ou de textos simples (propOrder) */
+function mesclaLista(b,l,r){
+  const chave=x=>ehObj(x)?(typeof x.id==='string'&&x.id?'#'+x.id:null):(Array.isArray(x)?null:'v'+canon(x));
+  const mapa=lista=>{const m=new Map();for(const x of lista){const k=chave(x);if(k==null||m.has(k))return null;m.set(k,x)}return m};
+  const B=mapa(b),L=mapa(l),R=mapa(r);
+  if(!B||!L||!R){houveConflito=true;return l}
+  const ordemIgual=(x,y)=>x.map(chave).join('|')===y.map(chave).join('|');
+  const esqueleto=ordemIgual(l,b)?r:l,outro=esqueleto===r?l:r;
+  const O=esqueleto===r?L:R;
+  const out=[],dentro=new Set();
+  for(const x of esqueleto){
+    const k=chave(x);
+    if(O.has(k)){const v=m3(B.get(k),L.get(k),R.get(k));if(v!==undefined){out.push(v);dentro.add(k)}}
+    else if(B.has(k)){
+      /* apagado do outro lado: some, a não ser que este lado tenha mexido nele */
+      if(canon(x)!==canon(B.get(k))){houveConflito=true;out.push(x);dentro.add(k)}
+    }else{out.push(x);dentro.add(k)}
+  }
+  outro.forEach((x,i)=>{
+    const k=chave(x);
+    if(B.has(k)||dentro.has(k))return;
+    let pos=0;
+    for(let j=i-1;j>=0;j--){const kj=chave(outro[j]);const at=out.findIndex(y=>chave(y)===kj);if(at>=0){pos=at+1;break}}
+    out.splice(pos,0,x);dentro.add(k);
+  });
+  return out;
+}
+/* "alterada em" e "aberta na árvore" mudam o tempo todo: não contam como conflito */
+function mesclaPagina(b,l,r){
+  const tira=p=>{const c=Object.assign({},p);delete c.updated;delete c.expanded;return c};
+  const m=m3(tira(b||{}),tira(l),tira(r));
+  m.updated=Math.max(l.updated||0,r.updated||0);
+  if(l.expanded!==undefined)m.expanded=l.expanded;
+  return m;
+}
+function mesclaMeta(b,l,r){
+  const m=m3(metaComum(b),metaComum(l),metaComum(r));
+  LOCAIS.forEach(k=>{if(k!=='pages'&&l[k]!==undefined)m[k]=l[k]});
+  return m;
+}
+
+/* ---- histórico de versões ----
+   Cada versão é um documento "~h_<página>_<data>" na mesma coleção (o "~" fica
+   depois de todo id de página, então a leitura das páginas não as carrega). */
+const HIST='~h_',FIM_PAGINAS='~',MAX_VERSOES=40,INTERVALO_VERSAO=10*60*1000;
+const ultimaVersao=new Map();
+const docId=()=>window.firebase.firestore.FieldPath.documentId();
+async function guardaVersao(pid,pagina,motivo){
+  const f=fb();if(!f||!pagina||contaMudou())return false;
+  try{
+    await f.raiz.doc(HIST+pid+'_'+Date.now()).set({p:paraNuvem(JSON.parse(JSON.stringify(pagina))),
+      s:{motivo:motivo||'auto'},em:new Date().toISOString()});
+    ultimaVersao.set(pid,Date.now());
+    return true;
+  }catch(e){console.warn('[Rubrica] histórico:',e&&e.message);return false}
+}
+async function listaVersoes(pid){
+  const f=fb();if(!f)return null;
+  const snap=await f.raiz.where(docId(),'>=',HIST+pid+'_').where(docId(),'<',HIST+pid+'_~').get();
+  const l=[];
+  snap.forEach(d=>{const v=d.data()||{};if(v.p)l.push({doc:d.id,ts:+d.id.split('_').pop()||0,p:deNuvem(v.p),motivo:(v.s||{}).motivo||'auto'})});
+  l.sort((a,b)=>b.ts-a.ts);
+  /* guarda só as mais recentes */
+  if(l.length>MAX_VERSOES){
+    const lote=f.db.batch();
+    l.slice(MAX_VERSOES).forEach(x=>lote.delete(f.raiz.doc(x.doc)));
+    lote.commit().catch(()=>{});
+    l.length=MAX_VERSOES;
+  }
+  return l;
+}
+async function apagaHistorico(pid){
+  const f=fb();if(!f)return;
+  try{
+    const snap=await f.raiz.where(docId(),'>=',HIST+pid+'_').where(docId(),'<',HIST+pid+'_~').get();
+    if(snap.empty)return;
+    const lote=f.db.batch();snap.forEach(d=>lote.delete(d.ref));await lote.commit();
+  }catch(e){}
+}
 
 const shellPrevisto=()=>!!document.querySelector('script[src*="app-shell"]');
 async function esperaShell(limite){
@@ -1304,56 +1492,228 @@ async function nuvemCarregar(){
   const f=await esperaLogin(8000);
   if(!f)return null;
   try{
-    const snap=await f.raiz.get();
+    const snap=await f.raiz.where(docId(),'<',FIM_PAGINAS).get();
     if(snap.empty)return {vazio:true};
     const pages={};let meta=null;
     snap.forEach(d=>{
       if(d.id===META)meta=d.data();
-      else{const v=d.data();if(v&&v.p){pages[d.id]=v.p;sincronizado.set(d.id,JSON.stringify(v.p))}}
+      else{const v=d.data();if(v&&v.p){const p=deNuvem(v.p);pages[d.id]=p;sincronizado.set(d.id,canon(p))}}
     });
     if(!Object.keys(pages).length)return {vazio:true};
     nuvemOk=true;
-    return Object.assign({},meta&&meta.s?meta.s:{},{pages});
+    const s=meta&&meta.s?deNuvem(meta.s):{};
+    metaBase=canon(metaComum(s));
+    return Object.assign({},s,{pages});
   }catch(e){avisaNuvem(e);return null}
 }
 
-/* ---- gravação incremental ---- */
+/* ---- gravação incremental ----
+   Poucas páginas: transação. Ela relê o que está na nuvem e, se outro aparelho
+   gravou a mesma página desde a última leitura, mescla antes de gravar — nada
+   do outro lado é atropelado. Muitas páginas de uma vez (migração, "enviar
+   este aparelho"): lote simples, como antes. */
 let gravando=false,pendente=false;
-async function nuvemGravar(){
+async function nuvemGravar(forcar){
   if(contaMudou())return;
   if(gravando){pendente=true;return}
   if(S&&S.semente)return;          /* só exemplo: não ocupa a conta */
   const f=fb();if(!f)return;
   gravando=true;
   try{
-    /* JSON tira os campos undefined (o Firestore recusa o lote inteiro por causa de um só,
-       por exemplo activeId numa conta ainda sem páginas) */
-    const resto=JSON.parse(JSON.stringify(Object.assign({},S,{pages:undefined})));
-    const lote=f.db.batch();let ops=0;
-    const gravadas=[],apagadas=[];   /* só marcadas como sincronizadas depois do commit */
+    const mudadas=[],apagar=[];
     for(const id in S.pages){
-      const j=JSON.stringify(S.pages[id]);
-      if(sincronizado.get(id)===j)continue;
-      if(j.length>900000){toast('a página “'+(S.pages[id].title||'sem título')+'” está perto do limite de 1 MB');continue}
-      if(ops>=400){pendente=true;break}   /* o resto vai no próximo lote */
-      lote.set(f.raiz.doc(id),{p:JSON.parse(j),em:new Date().toISOString()});
-      gravadas.push([id,j]);ops++;
+      const c=canon(S.pages[id]);
+      if(sincronizado.get(id)===c)continue;
+      if(c.length>900000){toast('a página “'+(S.pages[id].title||'sem título')+'” está perto do limite de 1 MB');continue}
+      if(mudadas.length>=(forcar?400:200)){pendente=true;break}
+      mudadas.push(id);
     }
     for(const id of Array.from(sincronizado.keys())){
       if(S.pages[id])continue;
-      if(ops>=450){pendente=true;break}
-      lote.delete(f.raiz.doc(id));apagadas.push(id);ops++;
+      if(apagar.length>=(forcar?90:40)){pendente=true;break}
+      apagar.push(id);
     }
-    lote.set(f.raiz.doc(META),{s:resto,em:new Date().toISOString()});ops++;
-    await lote.commit();
-    gravadas.forEach(([id,j])=>sincronizado.set(id,j));
-    apagadas.forEach(id=>sincronizado.delete(id));
+    const metaLocal=JSON.parse(JSON.stringify(Object.assign({},S,{pages:undefined,semente:undefined})));
+    if(!mudadas.length&&!apagar.length&&canon(metaComum(metaLocal))===metaBase)return;
+    const copias={},bases={};
+    mudadas.forEach(id=>{copias[id]=JSON.parse(JSON.stringify(S.pages[id]));bases[id]=sincronizado.get(id)});
+    const agora=()=>new Date().toISOString();
+    let res;
+    if(forcar||mudadas.length>20){
+      const lote=f.db.batch();
+      mudadas.forEach(id=>lote.set(f.raiz.doc(id),{p:paraNuvem(copias[id]),em:agora()}));
+      apagar.forEach(id=>lote.delete(f.raiz.doc(id)));
+      lote.set(f.raiz.doc(META),{s:paraNuvem(metaLocal),em:agora()});
+      await lote.commit();
+      res={pag:{},meta:metaLocal};
+      mudadas.forEach(id=>{res.pag[id]={final:copias[id]}});
+    }else{
+      res=await f.db.runTransaction(async tx=>{
+        const docs=await Promise.all(mudadas.map(id=>tx.get(f.raiz.doc(id))));
+        const metaDoc=await tx.get(f.raiz.doc(META));
+        const out={pag:{},meta:metaLocal};
+        mudadas.forEach((id,k)=>{
+          const d=docs[k],v=d.exists?d.data():null;
+          const remoto=v&&v.p?deNuvem(v.p):null;
+          let final=copias[id],conflito=false;
+          if(remoto&&bases[id]!==undefined){
+            const rc=canon(remoto);
+            if(rc!==bases[id]&&rc!==canon(final)){
+              houveConflito=false;
+              final=mesclaPagina(JSON.parse(bases[id]),copias[id],remoto);
+              conflito=houveConflito;
+            }
+          }
+          tx.set(f.raiz.doc(id),{p:paraNuvem(final),em:agora()});
+          out.pag[id]={final,remoto,conflito};
+        });
+        apagar.forEach(id=>tx.delete(f.raiz.doc(id)));
+        const ms=metaDoc.exists&&metaDoc.data().s?deNuvem(metaDoc.data().s):null;
+        if(ms&&metaBase!==undefined&&canon(metaComum(ms))!==metaBase)
+          out.meta=mesclaMeta(JSON.parse(metaBase),metaLocal,ms);
+        tx.set(f.raiz.doc(META),{s:paraNuvem(out.meta),em:agora()});
+        return out;
+      });
+    }
+    if(contaMudou())return;
+    /* o que a nuvem tem agora passa a ser a base; se a mesclagem trouxe algo do
+       outro aparelho, entra aqui também (mesclando com o que foi digitado durante a gravação) */
+    const mexidas=[];
+    Object.keys(res.pag).forEach(id=>{
+      const r=res.pag[id],fc=canon(r.final);
+      sincronizado.set(id,fc);
+      if(fc!==canon(copias[id])&&S.pages[id]){
+        S.pages[id]=canon(S.pages[id])===canon(copias[id])?r.final:mesclaPagina(copias[id],S.pages[id],r.final);
+        mexidas.push(id);
+      }
+      if(r.conflito){
+        guardaVersao(id,r.remoto,'conflito');
+        toast('“'+(r.final.title||'Sem título')+'” foi editada em outro aparelho — juntei as duas; a outra versão está no histórico');
+      }
+      if(Date.now()-(ultimaVersao.get(id)||0)>INTERVALO_VERSAO)guardaVersao(id,r.final,'auto');
+    });
+    apagar.forEach(id=>{sincronizado.delete(id);ultimaVersao.delete(id);apagaHistorico(id)});
+    metaBase=canon(metaComum(res.meta));
+    if(canon(metaComum(res.meta))!==canon(metaComum(metaLocal))){
+      Object.keys(metaComum(res.meta)).forEach(k=>{S[k]=res.meta[k]});
+      mexidas.push(null);
+    }
     nuvemOk=true;nuvemErro=false;
+    if(mexidas.length){aplicaNaTela(mexidas.filter(Boolean));salvaLocal()}
   }catch(e){pendente=false;avisaNuvem(e)}   /* sem repetição imediata em erro: o próximo save tenta de novo */
   finally{
     gravando=false;
     if(pendente){pendente=false;setTimeout(nuvemGravar,400)}
   }
+}
+
+/* ---- escuta em tempo real ----
+   O que outro aparelho grava chega aqui em segundos. Página que não foi mexida
+   aqui é trocada pela nova; página mexida dos dois lados é mesclada. */
+let pararEscuta=null;
+function escutaNuvem(){
+  if(pararEscuta){try{pararEscuta()}catch(e){}pararEscuta=null}
+  const f=fb();if(!f||contaMudou())return;
+  const dono=f.uid;
+  pararEscuta=f.raiz.where(docId(),'<',FIM_PAGINAS).onSnapshot(snap=>{
+    const g=fb();
+    if(contaMudou()||!g||g.uid!==dono||!S)return;
+    const mudou=[],conflitos=[];let metaMudou=false;
+    snap.docChanges().forEach(ch=>{
+      const d=ch.doc;
+      if(d.metadata.hasPendingWrites)return;
+      if(d.id===META){
+        if(ch.type==='removed'||!d.data().s)return;
+        const ms=deNuvem(d.data().s),mc=canon(metaComum(ms));
+        if(mc===metaBase)return;
+        const local=metaComum(S);
+        if(canon(local)!==mc){
+          const m=metaBase===undefined||canon(local)===metaBase?Object.assign({},ms):mesclaMeta(JSON.parse(metaBase),S,ms);
+          Object.keys(metaComum(m)).forEach(k=>{S[k]=m[k]});
+          Object.keys(local).forEach(k=>{if(!(k in metaComum(m)))delete S[k]});
+          metaMudou=true;
+        }
+        metaBase=mc;
+        return;
+      }
+      const id=d.id,base=sincronizado.get(id),local=S.pages[id];
+      if(ch.type==='removed'){
+        if(local&&base!==undefined&&canon(local)===base){delete S.pages[id];mudou.push(id)}
+        sincronizado.delete(id);
+        return;
+      }
+      const v=d.data();if(!v||!v.p)return;
+      const remoto=deNuvem(v.p),rc=canon(remoto);
+      if(rc===base)return;
+      if(!local){
+        if(base===undefined){S.pages[id]=remoto;mudou.push(id)}   /* página nova de outro aparelho */
+      }else{
+        const lc=canon(local);
+        if(lc!==rc){
+          if(lc===base){S.pages[id]=remoto;mudou.push(id)}
+          else if(base!==undefined){
+            houveConflito=false;
+            S.pages[id]=mesclaPagina(JSON.parse(base),local,remoto);
+            if(houveConflito)conflitos.push([id,remoto]);
+            mudou.push(id);
+          }
+        }
+      }
+      sincronizado.set(id,rc);
+    });
+    if(!mudou.length&&!metaMudou)return;
+    conflitos.forEach(([id,r])=>guardaVersao(id,r,'conflito'));
+    if(conflitos.length)toast('editada em outro aparelho ao mesmo tempo — juntei as duas versões; a outra está no histórico');
+    garanteAreas();
+    aplicaNaTela(mudou);
+    salvaLocal();
+    if(conflitos.length||mudou.some(id=>S.pages[id]&&sincronizado.get(id)!==canon(S.pages[id])))nuvemGravar();
+  },e=>{console.warn('[Rubrica] escuta:',e&&e.message)});
+}
+/* grava o espelho local sem disparar nova ida à nuvem */
+function salvaLocal(){
+  if(contaMudou())return;
+  try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}
+}
+/* redesenha o que mudou por fora, sem tirar o cursor de quem está escrevendo */
+let avisoRemotoEm=0;
+function aplicaNaTela(ids){
+  if(!S)return;
+  if(S.peekId&&!S.pages[S.peekId])S.peekId=null;
+  if(S.activeId&&!S.pages[S.activeId]){
+    const alt=daArea().filter(p=>!p.trashed)[0];
+    S.activeId=alt?alt.id:null;
+    return render();
+  }
+  renderTree();renderCrumb();renderArea();updateTrashCount();
+  if(S.view==='trash')return renderTrash($('#scroll'));
+  if(S.view==='graph'||S.view==='map')return;
+  const afeta=new Set(ids);
+  ids.forEach(id=>{const p=S.pages[id];if(p&&p.parentId)afeta.add(p.parentId)});
+  let visivel=false;
+  document.querySelectorAll('.surface[data-pid]').forEach(host=>{
+    const pid=host.dataset.pid;
+    if(!afeta.has(pid)||!S.pages[pid])return;
+    visivel=true;
+    const ae=document.activeElement;
+    if(!host.contains(ae)){
+      /* ninguém escrevendo aqui: redesenha a superfície inteira, mantendo a rolagem */
+      const rol=rolagemDe(host)||host.parentElement,top=rol?rol.scrollTop:0;
+      const tmp=document.createElement('div');tmp.innerHTML=surfaceHTML(S.pages[pid]);
+      host.replaceWith(tmp.firstElementChild);
+      if(rol)rol.scrollTop=top;
+      return;
+    }
+    const bid=ae.classList&&ae.classList.contains('ct')?ae.dataset.b:null;
+    const pos=bid?getCaret(ae):null;
+    refresh(host,'blocks');refresh(host,'props');refresh(host,'back');
+    const ti=host.querySelector('[data-title]');
+    if(ti&&ti!==ae&&ti.textContent!==S.pages[pid].title)ti.textContent=S.pages[pid].title;
+    if(bid)focusBlock(host,bid,pos);
+  });
+  if(S.peekId&&afeta.has(S.peekId)){const t=document.querySelector('.peek-top .t');const p=S.pages[S.peekId];
+    if(t&&p)t.innerHTML=ico(p.icon,'14px')+' '+esc(p.title||'Sem título')}
+  if(visivel&&Date.now()-avisoRemotoEm>8000){avisoRemotoEm=Date.now();toast('atualizado com o outro aparelho')}
 }
 
 async function load(){
@@ -1416,10 +1776,11 @@ function save(){
    da conta nova. */
 window.addEventListener('soter:firebase-auth-changed',async function(){
   trocandoConta=true;clearTimeout(saveT);undoStack=[];
-  try{await trocaDeConta()}finally{trocandoConta=false}
+  try{await trocaDeConta()}finally{trocandoConta=false;escutaNuvem()}
 });
 async function trocaDeConta(){
-  sincronizado=new Map();
+  if(pararEscuta){try{pararEscuta()}catch(e){}pararEscuta=null}
+  sincronizado=new Map();metaBase=undefined;ultimaVersao.clear();
   const chaveAntes=KEY;
   fixaChave();                       /* o usuário mudou: o balde local também muda */
   migraChaveLocal();
@@ -2045,6 +2406,7 @@ function render(){
   const p=P();
   if(!p){sc.innerHTML='<div class="page"><div class="nada" style="padding-top:60px">nenhuma página aberta</div></div>';return}
   sc.innerHTML=surfaceHTML(p);
+  if(selecao&&!selecao.host.isConnected)limpaSelecao();
 }
 function updateTrashCount(){
   const el=$('#trashCount');if(!el)return;
@@ -2136,6 +2498,7 @@ function refresh(host,what){
   const sel={blocks:'[data-blocks]',props:'[data-props]',back:'[data-back]'}[what];
   const el=host.querySelector(sel);if(!el)return;
   el.outerHTML={blocks:blocksHTML,props:propsHTML,back:backHTML}[what](p);
+  if(what==='blocks'&&selecao&&selecao.host===host)marcaSelecao();
 }
 /* a mesma página pode estar aberta na área principal e no painel — mantém as duas iguais */
 function syncOthers(host){
@@ -2670,6 +3033,7 @@ function pmActions(p){
     {id:'custom',label:'Personalizar página',ic:icn('ico-settings'),chevron:true,stay:true,run:()=>pmOpenCustomize(p)},
     {id:'lock',label:'Bloquear página',ic:icn('ico-lock'),toggle:cfg(p,'travada'),stay:true,run:()=>pmToggleLock(p)},
     {id:'undo',label:'Desfazer',ic:icn('ico-undo-2'),kbd:'Ctrl Z',run:()=>undo()},
+    {id:'hist',label:'Histórico de versões',ic:icn('ico-history'),run:()=>abreHistorico(p)},
     {id:'import',label:'Importar',ic:icn('ico-upload'),run:()=>pmImport(p)},
     {id:'export',label:'Exportar',ic:icn('ico-download'),run:()=>{download((p.title||'pagina')+'.md',toMD(p),'text/markdown');toast('página exportada')}}
   ];
@@ -2725,7 +3089,7 @@ function renderPMBody(p,query){
     const fontRow=`<div class="pmenu-fonts">${[
       ['interface','Padrão','var(--font-ui)'],['editorial','Serifada','var(--font-editorial)'],['maquina','Mono','var(--font-mono)']
     ].map(f=>`<button data-pmfont="${f[0]}" class="${cfg(p,'fonte')===f[0]?'on':''}"><span style="font-family:${f[2]}">Ag</span><small>${f[1]}</small></button>`).join('')}</div>`;
-    const groups=[['link','content','dup','move','trash'],['small','wide','custom','lock'],['undo'],['import','export']];
+    const groups=[['link','content','dup','move','trash'],['small','wide','custom','lock'],['undo','hist'],['import','export']];
     body.innerHTML=fontRow+groups.map(g=>'<div class="pmenu-div"></div>'+g.map(id=>pmRow(acts.find(a=>a.id===id))).join('')).join('');
     const n=pageWords(p);
     foot.style.display='';
@@ -2810,6 +3174,60 @@ function pmToggleLock(p){
   save();render();
 }
 function pmOpenCustomize(p){pmView='custom';renderPMBody(p,'')}
+/* versões guardadas na nuvem: lista à esquerda, prévia só de leitura à direita */
+const MOTIVO={auto:'salvamento automático',conflito:'versão do outro aparelho',antes:'antes de restaurar'};
+const CAMPOS_VERSAO=['title','icon','cover','blocks','props','propOrder','propOcultas','cfg','cols'];
+async function abreHistorico(p){
+  if(!fb())return toast('entre na sua conta para ter o histórico de versões');
+  const ov=document.createElement('div');
+  ov.className='overlay pickov';
+  ov.innerHTML=`<div class="hist"><div class="histlista"><h3>${icn('ico-history')} Histórico · ${esc(p.title||'Sem título')}</h3>
+    <div class="histitens"><div class="nada" style="padding:14px">carregando…</div></div></div>
+    <div class="histcorpo"><div class="histbarra"><span class="t"></span>
+      <button class="prim" data-histrest disabled>restaurar esta versão</button><button data-histfechar>fechar</button></div>
+    <div class="histprev"></div></div></div>`;
+  document.body.appendChild(ov);
+  const fechar=()=>{ov.remove();document.removeEventListener('keydown',tecla,true)};
+  const tecla=e=>{if(e.key==='Escape'){e.stopPropagation();fechar()}};
+  document.addEventListener('keydown',tecla,true);
+  ov.onclick=e=>{if(e.target===ov||e.target.closest('[data-histfechar]'))fechar()};
+  const itens=ov.querySelector('.histitens'),prev=ov.querySelector('.histprev'),
+    barra=ov.querySelector('.histbarra .t'),bRest=ov.querySelector('[data-histrest]');
+  let lista;
+  try{lista=await listaVersoes(p.id)}catch(e){lista=null}
+  if(!ov.isConnected)return;
+  if(!lista){itens.innerHTML='<div class="nada" style="padding:14px">não consegui ler o histórico agora</div>';return}
+  const atual={ts:p.updated||Date.now(),p:JSON.parse(JSON.stringify(p)),motivo:'atual'};
+  const todas=[atual].concat(lista);
+  let sel=0;
+  const mostra=i=>{
+    sel=i;const v=todas[i];
+    itens.querySelectorAll('.histitem').forEach((b,k)=>b.classList.toggle('on',k===i));
+    const c=Object.assign({},v.p,{id:p.id,cfg:Object.assign({},v.p.cfg||{},{travada:true})});
+    prev.setAttribute('style',styleOf(c));
+    prev.innerHTML=`<div class="ptitle">${esc(c.title||'Sem título')}</div>${blocksHTML(c)}`;
+    prev.scrollTop=0;
+    barra.textContent=i?new Date(v.ts).toLocaleString('pt-BR')+' · '+pageWords(c)+' palavras':'versão atual';
+    bRest.disabled=!i;
+  };
+  itens.innerHTML=todas.map((v,i)=>`<button class="histitem" data-hist="${i}">
+    <b>${i?esc(new Date(v.ts).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})):'Agora'}</b>
+    <small class="${v.motivo==='conflito'?'conf':''}">${i?MOTIVO[v.motivo]||v.motivo:'versão atual'} · ${pageWords(v.p)} palavras</small></button>`).join('')
+    +(lista.length?'':'<div class="nada" style="padding:10px 12px">as versões aparecem aqui conforme você escreve (no máximo uma a cada 10 minutos)</div>');
+  itens.onclick=e=>{const b=e.target.closest('[data-hist]');if(b)mostra(+b.dataset.hist)};
+  bRest.onclick=async()=>{
+    const v=todas[sel];if(!v||!sel)return;
+    if(!confirm('Restaurar a versão de '+new Date(v.ts).toLocaleString('pt-BR')+'?\n\nA versão atual fica guardada no histórico.'))return;
+    bRest.disabled=true;
+    await guardaVersao(p.id,p,'antes');
+    const pg=S.pages[p.id];if(!pg){fechar();return}
+    CAMPOS_VERSAO.forEach(k=>{if(v.p[k]!==undefined)pg[k]=JSON.parse(JSON.stringify(v.p[k]));else delete pg[k]});
+    if(!pg.blocks||!pg.blocks.length)pg.blocks=[mkBlock()];
+    pg.updated=Date.now();
+    save();render();fechar();toast('versão restaurada');
+  };
+  mostra(0);
+}
 function pmImport(p){
   const i=document.createElement('input');i.type='file';i.accept='.md,.txt';
   i.onchange=()=>{
@@ -3247,6 +3665,12 @@ document.addEventListener('click',e=>{
     const plus=t.closest('[data-plus]');
     if(plus)return addBlock(host,plus.dataset.plus,'p','',true);
     const drag=t.closest('[data-drag]');
+    if(drag&&(e.ctrlKey||e.metaKey||e.shiftKey||(selecao&&selecao.host===host))){
+      /* Ctrl+clique (ou com uma seleção ativa): entra/sai da seleção; Shift: faixa */
+      if(e.shiftKey&&selecao&&selecao.host===host)selecionaFaixa(host,selecao.ancora,drag.dataset.drag);
+      else alternaSelecao(host,drag.dataset.drag);
+      return;
+    }
     if(drag){
       const id=drag.dataset.drag,r=drag.getBoundingClientRect();
       const naColuna=!!(p.blocks.find(x=>x.id===id)||{}).colg;
@@ -3260,6 +3684,7 @@ document.addEventListener('click',e=>{
         delete b.colg;delete b.coli;
         p.blocks.splice(ult+1,0,b);
       })});
+      itensBloco.push({label:'selecionar',ic:icn('ico-text-select'),kbd:'Esc',grupo:'Ações',run:()=>alternaSelecao(host,id)});
       itensBloco.push({label:'mover para cima',ic:icn('ico-arrow-up'),kbd:'Ctrl Shift ↑',grupo:'Ações',run:()=>moveBlocoTecla(host,id,-1)});
       itensBloco.push({label:'mover para baixo',ic:icn('ico-arrow-down'),kbd:'Ctrl Shift ↓',grupo:'Ações',run:()=>moveBlocoTecla(host,id,1)});
       itensBloco.push({label:'duplicar',ic:icn('ico-copy-plus'),grupo:'Ações',run:()=>anima(()=>{
@@ -3632,7 +4057,7 @@ function fimArraste(aplicar){
   cancelAnimationFrame(a.raf);
   document.body.classList.remove('arrastando-algo');
   if(a.fant)a.fant.remove();
-  if(a.el)a.el.classList.remove('arrastando');
+  document.querySelectorAll('.arrastando').forEach(x=>x.classList.remove('arrastando'));
   const l=document.querySelector('.arraste-linha');if(l)l.remove();
   limpaMarcas();
   if(a.ativo){
@@ -3647,6 +4072,10 @@ function comecaArraste(a){
   closeMenu();
   a.fant=fantasma(a.el);
   a.el.classList.add('arrastando');
+  if(a.tipo==='bloco'&&selecao&&selecao.host===a.host&&selecao.ids.has(a.id)&&selecao.ids.size>1){
+    a.host.querySelectorAll('.blk.selecionado').forEach(x=>x.classList.add('arrastando'));
+    const q=document.createElement('span');q.className='qtd';q.textContent=selecao.ids.size+' blocos';a.fant.appendChild(q);
+  }
   document.body.classList.add('arrastando-algo');
   if(navigator.vibrate&&a.toque)try{navigator.vibrate(12)}catch(e){}
   const passo=()=>{
@@ -3709,54 +4138,119 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&arraste&&arraste.at
 window.addEventListener('blur',()=>{if(arraste)fimArraste(false)});
 
 /* ---- blocos ---- */
-/* o bloco e, se for um título/alternante dobrado, tudo que ele esconde */
+/* o bloco e, se for um título/alternante dobrado, tudo que ele esconde;
+   se ele faz parte da seleção, todos os selecionados vão juntos */
 function unidadeBloco(p,id){
-  const L=p.blocks,i=L.findIndex(b=>b.id===id);
-  if(i<0)return [];
-  const ids=[id];
-  if(L[i].dobrado&&(L[i].t==='toggle'||L[i].t.indexOf('th')===0)){
-    const esc2=ocultos(L);
-    for(let j=i+1;j<L.length&&esc2.has(L[j].id);j++)ids.push(L[j].id);
-  }
+  const L=p.blocks;
+  const heads=selecao&&selecao.ids.has(id)&&S.pages[selecao.host.dataset.pid]===p
+    ?L.filter(b=>selecao.ids.has(b.id)).map(b=>b.id):[id];
+  const esc2=ocultos(L),ids=[];
+  heads.forEach(h=>{
+    const i=L.findIndex(b=>b.id===h);if(i<0||ids.indexOf(h)>=0)return;
+    ids.push(h);
+    if(L[i].dobrado&&(L[i].t==='toggle'||L[i].t.indexOf('th')===0))
+      for(let j=i+1;j<L.length&&esc2.has(L[j].id);j++)if(ids.indexOf(L[j].id)<0)ids.push(L[j].id);
+  });
   return ids;
+}
+/* bloco de primeiro nível mais perto do ponteiro dentro de host */
+function blocoPerto(host,x,y,fora){
+  let melhor=null,dist=Infinity;
+  host.querySelectorAll('[data-blocks] .blk[data-id]').forEach(el=>{
+    if(fora&&fora.indexOf(el.dataset.id)>=0)return;
+    const r=el.getBoundingClientRect();
+    if(!r.height)return;
+    const dy=y<r.top?r.top-y:y>r.bottom?y-r.bottom:0;
+    const dx=x<r.left?r.left-x:x>r.right?x-r.right:0;
+    const d=dy+dx*3;
+    if(d<dist){dist=d;melhor={el,r,dy}}
+  });
+  return melhor&&dist<=160?melhor:null;
+}
+function linhaH(r,antes){
+  const l=linhaArraste();l.classList.remove('vertical');
+  l.style.display='block';l.style.height='';
+  l.style.left=r.left+'px';l.style.width=r.width+'px';
+  l.style.top=((antes?r.top:r.bottom)-1)+'px';
+}
+function linhaV(x,top,altura){
+  const l=linhaArraste();l.classList.add('vertical');
+  l.style.display='block';l.style.width='';
+  l.style.left=(x-1)+'px';l.style.top=top+'px';l.style.height=altura+'px';
 }
 function miraBloco(a){
   const p=S.pages[a.host.dataset.pid];if(!p)return;
   if(!a.unid)a.unid=unidadeBloco(p,a.id);
-  const linha=linhaArraste();
   limpaMarcas();a.alvo=null;
   const sob=document.elementFromPoint(a.x,a.y);
   const vazia=sob&&sob.closest&&sob.closest('[data-colnovo]');
   if(vazia&&hostOf(vazia)===a.host){vazia.classList.add('drop-dentro');a.alvo={vazia:vazia.dataset.colnovo};return}
-  /* bloco mais próximo do ponteiro (dentro da coluna em que ele está) */
-  let melhor=null,dist=Infinity;
-  a.host.querySelectorAll('[data-blocks] .blk[data-id]').forEach(el=>{
-    if(a.unid.indexOf(el.dataset.id)>=0)return;
-    const r=el.getBoundingClientRect();
-    if(!r.height)return;
-    const dy=a.y<r.top?r.top-a.y:a.y>r.bottom?a.y-r.bottom:0;
-    const dx=a.x<r.left?r.left-a.x:a.x>r.right?a.x-r.right:0;
-    const d=dy+dx*3;
-    if(d<dist){dist=d;melhor={el,r}}
+  const m=blocoPerto(a.host,a.x,a.y,a.unid);
+  if(!m)return;
+  const r=m.r,alvoB=p.blocks.find(b=>b.id===m.el.dataset.id);
+  /* soltar na lateral de um bloco cria (ou aumenta) colunas */
+  if(alvoB&&m.dy===0&&window.innerWidth>760&&!alvoB.dobrado){
+    const grupo=m.el.closest('.cols');
+    const nCols=grupo?grupo.querySelectorAll('.colitem').length:1;
+    const esq=a.x>=r.left&&a.x<r.left+Math.min(90,r.width*.18)&&Math.abs(a.x-a.x0)>30;
+    const dir=a.x>r.right-Math.min(110,r.width*.22);
+    if((esq||dir)&&nCols<4){
+      a.alvo={id:alvoB.id,lado:esq?'esq':'dir'};
+      linhaV(esq?r.left-6:r.right+4,r.top,r.height);
+      return;
+    }
+  }
+  const antes=a.y<r.top+r.height/2;
+  a.alvo={id:m.el.dataset.id,antes};
+  linhaH(r,antes);
+}
+/* coluna vazia some e as larguras se ajustam (depois de tirar o último bloco dela) */
+function compactaColunas(p){
+  const usadas={};
+  p.blocks.forEach(b=>{if(b.colg)(usadas[b.colg]=usadas[b.colg]||new Set()).add(b.coli||0)});
+  Object.keys(usadas).forEach(g=>{
+    const lista=Array.from(usadas[g]).sort((x,y)=>x-y);
+    const mapa={};lista.forEach((c,k)=>mapa[c]=k);
+    p.blocks.forEach(b=>{if(b.colg===g)b.coli=mapa[b.coli||0]});
+    if(p.cols&&p.cols[g]){
+      const w=lista.map(c=>p.cols[g][c]||1/lista.length),soma=w.reduce((x,y)=>x+y,0)||1;
+      p.cols[g]=w.map(x=>x/soma);
+    }
   });
-  if(!melhor||dist>160)return;
-  const antes=a.y<melhor.r.top+melhor.r.height/2;
-  a.alvo={id:melhor.el.dataset.id,antes};
-  linha.style.display='block';
-  linha.style.left=melhor.r.left+'px';
-  linha.style.width=melhor.r.width+'px';
-  linha.style.top=((antes?melhor.r.top:melhor.r.bottom)-1)+'px';
+  limpaColunas(p);
+  if(p.cols)Object.keys(p.cols).forEach(g=>{if(!p.blocks.some(b=>b.colg===g))delete p.cols[g]});
 }
 function soltaBloco(a){
   const host=a.host,p=S.pages[host.dataset.pid];if(!p)return;
   const unid=a.unid||unidadeBloco(p,a.id);
   const movidos=unid.map(id=>p.blocks.find(b=>b.id===id)).filter(Boolean);
   if(!movidos.length)return;
+  const antesDe=canon(p.blocks)+canon(p.cols||{});
   const resto=p.blocks.filter(b=>unid.indexOf(b.id)<0);
   let pos,colg=null,coli=0;
   if(a.alvo.vazia){
     const pr=a.alvo.vazia.split(':');colg=pr[0];coli=+pr[1];
     pos=0;resto.forEach((x,k)=>{if(x.colg===colg)pos=k+1});
+  }else if(a.alvo.lado){
+    const alvoB=resto.find(b=>b.id===a.alvo.id);if(!alvoB)return;
+    p.cols=p.cols||{};
+    if(!alvoB.colg){
+      colg=uid();
+      alvoB.colg=colg;alvoB.coli=a.alvo.lado==='esq'?1:0;coli=a.alvo.lado==='esq'?0:1;
+      p.cols[colg]=[.5,.5];
+      pos=resto.indexOf(alvoB)+1;
+    }else{
+      colg=alvoB.colg;
+      const ai=alvoB.coli||0;
+      const n=Math.max(1,...resto.filter(x=>x.colg===colg).map(x=>(x.coli||0)+1));
+      const larg=(p.cols[colg]||new Array(n).fill(1/n)).slice(0,n);
+      while(larg.length<n)larg.push(1/n);
+      coli=a.alvo.lado==='esq'?ai:ai+1;
+      const metade=larg[ai]/2;larg[ai]=metade;larg.splice(coli,0,metade);
+      p.cols[colg]=larg;
+      resto.forEach(x=>{if(x.colg===colg&&(x.coli||0)>=coli)x.coli=(x.coli||0)+1});
+      pos=0;resto.forEach((x,k)=>{if(x.colg===colg)pos=k+1});
+    }
   }else{
     const alvoB=resto.find(b=>b.id===a.alvo.id);if(!alvoB)return;
     pos=resto.indexOf(alvoB);
@@ -3768,23 +4262,24 @@ function soltaBloco(a){
     }
     if(alvoB.colg){colg=alvoB.colg;coli=alvoB.coli||0}
   }
-  const antes=p.blocks.map(b=>b.id+':'+(b.colg||'')+(b.coli||'')).join();
   movidos.forEach(m=>{if(colg){m.colg=colg;m.coli=coli}else{delete m.colg;delete m.coli}});
   resto.splice(pos,0,...movidos);
   p.blocks=resto;
-  if(p.blocks.map(b=>b.id+':'+(b.colg||'')+(b.coli||'')).join()===antes)return;
-  limpaColunas(p);p.updated=Date.now();
+  compactaColunas(p);
+  if(canon(p.blocks)+canon(p.cols||{})===antesDe)return;
+  p.updated=Date.now();
   flip(host,'[data-blocks] .blk[data-id]','data-id',()=>refresh(host,'blocks'));
   syncOthers(host);save();
 }
-/* Ctrl+Shift+↑/↓ (e "mover para cima/baixo" no menu do bloco): troca de lugar
-   com o vizinho visível, pulando seções dobradas e grupos de colunas inteiros */
-function moveBlocoTecla(host,id,dir,caret){
+/* Ctrl+Shift+↑/↓ (e "mover para cima/baixo"): troca de lugar com o vizinho
+   visível, pulando seções dobradas e grupos de colunas inteiros. Com vários
+   blocos selecionados, o vizinho passa para o outro lado do conjunto. */
+function moveBlocoTecla(host,qual,dir,caret){
   const p=S.pages[host.dataset.pid];if(!p)return;
+  const ids=Array.isArray(qual)?qual:[qual];
   const L=p.blocks,esc2=ocultos(L);
-  const b=L.find(x=>x.id===id);if(!b)return;
+  const b=L.find(x=>ids.indexOf(x.id)>=0);if(!b)return;
   const mesmaCol=x=>x.colg===b.colg&&(x.coli||0)===(b.coli||0);
-  /* unidades na ordem: [ids...] */
   const unids=[];
   for(let k=0;k<L.length;){
     const x=L[k];
@@ -3798,27 +4293,233 @@ function moveBlocoTecla(host,id,dir,caret){
     while(k<L.length&&esc2.has(L[k].id)&&(!b.colg||mesmaCol(L[k])))u.push(L[k++].id);
     unids.push(u);
   }
-  const ui=unids.findIndex(u=>u[0]===id);
-  const viz=unids[ui+dir];
-  if(ui<0||!viz)return;
-  const meus=unids[ui];
-  const movidos=meus.map(i=>L.find(x=>x.id===i));
-  const resto=L.filter(x=>meus.indexOf(x.id)<0);
-  let pos=resto.findIndex(x=>x.id===(dir<0?viz[0]:viz[viz.length-1]));
-  if(dir>0)pos++;
+  const minhas=[];
+  unids.forEach((u,k)=>{if(ids.indexOf(u[0])>=0)minhas.push(k)});
+  if(minhas.length!==ids.filter(id=>!esc2.has(id)).length)return toast('só dá para mover juntos blocos da mesma coluna');
+  const ini=minhas[0],fim=minhas[minhas.length-1];
+  const viz=unids[dir<0?ini-1:fim+1];
+  if(!viz)return;
+  const resto=L.filter(x=>viz.indexOf(x.id)<0);
+  const movidos=viz.map(i=>L.find(x=>x.id===i));
+  let pos;
+  if(dir<0){const ult=unids[fim];pos=resto.findIndex(x=>x.id===ult[ult.length-1])+1}
+  else pos=resto.findIndex(x=>x.id===unids[ini][0]);
   resto.splice(pos,0,...movidos);
   p.blocks=resto;p.updated=Date.now();
   flip(host,'[data-blocks] .blk[data-id]','data-id',()=>refresh(host,'blocks'));
-  if(caret!=null)focusBlock(host,id,caret);
+  if(caret!=null)focusBlock(host,ids[0],caret);
   syncOthers(host);save();
 }
 
-/* ---- páginas na árvore lateral ---- */
+/* ============================================================
+   Seleção de vários blocos
+   Shift+clique num bloco seleciona a faixa desde o bloco em que se estava;
+   Ctrl+clique na alça ⋮⋮ (ou "selecionar" no menu) junta um por um; Esc
+   dentro de um bloco seleciona ele. Com a seleção ativa: arrastar leva todos,
+   Delete apaga, Ctrl+Shift+↑/↓ move, Ctrl+D duplica, Ctrl+C copia.
+   ============================================================ */
+let selecao=null;      /* {host, ids:Set, ancora} */
+const TIPOS_TEXTO=['p','h1','h2','h3','h4','bullet','num','todo','toggle','quote','callout','code','th1','th2','th3'];
+function ordemTela(host){return [].map.call(host.querySelectorAll('[data-blocks] .blk[data-id]'),el=>el.dataset.id)}
+function marcaSelecao(){
+  document.querySelectorAll('.blk.selecionado').forEach(x=>x.classList.remove('selecionado'));
+  if(!selecao)return barraSelecao();
+  if(!selecao.host.isConnected){selecao=null;return barraSelecao()}
+  const p=S.pages[selecao.host.dataset.pid];
+  if(!p){selecao=null;return barraSelecao()}
+  selecao.ids.forEach(id=>{if(!p.blocks.some(b=>b.id===id))selecao.ids.delete(id)});
+  if(!selecao.ids.size){selecao=null;return barraSelecao()}
+  selecao.ids.forEach(id=>{const el=selecao.host.querySelector('.blk[data-id="'+id+'"]');if(el)el.classList.add('selecionado')});
+  barraSelecao();
+}
+function limpaSelecao(){if(selecao){selecao=null;marcaSelecao()}}
+function iniciaSelecao(host,ids,ancora){
+  if(document.activeElement&&document.activeElement.isContentEditable)document.activeElement.blur();
+  try{window.getSelection().removeAllRanges()}catch(e){}
+  closeMenu();
+  selecao={host,ids:new Set(ids),ancora:ancora||ids[0]};
+  marcaSelecao();
+}
+function alternaSelecao(host,id){
+  if(!selecao||selecao.host!==host)return iniciaSelecao(host,[id],id);
+  if(selecao.ids.has(id))selecao.ids.delete(id);else{selecao.ids.add(id);selecao.ancora=id}
+  marcaSelecao();
+}
+function selecionaFaixa(host,de,ate){
+  const ordem=ordemTela(host);
+  let i=ordem.indexOf(de),j=ordem.indexOf(ate);
+  if(i<0)i=j;
+  if(j<0)return;
+  if(i>j){const x=i;i=j;j=x}
+  iniciaSelecao(host,ordem.slice(i,j+1),de||ate);
+}
+function idsSelecionados(){
+  if(!selecao)return [];
+  const p=S.pages[selecao.host.dataset.pid];if(!p)return [];
+  return p.blocks.filter(b=>selecao.ids.has(b.id)).map(b=>b.id);
+}
+function mexeSelecao(fn){
+  const host=selecao.host,p=S.pages[host.dataset.pid];if(!p)return;
+  flip(host,'[data-blocks] .blk[data-id]','data-id',()=>{fn(p);if(!p.blocks.length)p.blocks=[mkBlock()];compactaColunas(p);p.updated=Date.now();refresh(host,'blocks')});
+  syncOthers(host);save();
+}
+const acoesSelecao={
+  cima:()=>moveBlocoTecla(selecao.host,idsSelecionados(),-1),
+  baixo:()=>moveBlocoTecla(selecao.host,idsSelecionados(),1),
+  duplicar:()=>{
+    const novos=[];
+    mexeSelecao(p=>{
+      const out=[];
+      p.blocks.forEach(b=>{out.push(b);if(selecao.ids.has(b.id)){const c=Object.assign(JSON.parse(JSON.stringify(b)),{id:uid()});out.push(c);novos.push(c.id)}});
+      p.blocks=out;
+    });
+    toast(novos.length+' bloco'+(novos.length>1?'s':'')+' duplicado'+(novos.length>1?'s':''));
+  },
+  copiar:()=>{
+    const p=S.pages[selecao.host.dataset.pid];let n=0;
+    const txt=p.blocks.filter(b=>selecao.ids.has(b.id)).map(b=>{n=b.t==='num'?n+1:0;return linhaMD(b,n)}).filter(x=>x!=='').join('\n\n');
+    const ok=()=>toast('copiado');
+    if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(ok).catch(ok);else ok();
+  },
+  excluir:()=>{
+    const n=selecao.ids.size;
+    mexeSelecao(p=>{p.blocks=p.blocks.filter(b=>!selecao.ids.has(b.id))});
+    selecao=null;marcaSelecao();
+    toast(n+' bloco'+(n>1?'s':'')+' excluído'+(n>1?'s':'')+' — Ctrl+Z desfaz');
+  },
+  virar:botao=>{
+    const r=botao.getBoundingClientRect();
+    openMenu(r.left,r.top-350,BLOCK_TYPES.filter(t=>TIPOS_TEXTO.indexOf(t[0])>=0).map(t=>({label:t[1],ic:t[2],sub:t[3],
+      run:()=>mexeSelecao(p=>p.blocks.forEach(b=>{
+        if(selecao.ids.has(b.id)&&!semTexto(b.t)&&b.t!=='pagelink'){b.t=t[0];if(t[0]!=='todo')b.checked=false}
+      }))})),'Virar todos em');
+  },
+  fechar:()=>limpaSelecao()
+};
+function barraSelecao(){
+  let bar=document.querySelector('.selbarra');
+  if(!selecao){if(bar)bar.remove();return}
+  if(!bar){
+    bar=document.createElement('div');bar.className='selbarra';
+    bar.innerHTML='<span class="n"></span>'+
+      '<button data-sel="cima" title="Mover para cima (Ctrl+Shift+↑)">'+icn('ico-arrow-up')+'</button>'+
+      '<button data-sel="baixo" title="Mover para baixo (Ctrl+Shift+↓)">'+icn('ico-arrow-down')+'</button>'+
+      '<button data-sel="virar" title="Mudar o tipo de todos">'+icn('ico-type')+'<span class="rot">virar</span></button>'+
+      '<button data-sel="duplicar" title="Duplicar (Ctrl+D)">'+icn('ico-copy-plus')+'</button>'+
+      '<button data-sel="copiar" title="Copiar como texto (Ctrl+C)">'+icn('ico-clipboard')+'</button>'+
+      '<button data-sel="excluir" class="perigo" title="Excluir (Delete)">'+icn('ico-trash-2')+'</button>'+
+      '<button data-sel="fechar" title="Limpar a seleção (Esc)">'+icn('ico-x')+'</button>';
+    bar.addEventListener('mousedown',e=>e.preventDefault());
+    bar.addEventListener('click',e=>{
+      const b=e.target.closest('[data-sel]');if(!b||!selecao)return;
+      e.stopPropagation();acoesSelecao[b.dataset.sel](b);
+    });
+    document.body.appendChild(bar);
+  }
+  const n=selecao.ids.size;
+  bar.querySelector('.n').innerHTML='<b>'+n+'</b><span class="longo"> bloco'+(n>1?'s':'')+' selecionado'+(n>1?'s':'')+'</span>';
+}
+/* Shift+clique noutro bloco: seleção de blocos (no mesmo bloco continua sendo seleção de texto) */
+document.addEventListener('mousedown',e=>{
+  if(e.button!==0)return;
+  const t=e.target;
+  if(!t.closest)return;
+  if(selecao&&!e.shiftKey&&!t.closest('.selbarra,.menu,[data-drag],.arraste-fantasma'))limpaSelecao();
+  if(!e.shiftKey)return;
+  const blk=t.closest('[data-blocks] .blk[data-id]');
+  const host=blk&&hostOf(blk);
+  if(!host||host.classList.contains('locked')||t.closest('[data-drag]'))return;
+  const ae=document.activeElement;
+  let ancora=selecao&&selecao.host===host?selecao.ancora:null;
+  if(!ancora&&ae&&ae.classList&&ae.classList.contains('ct')&&hostOf(ae)===host){
+    const b0=ae.closest('.blk[data-id]');ancora=b0&&b0.dataset.id;
+  }
+  if(!ancora||ancora===blk.dataset.id)return;
+  e.preventDefault();
+  selecionaFaixa(host,ancora,blk.dataset.id);
+},true);
+document.addEventListener('keydown',e=>{
+  if(arraste&&arraste.ativo)return;
+  /* Esc dentro de um bloco seleciona o bloco (Esc de novo limpa) */
+  if(e.key==='Escape'&&!menuEl&&!pmenuEl&&!document.querySelector('.overlay')){
+    const ct=e.target.closest&&e.target.closest('.ct[data-b]');
+    if(ct&&!selecao){
+      const host=hostOf(ct),blk=ct.closest('.blk[data-id]');
+      if(host&&blk){e.preventDefault();e.stopPropagation();iniciaSelecao(host,[blk.dataset.id]);return}
+    }
+    if(selecao){e.preventDefault();e.stopPropagation();limpaSelecao();return}
+  }
+  if(!selecao)return;
+  if(e.target.closest&&e.target.closest('[contenteditable],input,textarea'))return;
+  const mod=e.ctrlKey||e.metaKey;
+  const faz=k=>{e.preventDefault();e.stopPropagation();acoesSelecao[k]()};
+  if(e.key==='Delete'||e.key==='Backspace')return faz('excluir');
+  if(mod&&e.shiftKey&&e.key==='ArrowUp')return faz('cima');
+  if(mod&&e.shiftKey&&e.key==='ArrowDown')return faz('baixo');
+  if(mod&&!e.shiftKey&&e.key.toLowerCase()==='d')return faz('duplicar');
+  if(mod&&!e.shiftKey&&e.key.toLowerCase()==='c')return faz('copiar');
+  if(mod&&e.key.toLowerCase()==='a'){
+    e.preventDefault();e.stopPropagation();
+    return iniciaSelecao(selecao.host,ordemTela(selecao.host),selecao.ancora);
+  }
+  /* Shift+↑/↓ aumenta ou diminui a faixa */
+  if(e.shiftKey&&!mod&&(e.key==='ArrowUp'||e.key==='ArrowDown')){
+    e.preventDefault();e.stopPropagation();
+    const ordem=ordemTela(selecao.host),sel=ordem.filter(id=>selecao.ids.has(id));
+    const ia=ordem.indexOf(selecao.ancora);
+    const pontas=[ordem.indexOf(sel[0]),ordem.indexOf(sel[sel.length-1])];
+    let outra=pontas[0]===ia?pontas[1]:pontas[0];
+    outra=Math.max(0,Math.min(ordem.length-1,outra+(e.key==='ArrowUp'?-1:1)));
+    const anc=selecao.ancora;
+    selecionaFaixa(selecao.host,anc,ordem[outra]);selecao.ancora=anc;
+  }
+},true);
+
+/* ---- páginas na árvore lateral (e da árvore para dentro do texto) ---- */
+/* posição no texto cru de um bloco a partir de um ponto da tela */
+function posNoTexto(ct,x,y){
+  let r=null;
+  try{
+    if(document.caretRangeFromPoint)r=document.caretRangeFromPoint(x,y);
+    else if(document.caretPositionFromPoint){const c=document.caretPositionFromPoint(x,y);
+      if(c){r=document.createRange();r.setStart(c.offsetNode,c.offset)}}
+  }catch(e){}
+  if(!r||!ct.contains(r.startContainer))return null;
+  const pre=document.createRange();pre.selectNodeContents(ct);
+  try{pre.setEnd(r.startContainer,r.startOffset)}catch(e){return null}
+  const rects=r.getClientRects();
+  let rc=rects&&rects[0];
+  if(!rc||!rc.height){const el=r.startContainer.nodeType===3?r.startContainer.parentElement:r.startContainer;rc=el.getBoundingClientRect()}
+  return {vis:pre.toString().length,x:rc.left,top:rc.top,h:rc.height||20};
+}
 function miraPagina(a){
-  const linha=linhaArraste();
   limpaMarcas();a.alvo=null;
   const sob=document.elementFromPoint(a.x,a.y);
-  const row=sob&&sob.closest&&sob.closest('#tree .row[data-page]');
+  const arvore=$('#tree');
+  const naArvore=!!(sob&&arvore.contains(sob));
+  a.rola=naArvore?arvore:(sob?rolagemDe(sob):null);
+  /* fora da árvore: soltar numa página aberta cria um link para a página arrastada */
+  if(!naArvore){
+    clearTimeout(a.abreT);a.abrePara=null;
+    const host=sob&&hostOf(sob);
+    if(!host||host.classList.contains('locked')||sob.closest('.cover,.pico,[data-title],.ptools,[data-props],.lockbadge'))return;
+    const ct=sob.closest('.ct[data-b]');
+    if(ct&&hostOf(ct)===host){
+      const pt=posNoTexto(ct,a.x,a.y);
+      if(pt){
+        a.alvo={tipo:'texto',host,bid:ct.dataset.b,vis:pt.vis,cru:ct===document.activeElement};
+        linhaV(pt.x,pt.top,pt.h);
+        return;
+      }
+    }
+    const m=blocoPerto(host,a.x,a.y);
+    if(!m)return;
+    const antes=a.y<m.r.top+m.r.height/2;
+    a.alvo={tipo:'bloco',host,id:m.el.dataset.id,antes};
+    linhaH(m.r,antes);
+    return;
+  }
+  const row=sob.closest('#tree .row[data-page]');
   if(!row||row===a.el){clearTimeout(a.abreT);a.abrePara=null;return}
   const alvo=S.pages[row.dataset.page];
   const proibidos=descendantIds(a.id);proibidos.add(a.id);
@@ -3846,12 +4547,55 @@ function miraPagina(a){
   clearTimeout(a.abreT);a.abrePara=null;
   const recuo=parseFloat(row.style.paddingLeft)||8;
   const extra=modo==='primeira'?15:0;
-  linha.style.display='block';
-  linha.style.left=(r.left+recuo+extra+18)+'px';
-  linha.style.width=Math.max(40,r.width-recuo-extra-22)+'px';
-  linha.style.top=((modo==='antes'?r.top:r.bottom)-1)+'px';
+  const l=linhaArraste();l.classList.remove('vertical');l.style.height='';
+  l.style.display='block';
+  l.style.left=(r.left+recuo+extra+18)+'px';
+  l.style.width=Math.max(40,r.width-recuo-extra-22)+'px';
+  l.style.top=((modo==='antes'?r.top:r.bottom)-1)+'px';
+}
+function soltaLink(a){
+  const pg=S.pages[a.id],host=a.alvo.host;
+  const hp=host&&S.pages[host.dataset.pid];
+  if(!pg||!hp||!host.isConnected)return;
+  const titulo=(pg.title||'').trim();
+  /* link no meio do texto: [[Título]] — só se o título levar mesmo a esta página */
+  if(a.alvo.tipo==='texto'&&titulo&&findPage(titulo)===pg){
+    const b=hp.blocks.find(x=>x.id===a.alvo.bid);if(!b)return;
+    const raw=b.text||'';
+    let i=Math.min(raw.length,a.alvo.cru?a.alvo.vis:rawOffset(raw,a.alvo.vis));
+    /* no meio de uma palavra: vai para a borda mais próxima dela */
+    const letra=/[\p{L}\p{N}]/u;
+    if(i>0&&i<raw.length&&letra.test(raw[i-1])&&letra.test(raw[i])){
+      let ini=i,fim=i;
+      while(ini>0&&letra.test(raw[ini-1]))ini--;
+      while(fim<raw.length&&letra.test(raw[fim]))fim++;
+      i=i-ini<=fim-i?ini:fim;
+    }
+    const pre=raw.slice(0,i),pos=raw.slice(i);
+    const ins=(pre&&!/\s$/.test(pre)?' ':'')+'[['+titulo+']]'+(pos&&!/^[\s.,;:!?)]/.test(pos)?' ':'');
+    b.text=pre+ins+pos;hp.updated=Date.now();
+    const ct=host.querySelector('.ct[data-b="'+b.id+'"]');
+    if(ct&&ct===document.activeElement)rerenderBlock(host,b.id,pre.length+ins.length);
+    else refresh(host,'blocks');
+  }else{
+    /* entre blocos (ou título ambíguo): bloco "Link para a página" */
+    const alvoId=a.alvo.tipo==='texto'?a.alvo.bid:a.alvo.id;
+    const alvoB=hp.blocks.find(x=>x.id===alvoId);if(!alvoB)return;
+    const nb=mkBlock('pagelink',pg.id);
+    if(alvoB.colg){nb.colg=alvoB.colg;nb.coli=alvoB.coli||0}
+    let k=hp.blocks.indexOf(alvoB);
+    if(!(a.alvo.tipo==='bloco'&&a.alvo.antes)){
+      const esc2=ocultos(hp.blocks);k++;
+      if(alvoB.dobrado)while(k<hp.blocks.length&&esc2.has(hp.blocks[k].id))k++;
+    }
+    hp.blocks.splice(k,0,nb);hp.updated=Date.now();
+    flip(host,'[data-blocks] .blk[data-id]','data-id',()=>refresh(host,'blocks'));
+  }
+  refresh(host,'back');syncOthers(host);save();
+  toast('link para “'+(titulo||'Sem título')+'” criado');
 }
 function soltaPagina(a){
+  if(a.alvo.tipo)return soltaLink(a);
   const p=S.pages[a.id],alvo=S.pages[a.alvo.id];
   if(!p||!alvo)return;
   let pai,idx;
@@ -4135,6 +4879,14 @@ function toMD(p,depth){
   let n=0;
   p.blocks.forEach(b=>{
     if(b.t==='num')n++;else n=0;
+    const line=linhaMD(b,n);
+    if(line!=='')out+=line+'\n\n';
+  });
+  kids(p.id).forEach(c=>out+=toMD(c,depth+1));
+  return out;
+}
+/* um bloco em markdown (n = posição na lista numerada) */
+function linhaMD(b,n){
     const map={p:b.text,h1:'# '+b.text,h2:'## '+b.text,h3:'### '+b.text,
       bullet:'- '+b.text,num:n+'. '+b.text,todo:'- ['+(b.checked?'x':' ')+'] '+b.text,
       quote:'> '+b.text,code:'```\n'+b.text+'\n```',callout:'> '+(b.icon||'✦')+' '+b.text,
@@ -4148,11 +4900,7 @@ function toMD(p,depth){
       grid:(b.grid?b.grid.linhas.map(l=>'| '+l.join(' | ')+' |').join('\n'):''),
       divider:'---',page:'',pagelink:'',toc:'',breadcrumb:'',button:'',
       table:'',board:'',gallery:'',list:''};
-    const line=map[b.t]!==undefined?map[b.t]:b.text;
-    if(line!=='')out+=line+'\n\n';
-  });
-  kids(p.id).forEach(c=>out+=toMD(c,depth+1));
-  return out;
+    return map[b.t]!==undefined?map[b.t]:(b.text||'');
 }
 function download(name,text,mime){
   const a=document.createElement('a');
@@ -4222,18 +4970,19 @@ $('#btnSync').onclick=async e=>{
         try{
           const snap=await g.raiz.get();
           const lote=g.db.batch();
-          snap.forEach(d=>{if(d.id!=='__meta'&&!S.pages[d.id])lote.delete(g.raiz.doc(d.id))});
+          /* o histórico ("~h_…") fica: só some a página que não existe mais */
+          snap.forEach(d=>{if(d.id!=='__meta'&&d.id.indexOf(HIST)!==0&&!S.pages[d.id])lote.delete(g.raiz.doc(d.id))});
           await lote.commit();
         }catch(err){}
-        sincronizado=new Map();
-        await nuvemGravar();
+        sincronizado=new Map();metaBase=undefined;
+        await nuvemGravar(true);
         toast(nuvemErro?'não consegui enviar':'enviado para a sua conta');
       }},
     {label:'trazer da nuvem',ic:icn('ico-cloud-download'),
       sub:'descarta o que está neste aparelho',
       run:async()=>{
         if(!fb())return toast('entre na sua conta primeiro');
-        sincronizado=new Map();
+        sincronizado=new Map();metaBase=undefined;
         const d=await nuvemCarregar();
         if(!d||d.vazio||!d.pages||!Object.keys(d.pages).length)return toast('não há nada na sua conta ainda');
         if(!confirm('Substituir as '+pgs+' páginas deste aparelho pelas '+Object.keys(d.pages).length+' da nuvem?'))return;
@@ -4305,6 +5054,7 @@ if(window.innerWidth<=900)$('#togSide').style.display='block';
   applySideCollapsed();
   render();save();ajustaLateral();
   iniciado=true;
+  escutaNuvem();
   const boot=document.getElementById('boot');
   if(boot){boot.style.transition='opacity .3s';boot.style.opacity='0';setTimeout(()=>boot.remove(),320)}
 })();
