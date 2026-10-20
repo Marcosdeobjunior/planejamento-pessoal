@@ -2006,3 +2006,33 @@ body.sn-drawer-lock { overflow: hidden !important; }
   .hub-meta-side { opacity: 1; }
   .sn-action-btn { width: 36px; height: 36px; }
 }
+
+/* ── Celular (etapa 13) ─────────────────────────────────────────────────────
+   Hub, analytics e modal ocupam a tela inteira: a barra inferior do app sai da frente
+   enquanto estão abertos. Modal de novo sonho vira folha que sobe de baixo. */
+@media (max-width: 900px) {
+  body.sn-hub-open .bottom-nav,
+  body.sn-modal-open .bottom-nav,
+  body:has(#sn-analytics.open) .bottom-nav,
+  body:has(#sn-modal.open) .bottom-nav { display: none; }
+  #sn-hub, #sn-analytics, #hub-drawer { height: 100vh; height: 100dvh; }
+  .hub-back-btn, .hub-nav-btn, .san-back-btn { min-height: 40px; }
+  .sn-action-btn { width: 36px; height: 36px; }
+  .sn-meta-add-btn { min-width: 40px; min-height: 40px; }
+}
+@media (max-width: 640px) {
+  .sn-modal-backdrop { padding: 0; align-items: flex-end; }
+  .sn-modal {
+    max-width: none; max-height: 94vh; max-height: 94dvh;
+    border-radius: 22px 22px 0 0; border-bottom: 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  /* o "x" acompanha a rolagem da folha */
+  .sn-modal-close { position: sticky; top: 12px; float: right; margin: 12px 12px -52px 0; width: 40px; height: 40px; font-size: 14px; }
+  .sn-modal .inp, .sn-modal .sn-meta-input,
+  #hub-drawer .hd-inp, #sn-hub input, #sn-hub select, #sn-hub textarea { font-size: 16px !important; }
+}
+@media (max-width: 560px) {
+  /* voltar à esquerda e as ações à direita, na mesma linha quando couber */
+  .hub-nav { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+}

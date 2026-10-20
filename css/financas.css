@@ -2275,3 +2275,73 @@ body.fin-cal-dragging * {
   cursor: grabbing !important;
   user-select: none !important;
 }
+
+/* ── Calendário no celular: mês compacto + agenda do dia ─────────────────────
+   No desktop os pontinhos e a agenda não aparecem (o calendário segue como antes). */
+.fin-cal-dots,
+.fin-cal-agenda { display: none; }
+
+@media (max-width: 640px) {
+  .fin-cal-wrap { padding: 14px 12px 16px; }
+  .fin-cal-nav { margin-bottom: 12px; }
+  .fin-cal-nav-btn { width: 40px; height: 40px; }
+  .fin-cal-today-btn { min-height: 40px; padding: 0 14px; }
+  .fin-cal-grid { gap: 2px; flex: none; overflow: visible; touch-action: pan-y; }
+  .fin-cal-dow { padding-bottom: 6px; letter-spacing: 1px; }
+  .fin-cal-cell {
+    min-height: 0; height: 46px; padding: 4px 2px;
+    align-items: center; justify-content: center; gap: 3px;
+    border-radius: 10px;
+  }
+  .fin-cal-cell:hover { box-shadow: none; }
+  .fin-cal-cell .fin-cal-events,
+  .fin-cal-cell .fin-cal-bal { display: none; }
+  .fin-cal-cell.has-sav .fin-cal-events { margin-bottom: 0; }
+  .fin-cal-dn { font-size: 13px; margin: 0; }
+  .fin-cal-cell.other-month { visibility: hidden; }
+  .fin-cal-cell.is-selected {
+    background: rgba(200, 169, 110, 0.2);
+    border-color: rgba(200, 169, 110, 0.6) !important;
+  }
+  .fin-cal-dots { display: flex; gap: 3px; height: 5px; }
+  .fin-cal-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--fin-teal); }
+  .fin-cal-dot.out { background: var(--fin-rose); }
+  .fin-cal-dot.save { background: var(--fin-gold); }
+  .fin-cal-dot.save-withdraw { background: var(--fin-violet); }
+  .fin-cal-dot.is-future { background: transparent; border: 1px dashed var(--fin-teal); box-sizing: border-box; }
+  .fin-cal-dot.out.is-future { border-color: var(--fin-rose); }
+  .fin-cal-dot.save.is-future { border-color: var(--fin-gold); }
+  .fin-cal-dot.save-withdraw.is-future { border-color: var(--fin-violet); }
+
+  .fin-cal-agenda { display: block; margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, 0.07); }
+  .fin-cal-ag-hd { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+  .fin-cal-ag-date { font-size: 15px; font-weight: 700; color: var(--fin-text); }
+  .fin-cal-ag-bal { margin-top: 2px; font: 600 12px var(--fin-font-mono); }
+  .fin-cal-ag-bal.pos { color: var(--fin-teal); }
+  .fin-cal-ag-bal.neg { color: var(--fin-rose); }
+  .fin-cal-ag-add {
+    display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
+    min-height: 40px; padding: 0 14px; border-radius: 10px; cursor: pointer;
+    background: rgba(200, 169, 110, 0.12); border: 1px solid rgba(200, 169, 110, 0.3);
+    color: var(--fin-gold); font: 600 13px var(--fin-font-ui, inherit);
+  }
+  .fin-cal-ag-empty { margin: 4px 0 0; font-size: 13px; color: var(--fin-muted); }
+  .fin-cal-ag-list { display: flex; flex-direction: column; gap: 6px; }
+  .fin-cal-ag-item {
+    display: flex; align-items: center; gap: 10px; width: 100%; min-height: 52px;
+    padding: 8px 12px; border-radius: 12px; cursor: pointer; text-align: left;
+    background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.07);
+    color: var(--fin-text); font: inherit;
+  }
+  .fin-cal-ag-item.is-future { opacity: 0.72; }
+  .fin-cal-ag-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--fin-teal); }
+  .fin-cal-ag-item.out .fin-cal-ag-dot { background: var(--fin-rose); }
+  .fin-cal-ag-item.save .fin-cal-ag-dot { background: var(--fin-gold); }
+  .fin-cal-ag-item.save-withdraw .fin-cal-ag-dot { background: var(--fin-violet); }
+  .fin-cal-ag-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+  .fin-cal-ag-name { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fin-cal-ag-cat { font-size: 12px; color: var(--fin-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fin-cal-ag-val { font: 700 13px var(--fin-font-mono); white-space: nowrap; color: var(--fin-teal); }
+  .fin-cal-ag-item.out .fin-cal-ag-val,
+  .fin-cal-ag-item.save .fin-cal-ag-val { color: var(--fin-rose); }
+}

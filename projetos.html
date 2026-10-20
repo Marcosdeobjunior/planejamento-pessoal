@@ -861,6 +861,21 @@ td.nm:hover{color:var(--accent1)}
   .ptitle{font-size:31px}
   .pkey{width:118px;flex:0 0 118px}
   .peek.left,.peek.right{width:100vw;border-radius:0}
+  /* celular: o editor ocupa o espaço entre o cabeçalho do site e a barra inferior do app
+     (--bottom-nav-h, do app-shell); a barra do editor fica sempre visível e só o conteúdo rola */
+  #app{position:fixed;top:58px;left:0;right:0;bottom:var(--bottom-nav-h,0px);height:auto;margin-top:0}
+  [data-app-footer]{display:none}
+  .side{height:100%}
+  body.show-side .main::after{content:'';position:absolute;inset:0;z-index:65;background:rgba(5,4,12,.55)}
+  .top{padding:0 6px;gap:2px}
+  .tbtn.icon{min-width:40px;min-height:40px;display:inline-flex;align-items:center;justify-content:center}
+  .crumb button{min-height:40px}
+  .sbtn{min-height:40px}
+  #peekLayer,.overlay{bottom:var(--bottom-nav-h,0px)}
+  .peek.popup{width:96vw;height:calc(100% - 24px)}
+  .toast{bottom:calc(var(--bottom-nav-h,0px) + 16px)}
+  /* 16px nos campos: o iPhone não dá zoom ao tocar neles */
+  input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),select,textarea{font-size:16px}
 }
 [data-app-footer] .site-footer{margin-top:0}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -2458,6 +2473,15 @@ function escolhePagina(host,bid){
 }
 
 /* ---------------- menus ---------------- */
+/* celular: menus não abrem atrás da barra inferior do app (no desktop ela não existe e nada muda) */
+function encaixaMenu(el){
+  const nav=document.getElementById('bottom-nav');
+  if(!el||!nav||getComputedStyle(nav).display==='none')return;
+  const limite=nav.getBoundingClientRect().top-8,topo=66;
+  el.style.maxHeight=Math.max(160,limite-topo)+'px';
+  const r=el.getBoundingClientRect();
+  if(r.bottom>limite)el.style.top=Math.max(topo,limite-r.height)+'px';
+}
 function closeMenu(){if(menuEl){menuEl.remove();menuEl=null}}
 let menuItems=[],menuSel=0,menuTitle='',menuFresh=false;
 function openMenu(x,y,items,title){
@@ -2476,6 +2500,7 @@ function openMenu(x,y,items,title){
     ev.preventDefault();const it=menuItems[+b.dataset.i];closeMenu();it.run();
   });
   document.body.appendChild(menuEl);
+  encaixaMenu(menuEl);
 }
 function paintMenu(){
   let ultimo=null,html=menuTitle?'<div class="grp">'+esc(menuTitle)+'</div>':'';
@@ -2487,6 +2512,7 @@ function paintMenu(){
       ${it.kbd?'<span class="kbd">'+esc(it.kbd)+'</span>':''}</button>`;
   });
   menuEl.innerHTML=html;
+  if(menuEl.isConnected)encaixaMenu(menuEl);
   const sel=menuEl.querySelector('button.sel');
   if(sel&&sel.scrollIntoView)sel.scrollIntoView({block:'nearest'});
 }
@@ -2517,6 +2543,7 @@ function openPageMenu(anchorEl,p){
   inp.oninput=()=>renderPMBody(p,inp.value);
   inp.onkeydown=e=>{if(e.key==='Escape'){e.preventDefault();closePMenu()}};
   renderPMBody(p,'');
+  encaixaMenu(pmenuEl);
   inp.focus();
 }
 function pmActions(p){
@@ -3579,6 +3606,7 @@ async function menuAreas(anchor){
     '<button class="lin nova" data-areanova><span class="qi">'+icn('ico-plus')+'</span>'+
       '<span class="nm">Novo espaço de trabalho</span></button>';
   document.body.appendChild(el);
+  encaixaMenu(el);
   menuFresh=true;setTimeout(()=>{menuFresh=false},0);
   const fecha=()=>{el.remove();document.removeEventListener('click',fora)};
   const fora=ev=>{if(!menuFresh&&!el.contains(ev.target))fecha()};
@@ -3722,6 +3750,11 @@ $('#btnNewRoot').onclick=()=>go(mkPage('',null,'📄'));
 $('#btnExport').onclick=exportMD;
 $('#btnTrash').onclick=()=>{S.view='trash';save();render()};
 $('#togSide').onclick=()=>document.body.classList.toggle('show-side');
+/* celular: tocar fora da lateral aberta (no véu sobre o editor) só fecha a lateral */
+$('.main').addEventListener('click',e=>{
+  if(!document.body.classList.contains('show-side')||e.target.closest('#togSide'))return;
+  e.preventDefault();e.stopPropagation();document.body.classList.remove('show-side');
+},true);
 $('#btnCollapseSide').onclick=()=>toggleSideCollapse();
 $('#btnAllToggle').onclick=e=>{
   const any=Object.values(S.pages).some(p=>p.expanded&&kids(p.id).length);
@@ -3735,13 +3768,13 @@ $('#btnAllToggle').onclick=e=>{
 function ajustaLateral(){
   const side=document.querySelector('.side');
   if(!side)return;
-  if(window.innerWidth<900){side.style.height='';return}
+  if(window.innerWidth<=900){side.style.height='';return}
   const y=Math.max(0,window.scrollY||window.pageYOffset||0);
   side.style.height=Math.max(240,window.innerHeight-58-y)+'px';
 }
 window.addEventListener('scroll',ajustaLateral,{passive:true});
 window.addEventListener('resize',()=>{
-  if(S)$('#togSide').style.display=window.innerWidth<900?'block':'none';
+  if(S)$('#togSide').style.display=window.innerWidth<=900?'block':'none';
   ajustaLateral();
 });
 $('#btnSync').onclick=async e=>{
@@ -3833,7 +3866,7 @@ $('#btnBackup').onclick=e=>{
   ],'Backup');
 };
 $('#btnMore').onclick=e=>{const p=P();if(p)openPageMenu(e.currentTarget,p)};
-if(window.innerWidth<900)$('#togSide').style.display='block';
+if(window.innerWidth<=900)$('#togSide').style.display='block';
 
 /* ---------------- início ---------------- */
 (async function(){

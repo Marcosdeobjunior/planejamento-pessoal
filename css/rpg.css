@@ -1771,3 +1771,35 @@ body.rpg-reading-open [data-app-header] {
     padding-top: 110px;
   }
 }
+
+/* Celular (etapa 13): coleções de conquistas em 2 colunas (antes uma capa de tela inteira por
+   coleção) e a tela de leitura das conquistas acima da barra inferior do app. */
+@media (max-width: 560px) {
+  .rpg-ach-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .rpg-ach-group {
+    padding: 8px 8px 10px;
+    gap: 8px;
+    border-radius: 14px;
+  }
+
+  .rpg-ach-group-cover {
+    padding: 6px;
+    border-radius: 10px;
+  }
+
+  .rpg-ach-group-title {
+    font-size: 13px;
+  }
+
+  .rpg-ach-group-head {
+    gap: 6px;
+  }
+
+  #rpg-reading-achievements {
+    padding-bottom: var(--bottom-nav-h, 0px);
+  }
+}

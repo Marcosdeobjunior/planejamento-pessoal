@@ -2593,7 +2593,7 @@ function tkCalRenderAgenda() {
   var items = tkCalItemsForDate(ds);
   var rows = items.map(function (item) {
     var kind = item.isHoliday ? (item.holidayType || 'Feriado') : item.isDream ? 'Prazo do sonho' : item.isReview ? 'Revisão' : item.isGym ? 'Treino' : (item.cat || ({ alta: 'Prioridade alta', media: 'Prioridade média', baixa: 'Prioridade baixa' })[item.prior] || 'Tarefa');
-    var when = item.hora ? esc(item.hora) : (tkTaskHasDateRange(item) ? tkFmtDate(item.data) + ' – ' + tkFmtDate(item.dataFim) : 'Dia todo');
+    var when = item.hora ? esc(item.hora) : (tkTaskHasDateRange(item) ? item.data.slice(8, 10) + '/' + item.data.slice(5, 7) + '–' + item.dataFim.slice(8, 10) + '/' + item.dataFim.slice(5, 7) : 'Dia todo');
     var action = tkCalAgendaAction(item);
     var tag = action ? 'button type="button" onclick="' + action + '"' : 'div';
     var close = action ? 'button' : 'div';
