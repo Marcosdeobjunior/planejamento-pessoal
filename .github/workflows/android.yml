@@ -82,11 +82,21 @@ jobs:
           fi
           tail -5 build.log
           ls -la *.apk *.aab
+      # o .apk fica sempre disponível em Actions → esta execução → Artifacts (vem num .zip)
+      - name: Guardar o .apk na execução
+        run: cp android/app-release-signed.apk "sol-de-soter-$VERSION_NAME.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sol-de-soter-apk
+          path: sol-de-soter-*.apk
+          retention-days: 30
+      # a Release é um atalho para baixar no celular; se o GitHub recusar, o .apk continua nos Artifacts
       - name: Publicar a Release
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp android/app-release-signed.apk "sol-de-soter-$VERSION_NAME.apk"
+          trap 'echo "::warning::O GitHub não deixou criar a Release. O .apk desta execução está em Artifacts, no fim da página do resumo (sol-de-soter-apk)."' ERR
           gh release create "app-v$VERSION_NAME" "sol-de-soter-$VERSION_NAME.apk" \
             --repo "${{ github.repository }}" --target "${{ github.sha }}" \
             --title "App Android $VERSION_NAME" \
