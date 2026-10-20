@@ -77,7 +77,11 @@ async function sendToDevices(uid, devices, reminder, gone) {
     } catch (err) {
       // 404/410: a inscrição não existe mais (o aparelho saiu, trocou de conta ou desinstalou)
       if (err && (err.statusCode === 404 || err.statusCode === 410)) gone.add(device.id);
-      else console.warn("  falha ao enviar para um aparelho:", err && err.statusCode ? "HTTP " + err.statusCode : (err && err.message) || err);
+      // diagnóstico: código e resposta do serviço de push (não têm dados da conta) e o servidor dele
+      let host = "?";
+      try { host = new URL(data.endpoint).host; } catch (e) { /* endereço inválido */ }
+      console.warn("  " + host + ": " + (err && err.statusCode ? "HTTP " + err.statusCode : "erro") + " " +
+        cleanText((err && (err.body || err.message)) || err, 200));
     }
   }
   return delivered;
