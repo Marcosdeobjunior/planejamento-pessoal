@@ -1,4 +1,7 @@
-var CACHE = "soter-v3";
+var CACHE = "soter-v4";
+// Dono dos lembretes deste aparelho (uid), gravado pelo site; fica fora do cache de arquivos.
+var PUSH_CACHE = "soter-push";
+var PUSH_OWNER_URL = "./__push_owner";
 
 // Respostas maiores que isso não vão para o cache (imagens pesadas, vídeos)
 var MAX_CACHE_BYTES = 1024 * 1024;
@@ -17,6 +20,8 @@ var PRECACHE = [
   "./js/app-shell.js",
   "./js/apresentacao.js",
   "./img/favicon-32.png",
+  "./img/icon-192.png",
+  "./manifest.webmanifest",
 ];
 
 // Rotas que nunca devem ser servidas do cache (Firebase, Google Fonts CDN)
@@ -45,7 +50,7 @@ self.addEventListener("activate", function (e) {
   e.waitUntil(
     caches.keys().then(function (keys) {
       return Promise.all(
-        keys.filter(function (k) { return k !== CACHE; }).map(function (k) {
+        keys.filter(function (k) { return k !== CACHE && k !== PUSH_CACHE; }).map(function (k) {
           return caches.delete(k);
         })
       );
@@ -95,4 +100,58 @@ self.addEventListener("fetch", function (e) {
       });
     })
   );
+});
+
+// ── Lembretes no celular (Web Push, enviados por push/send.mjs) ─────────────────────────
+// Cada aviso traz o uid da conta. Só mostra o conteúdo se for a conta dona deste aparelho;
+// senão (aparelho trocou de conta e o aviso já estava a caminho) cancela a inscrição e mostra
+// um aviso genérico, sem nada da outra conta.
+function readPushOwner() {
+  return caches.open(PUSH_CACHE).then(function (cache) {
+    return cache.match(PUSH_OWNER_URL);
+  }).then(function (res) {
+    return res ? res.text() : "";
+  }).catch(function () { return ""; });
+}
+
+self.addEventListener("push", function (e) {
+  var data = {};
+  try { data = e.data ? e.data.json() : {}; } catch (err) { data = {}; }
+  e.waitUntil(readPushOwner().then(function (owner) {
+    var icon = "img/icon-192.png";
+    if (!owner || !data.uid || data.uid !== owner) {
+      return self.registration.pushManager.getSubscription().then(function (sub) {
+        return sub ? sub.unsubscribe() : false;
+      }).catch(function () { return false; }).then(function () {
+        return self.registration.showNotification("Sól de Sóter", {
+          body: "Os lembretes deste aparelho foram desligados. Ative de novo no site, se quiser.",
+          icon: icon,
+          tag: "soter-push-off"
+        });
+      });
+    }
+    var url = /^[a-z0-9-]+\.html(\?[A-Za-z0-9=&_-]*)?$/.test(String(data.url || "")) ? data.url : "tarefas.html";
+    return self.registration.showNotification(String(data.title || "Sól de Sóter"), {
+      body: String(data.body || ""),
+      icon: icon,
+      badge: "img/badge-96.png",
+      tag: String(data.tag || data.id || "soter"),
+      data: { url: url }
+    });
+  }));
+});
+
+self.addEventListener("notificationclick", function (e) {
+  e.notification.close();
+  var target = new URL((e.notification.data && e.notification.data.url) || "tarefas.html", self.registration.scope).href;
+  e.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(function (list) {
+    for (var i = 0; i < list.length; i += 1) {
+      if (list[i].url.indexOf(self.registration.scope) === 0 && "focus" in list[i]) {
+        return list[i].focus().then(function (client) {
+          return client && "navigate" in client ? client.navigate(target) : client;
+        });
+      }
+    }
+    return self.clients.openWindow(target);
+  }));
 });

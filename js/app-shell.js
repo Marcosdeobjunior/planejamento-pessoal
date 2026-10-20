@@ -682,7 +682,7 @@ window.SoterUtils = window.SoterUtils || (function () {
     { name: "viagens", dataKeys: ["viagens", "travels"] },
     { name: "academia", dataKeys: ["academiaTracker", "academia", "gym", "treinos", "workouts"] },
     { name: "rpg", dataKeys: ["rpg"] },
-    { name: "sistema", dataKeys: ["lastVisitedPage", "lastVisitedAt", "notifications", "headerBalanceHidden", "fileStorage", "firebaseSync"] }
+    { name: "sistema", dataKeys: ["lastVisitedPage", "lastVisitedAt", "notifications", "headerBalanceHidden", "fileStorage", "firebaseSync", "pushPrefs"] }
   ];
 
   function getFirebaseCollectionDef(name) {
@@ -4206,6 +4206,8 @@ window.SoterUtils = window.SoterUtils || (function () {
 
   function checkTaskTimeReminders() {
     if (!supportsDesktopTaskNotifications()) return;
+    // com os lembretes no celular ativos neste aparelho, o aviso vem por eles (sem duplicar)
+    if (isPushActiveHere() && getPushPrefs(ensureStateShape(loadState())).tasks.on) return;
     ensureTaskReminderPermissionPrompt();
     if (window.Notification.permission !== "granted") return;
 
@@ -6316,6 +6318,7 @@ window.SoterUtils = window.SoterUtils || (function () {
       '      </div>',
       '      <div class="pm-divider"></div>',
       '      <a class="pm-item pm-item-user" href="rpg.html"><span class="pm-icon pm-icon-user" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="8" r="3.25"></circle><path d="M5.5 18.5c.9-3 3.5-4.75 6.5-4.75s5.6 1.75 6.5 4.75"></path></svg></span> Usu\u00e1rio</a>',
+      '      <button class="pm-item pm-item-push" type="button" data-open-push hidden><span class="pm-icon" aria-hidden="true"><i class="ico ico-bell-ring"></i></span> Lembretes no celular</button>',
       '    </div>',
       '  </div>',
       '  </div>',
@@ -6360,6 +6363,7 @@ window.SoterUtils = window.SoterUtils || (function () {
       '  </nav>',
       '  <div class="header-mobile-drawer-actions">',
       '    <a class="header-mobile-action" href="rpg.html">Usu\u00e1rio</a>',
+      '    <button class="header-mobile-action" type="button" data-open-push hidden><i class="ico ico-bell-ring" aria-hidden="true"></i> Lembretes</button>',
       '  </div>',
       '</aside>'
     ].join("\n");
@@ -6866,6 +6870,7 @@ window.SoterUtils = window.SoterUtils || (function () {
       } finally {
         firebaseUserChangeDepth -= 1;
       }
+      schedulePushRefresh();
       return state;
     }
 
@@ -7003,7 +7008,10 @@ window.SoterUtils = window.SoterUtils || (function () {
           if (uid && !keepUnsyncedCopy) {
             try { localStorage.setItem(LOGOUT_PURGE_STORAGE_KEY, uid); } catch (err) { }
           }
-          return firebaseAuthInstance.signOut();
+          // lembretes: o aparelho deixa de receber os avisos desta conta (antes do signOut, com acesso)
+          return pushCleanupBeforeSignOut(uid, false).then(function () {
+            return firebaseAuthInstance.signOut();
+          });
         }).then(function () {
           return removeLocalAccountData(uid, keepUnsyncedCopy);
         }).then(function () {
@@ -7053,6 +7061,8 @@ window.SoterUtils = window.SoterUtils || (function () {
               .then(function () { return deleteFirestoreUserSubcollection(uid, 'rubrica').catch(function () { return null; }); })
               // schema 2: módulos, imagens e meta/sync
               .then(function () { return syncV2DeleteRemoteData(uid); })
+              // lembretes: agenda e aparelhos da conta
+              .then(function () { return pushCleanupBeforeSignOut(uid, true); })
               .then(function () { return user.delete(); })
               .then(function () {
                 return removeLocalAccountData(uid, false);
@@ -7100,6 +7110,827 @@ window.SoterUtils = window.SoterUtils || (function () {
     };
   }
 
+  // =====================================================================
+  // Lembretes no celular (Web Push). Ver docs/LEMBRETES.md.
+  // - o site calcula a agenda dos próximos 14 dias a partir dos dados da conta e grava em
+  //   pushSchedules/{uid} só o que a notificação precisa (hora, título, texto, página);
+  // - cada aparelho que ativa grava a inscrição do navegador em pushSchedules/{uid}/devices/{id};
+  // - o envio é feito pelo GitHub Actions (push/send.mjs) a cada ~10 minutos.
+  // Isolamento entre contas: a inscrição do aparelho pertence a uma conta (PUSH_OWNER_KEY). Sair,
+  // trocar de conta ou excluir a conta cancela a inscrição, e o service worker confere de qual
+  // conta é cada aviso antes de mostrar.
+  // =====================================================================
+  var PUSH_OWNER_KEY = "soter_push_owner_v1";
+  var PUSH_SCHED_KEY_PREFIX = "soter_push_sched_v1_";
+  var PUSH_TEST_KEY_PREFIX = "soter_push_test_v1_";
+  var PUSH_COLLECTION = "pushSchedules";
+  var PUSH_HORIZON_DAYS = 14;
+  var PUSH_MAX_REMINDERS = 150;
+  var PUSH_KEEP_SENT_MS = 3 * 60 * 60 * 1000;   // igual ao "atrasado demais" do envio
+  var PUSH_REWRITE_MS = 6 * 60 * 60 * 1000;     // regrava mesmo sem mudança (a janela de 14 dias anda)
+  var PUSH_TYPES = ["tasks", "review", "bills", "gym", "abandon", "travel"];
+  var PUSH_DEFAULT_PREFS = {
+    enabled: false,
+    tasks: { on: true, lead: 15 },
+    review: { on: true, time: "19:00" },
+    bills: { on: true, when: "day", time: "09:00" },
+    gym: { on: true, time: "18:00" },
+    abandon: { on: true, time: "20:00" },
+    travel: { on: true, time: "10:00" },
+    hideDetails: false
+  };
+  var PUSH_TASK_LEADS = [0, 5, 10, 15, 30, 60, 120];
+  var PUSH_ABANDON_DAYS = [7, 14, 30];
+  var PUSH_TRAVEL_DAYS = [7, 1, 0];
+  var pushRefreshTimer = 0;
+  var pushRefreshRunning = null;
+  var pushModalMounted = false;
+
+  function getPushPublicKey() {
+    var config = getFirebaseRuntimeConfig() || {};
+    return config.push && typeof config.push.publicKey === "string" ? config.push.publicKey.trim() : "";
+  }
+
+  function isIosDevice() {
+    var ua = String(navigator.userAgent || "");
+    return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  }
+
+  function isStandaloneApp() {
+    return !!((window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone === true);
+  }
+
+  // "ok" | "unconfigured" | "ios-install" | "unsupported" | "denied"
+  function getPushSupport() {
+    if (!getPushPublicKey() || !getFirebaseRuntimeConfig()) return "unconfigured";
+    var capable = "serviceWorker" in navigator && "PushManager" in window && typeof window.Notification === "function";
+    if (!capable) return isIosDevice() && !isStandaloneApp() ? "ios-install" : "unsupported";
+    if (window.Notification.permission === "denied") return "denied";
+    return "ok";
+  }
+
+  function pushValidTime(value, fallback) {
+    return parseTaskClockMinutes(value) === null ? fallback : String(value).slice(0, 5);
+  }
+
+  function getPushPrefs(state) {
+    var raw = state && state.data && state.data.pushPrefs && typeof state.data.pushPrefs === "object" ? state.data.pushPrefs : {};
+    var prefs = deepClone(PUSH_DEFAULT_PREFS);
+    PUSH_TYPES.forEach(function (type) {
+      if (raw[type] && typeof raw[type] === "object") Object.assign(prefs[type], raw[type]);
+      prefs[type].on = prefs[type].on !== false;
+      if (type !== "tasks") prefs[type].time = pushValidTime(prefs[type].time, PUSH_DEFAULT_PREFS[type].time);
+    });
+    prefs.enabled = raw.enabled === true;
+    prefs.hideDetails = raw.hideDetails === true;
+    prefs.tasks.lead = PUSH_TASK_LEADS.indexOf(Number(prefs.tasks.lead)) >= 0 ? Number(prefs.tasks.lead) : PUSH_DEFAULT_PREFS.tasks.lead;
+    prefs.bills.when = prefs.bills.when === "eve" ? "eve" : "day";
+    return prefs;
+  }
+
+  function savePushPrefs(prefs) {
+    var state = ensureStateShape(loadState());
+    state.data.pushPrefs = deepClone(prefs);
+    window.SoterStorage.save(state);
+  }
+
+  // ── Agenda ───────────────────────────────────────────────────────────
+  function pushAddDays(dateStr, days) {
+    var date = new Date(String(dateStr).slice(0, 10) + "T12:00:00");
+    date.setDate(date.getDate() + days);
+    return getLocalIsoDate(date);
+  }
+
+  function pushAt(dateStr, time) {
+    var minutes = parseTaskClockMinutes(time);
+    var parts = String(dateStr || "").slice(0, 10).split("-").map(Number);
+    if (minutes === null || parts.length !== 3 || !parts[0]) return NaN;
+    return new Date(parts[0], parts[1] - 1, parts[2], Math.floor(minutes / 60), minutes % 60, 0, 0).getTime();
+  }
+
+  function pushId(parts) {
+    return parts.join("_").replace(/[^A-Za-z0-9_-]/g, "-").slice(0, 150);
+  }
+
+  function pushText(value, max) {
+    var text = String(value == null ? "" : value).replace(/\s+/g, " ").trim();
+    return text.length > max ? text.slice(0, max - 1) + "…" : text;
+  }
+
+  function pushMoney(value) {
+    return "R$ " + (Number(value) || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function pushDayLabel(dateStr, today) {
+    var diff = Math.round((new Date(dateStr + "T12:00:00") - new Date(today + "T12:00:00")) / 86400000);
+    if (diff === 0) return "hoje";
+    if (diff === 1) return "amanhã";
+    return "dia " + dateStr.slice(8, 10) + "/" + dateStr.slice(5, 7);
+  }
+
+  // saídas (contas) que caem entre from e to: lançamentos únicos, mensais, semanais e regras
+  function pushBillsBetween(state, from, to) {
+    var out = [];
+    getFinanceTxs(state).forEach(function (tx) {
+      if (!tx || tx.type !== "out" || !tx.date || !(Number(tx.value) > 0)) return;
+      var base = String(tx.date).slice(0, 10);
+      if (tx.recurrence === "monthly") {
+        var parts = base.split("-").map(Number);
+        var y = parts[0];
+        var m = parts[1] - 1;
+        for (var guard = 0; guard < 600; guard += 1) {
+          var last = new Date(y, m + 1, 0).getDate();
+          var date = financeDateStr(y, m, Math.min(parts[2], last));
+          if (date > to) break;
+          if (date >= from) out.push({ date: date, name: tx.description || tx.category, value: tx.value });
+          m += 1;
+          if (m > 11) { m = 0; y += 1; }
+        }
+      } else if (tx.recurrence === "weekly") {
+        var cur = new Date(base + "T12:00:00");
+        for (var g = 0; g < 2000; g += 1) {
+          var weekly = getLocalIsoDate(cur);
+          if (weekly > to) break;
+          if (weekly >= from) out.push({ date: weekly, name: tx.description || tx.category, value: tx.value });
+          cur.setDate(cur.getDate() + 7);
+        }
+      } else if (base >= from && base <= to) {
+        out.push({ date: base, name: tx.description || tx.category, value: tx.value });
+      }
+    });
+    var start = new Date(from + "T12:00:00");
+    var end = new Date(to + "T12:00:00");
+    getFinanceRules(state).forEach(function (rule) {
+      if (!rule || rule.type !== "out" || !rule.startDate || !(Number(rule.value) > 0)) return;
+      var seen = {};
+      // o ajuste para dia útil pode jogar a data para o mês vizinho: olha um mês antes e um depois
+      for (var cursor = new Date(start.getFullYear(), start.getMonth() - 1, 1); cursor <= new Date(end.getFullYear(), end.getMonth() + 1, 1); cursor.setMonth(cursor.getMonth() + 1)) {
+        var date = financeRuleDate(rule, cursor.getFullYear(), cursor.getMonth());
+        if (seen[date] || date < from || date > to || date < rule.startDate) continue;
+        seen[date] = true;
+        out.push({ date: date, name: rule.description || rule.name, value: rule.value });
+      }
+    });
+    return out;
+  }
+
+  function pushGymExercisesFor(gymState, dateStr) {
+    var dow = new Date(dateStr + "T12:00:00").getDay();
+    var trainDays = gymState.profile && Array.isArray(gymState.profile.trainDays) ? gymState.profile.trainDays.map(Number) : [];
+    if (trainDays.indexOf(dow) < 0) return [];
+    return (Array.isArray(gymState.exercises) ? gymState.exercises : []).filter(function (exercise) {
+      return Array.isArray(exercise && exercise.days) && exercise.days.map(Number).indexOf(dow) >= 0;
+    });
+  }
+
+  // keepIds: lembretes já gravados que podem estar passando da hora agora (o envio roda a cada
+  // ~10 minutos); continuam na agenda até 3 h depois para não sumirem antes de serem enviados.
+  function buildPushReminders(state, prefs, nowMs, keepIds) {
+    var list = [];
+    var keep = keepIds || {};
+    var today = getLocalIsoDate(new Date(nowMs));
+    var lastDay = pushAddDays(today, PUSH_HORIZON_DAYS);
+    var maxAt = nowMs + (PUSH_HORIZON_DAYS + 1) * 86400000;
+    var days = [];
+    for (var i = 0; i <= PUSH_HORIZON_DAYS; i += 1) days.push(pushAddDays(today, i));
+
+    function add(kind, reminder) {
+      if (!Number.isFinite(reminder.at) || reminder.at > maxAt) return;
+      if (reminder.at < nowMs && !(keep[reminder.id] && reminder.at >= nowMs - PUSH_KEEP_SENT_MS)) return;
+      if (prefs.hideDetails) {
+        reminder.title = "Lembrete: " + kind;
+        reminder.body = "Abra o Sól de Sóter para ver.";
+      }
+      reminder.title = pushText(reminder.title, 90);
+      reminder.body = pushText(reminder.body, 200);
+      list.push(reminder);
+    }
+
+    if (prefs.tasks.on) {
+      getTasks(state).forEach(function (task) {
+        if (!task || task.done || !task.data || parseTaskClockMinutes(task.hora) === null) return;
+        var date = String(task.data).slice(0, 10);
+        if (date < today || date > lastDay) return;
+        var hora = String(task.hora).slice(0, 5);
+        var bits = ["Às " + hora];
+        if (prefs.tasks.lead) bits.push(prefs.tasks.lead >= 60 ? "em " + (prefs.tasks.lead / 60) + " h" : "em " + prefs.tasks.lead + " min");
+        if (task.cat) bits.push(task.cat);
+        add("tarefa", {
+          id: pushId(["t", task.id, date, hora.replace(":", "")]),
+          at: pushAt(date, hora) - prefs.tasks.lead * 60000,
+          title: task.nome || "Tarefa",
+          body: bits.join(" · "),
+          url: "tarefas.html",
+          tag: pushId(["task", task.id])
+        });
+      });
+    }
+
+    if (prefs.review.on) {
+      var planner = getReviewPlanner(state);
+      var fresh = planner.cards.filter(function (card) { return card && !card.nextDue; }).length;
+      days.forEach(function (day) {
+        var due = planner.cards.filter(function (card) { return card && card.nextDue && card.nextDue <= day; }).length;
+        var count = due + Math.min(fresh, 20);
+        if (!count) return;
+        add("revisão", {
+          id: pushId(["rv", day]),
+          at: pushAt(day, prefs.review.time),
+          title: "Revisão",
+          body: count + " card" + (count === 1 ? "" : "s") + " para revisar " + (day === today ? "hoje" : "nesse dia") + ".",
+          url: "revisao.html",
+          tag: "review"
+        });
+      });
+    }
+
+    if (prefs.bills.on) {
+      var byDay = {};
+      pushBillsBetween(state, today, pushAddDays(lastDay, 1)).forEach(function (bill) {
+        (byDay[bill.date] = byDay[bill.date] || []).push(bill);
+      });
+      Object.keys(byDay).forEach(function (date) {
+        var bills = byDay[date];
+        var when = prefs.bills.when === "eve" ? pushAddDays(date, -1) : date;
+        var names = bills.slice(0, 3).map(function (bill) { return pushText(bill.name || "Conta", 30) + " " + pushMoney(bill.value); });
+        if (bills.length > 3) names.push("e mais " + (bills.length - 3));
+        add("contas", {
+          id: pushId(["bl", date, prefs.bills.when]),
+          at: pushAt(when, prefs.bills.time),
+          title: (bills.length === 1 ? "Conta " : "Contas ") + (prefs.bills.when === "eve" ? "de amanhã" : "de hoje"),
+          body: names.join(", "),
+          url: "financas.html",
+          tag: pushId(["bills", date])
+        });
+      });
+    }
+
+    if (prefs.gym.on) {
+      var gymState = state.data.academiaTracker && typeof state.data.academiaTracker === "object" ? state.data.academiaTracker : {};
+      var doneByDate = gymState.todayDoneByDate && typeof gymState.todayDoneByDate === "object" ? gymState.todayDoneByDate : {};
+      var skipped = gymState.skippedByDate && typeof gymState.skippedByDate === "object" ? gymState.skippedByDate : {};
+      days.forEach(function (day) {
+        var exercises = pushGymExercisesFor(gymState, day);
+        if (!exercises.length || skipped[day]) return;
+        var doneMap = doneByDate[day] && typeof doneByDate[day] === "object" ? doneByDate[day] : {};
+        if (exercises.every(function (exercise) { return !!doneMap[exercise.id]; })) return;
+        add("treino", {
+          id: pushId(["gy", day]),
+          at: pushAt(day, prefs.gym.time),
+          title: "Treino de hoje",
+          body: exercises.length + " exercício" + (exercises.length === 1 ? "" : "s") + ": " +
+            exercises.slice(0, 3).map(function (exercise) { return exercise.name; }).join(", ") + (exercises.length > 3 ? "…" : ""),
+          url: "academia.html",
+          tag: "gym"
+        });
+      });
+    }
+
+    if (prefs.abandon.on) {
+      [
+        { tracker: "livros", items: getLivros(state) },
+        { tracker: "cinema", items: getCinema(state) },
+        { tracker: "mangas", items: getMangas(state) }
+      ].forEach(function (entry) {
+        (entry.items || []).forEach(function (item) {
+          var actives = ABANDON_ACTIVE_STATUSES[entry.tracker] || {};
+          if (!item || !actives[norm(item.status)]) return;
+          var lastTouch = getTrackerLastTouch(item);
+          if (!lastTouch) return;
+          var touchDay = getLocalIsoDate(new Date(lastTouch));
+          var label = entry.tracker === "cinema" && isSeriesType(item) ? "Séries" : ABANDON_TRACKER_LABELS[entry.tracker];
+          PUSH_ABANDON_DAYS.forEach(function (n) {
+            var day = pushAddDays(touchDay, n);
+            if (day < today || day > lastDay) return;
+            add("leitura", {
+              id: pushId(["ab", entry.tracker, item.id, n]),
+              at: pushAt(day, prefs.abandon.time),
+              title: label + ": “" + pushText(getTrackerItemTitle(item, entry.tracker), 50) + "” parado há " + n + " dias",
+              body: "Que tal retomar hoje? Um pouco já mantém o ritmo.",
+              url: entry.tracker + ".html",
+              tag: pushId(["abandon", entry.tracker, item.id])
+            });
+          });
+        });
+      });
+    }
+
+    if (prefs.travel.on) {
+      getViagens(state).forEach(function (trip) {
+        var start = String(trip && (trip.startDate || trip.dataInicio || trip.start) || "").slice(0, 10);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || isVisitedViagem(trip)) return;
+        var place = pushText(trip.destination || trip.destino || trip.nome || "sua viagem", 50);
+        PUSH_TRAVEL_DAYS.forEach(function (n) {
+          var day = pushAddDays(start, -n);
+          if (day < today || day > lastDay) return;
+          add("viagem", {
+            id: pushId(["tv", trip.id, start, n]),
+            at: pushAt(day, prefs.travel.time),
+            title: n === 0 ? "Viagem hoje: " + place : n === 1 ? "Viagem amanhã: " + place : "Viagem em " + n + " dias: " + place,
+            body: n === 0 ? "Boa viagem!" : "Confira roteiro, documentos e orçamento.",
+            url: "viagens.html",
+            tag: pushId(["travel", trip.id])
+          });
+        });
+      });
+    }
+
+    list.sort(function (a, b) { return a.at - b.at || (a.id < b.id ? -1 : 1); });
+    return list.slice(0, PUSH_MAX_REMINDERS);
+  }
+
+  // ── Firestore e inscrição do aparelho ──────────────────────────────────
+  function pushScheduleRef(uid) { return firebaseDbInstance.collection(PUSH_COLLECTION).doc(String(uid)); }
+  function pushDevicesRef(uid) { return pushScheduleRef(uid).collection("devices"); }
+
+  function readPushOwner() {
+    try {
+      var owner = JSON.parse(localStorage.getItem(PUSH_OWNER_KEY) || "null");
+      return owner && typeof owner === "object"
+        ? { uid: String(owner.uid || ""), device: String(owner.device || ""), seen: Number(owner.seen || 0) }
+        : { uid: "", device: "", seen: 0 };
+    } catch (err) { return { uid: "", device: "", seen: 0 }; }
+  }
+
+  // o service worker lê o dono no cache "soter-push" (o localStorage não existe lá)
+  function writePushOwner(uid, device) {
+    try {
+      if (uid) localStorage.setItem(PUSH_OWNER_KEY, JSON.stringify({ uid: uid, device: device || "", seen: Date.now() }));
+      else localStorage.removeItem(PUSH_OWNER_KEY);
+    } catch (err) { }
+    if (!window.caches) return Promise.resolve();
+    return window.caches.open("soter-push").then(function (cache) {
+      return uid ? cache.put("./__push_owner", new Response(uid)) : cache.delete("./__push_owner");
+    }).catch(function () { });
+  }
+
+  function getPushRegistration() {
+    if (!("serviceWorker" in navigator)) return Promise.resolve(null);
+    return navigator.serviceWorker.getRegistration().then(function (reg) {
+      return reg || navigator.serviceWorker.register("sw.js");
+    }).then(function () {
+      return navigator.serviceWorker.ready;
+    }).catch(function () { return null; });
+  }
+
+  function getPushSubscription() {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return Promise.resolve(null);
+    return navigator.serviceWorker.getRegistration().then(function (reg) {
+      return reg && reg.pushManager ? reg.pushManager.getSubscription() : null;
+    }).catch(function () { return null; });
+  }
+
+  function pushKeyBytes(base64url) {
+    var base64 = (base64url + "===".slice((base64url.length + 3) % 4)).replace(/-/g, "+").replace(/_/g, "/");
+    var raw = window.atob(base64);
+    var bytes = new Uint8Array(raw.length);
+    for (var i = 0; i < raw.length; i += 1) bytes[i] = raw.charCodeAt(i);
+    return bytes;
+  }
+
+  function pushSameKey(subscription, keyBytes) {
+    var current = subscription && subscription.options && subscription.options.applicationServerKey;
+    if (!current) return true;
+    var a = new Uint8Array(current);
+    if (a.length !== keyBytes.length) return false;
+    for (var i = 0; i < a.length; i += 1) if (a[i] !== keyBytes[i]) return false;
+    return true;
+  }
+
+  function pushDeviceId(endpoint) {
+    var data = new TextEncoder().encode(String(endpoint));
+    return window.crypto.subtle.digest("SHA-256", data).then(function (hash) {
+      return Array.prototype.map.call(new Uint8Array(hash), function (b) { return ("0" + b.toString(16)).slice(-2); }).join("").slice(0, 40);
+    });
+  }
+
+  function pushDeviceLabel() {
+    var ua = String(navigator.userAgent || "");
+    var system = /Android/.test(ua) ? "Android" : isIosDevice() ? "iPhone/iPad" : /Windows/.test(ua) ? "Windows" : /Mac OS X/.test(ua) ? "Mac" : /Linux/.test(ua) ? "Linux" : "Outro";
+    var browser = /Edg\//.test(ua) ? "Edge" : /Firefox\//.test(ua) ? "Firefox" : /Chrome\//.test(ua) ? "Chrome" : /Safari\//.test(ua) ? "Safari" : "Navegador";
+    return system + " · " + browser;
+  }
+
+  function savePushDevice(uid, subscription) {
+    var json = subscription.toJSON ? subscription.toJSON() : subscription;
+    var keys = json && json.keys ? { p256dh: String(json.keys.p256dh || ""), auth: String(json.keys.auth || "") } : {};
+    return pushDeviceId(json.endpoint).then(function (deviceId) {
+      var now = Date.now();
+      return pushDevicesRef(uid).doc(deviceId).set({
+        endpoint: String(json.endpoint),
+        keys: keys,
+        ua: pushDeviceLabel(),
+        createdAt: now,
+        lastSeen: now
+      }, { merge: true }).then(function () { return deviceId; });
+    });
+  }
+
+  function isPushActiveHere() {
+    var uid = firebaseCurrentUser ? String(firebaseCurrentUser.uid || "") : "";
+    return !!uid && readPushOwner().uid === uid;
+  }
+
+  function enablePushOnThisDevice() {
+    var uid = firebaseCurrentUser ? String(firebaseCurrentUser.uid || "") : "";
+    if (!uid || !firebaseDbInstance) return Promise.reject(new Error("not_signed_in"));
+    if (getPushSupport() !== "ok") return Promise.reject(new Error(getPushSupport()));
+    var keyBytes = pushKeyBytes(getPushPublicKey());
+    var owner = readPushOwner();
+    return Promise.resolve(window.Notification.requestPermission()).then(function (permission) {
+      if (permission !== "granted") throw new Error("denied");
+      return getPushRegistration();
+    }).then(function (reg) {
+      if (!reg || !reg.pushManager) throw new Error("unsupported");
+      return reg.pushManager.getSubscription().then(function (current) {
+        // inscrição de outra conta ou de outra chave: cancela e faz uma nova
+        if (current && (owner.uid !== uid || !pushSameKey(current, keyBytes))) {
+          return current.unsubscribe().then(function () { return null; }, function () { return null; });
+        }
+        return current;
+      }).then(function (current) {
+        return current || reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes });
+      });
+    }).then(function (subscription) {
+      return savePushDevice(uid, subscription);
+    }).then(function (deviceId) {
+      return writePushOwner(uid, deviceId);
+    }).then(function () {
+      var prefs = getPushPrefs(ensureStateShape(loadState()));
+      if (!prefs.enabled) {
+        prefs.enabled = true;
+        savePushPrefs(prefs);
+      }
+      return refreshPushSchedule(true);
+    });
+  }
+
+  // cancela a inscrição deste aparelho; com a conta ainda logada, apaga também o registro dele
+  function disablePushOnThisDevice(options) {
+    var opts = options || {};
+    var owner = readPushOwner();
+    var uid = firebaseCurrentUser ? String(firebaseCurrentUser.uid || "") : "";
+    var removeDoc = owner.device && owner.uid && owner.uid === uid && firebaseDbInstance
+      ? pushDevicesRef(uid).doc(owner.device).delete().catch(function () { return null; })
+      : Promise.resolve(null);
+    return removeDoc.then(function () {
+      return getPushSubscription();
+    }).then(function (subscription) {
+      return subscription ? subscription.unsubscribe().catch(function () { return false; }) : false;
+    }).then(function () {
+      return writePushOwner("", "");
+    }).then(function () {
+      if (opts.keepSchedule || !uid || !firebaseDbInstance) return null;
+      // sem nenhum aparelho ativo na conta: a agenda fica vazia
+      return pushDevicesRef(uid).get().then(function (snap) {
+        if (!snap.empty) return null;
+        var prefs = getPushPrefs(ensureStateShape(loadState()));
+        if (prefs.enabled) { prefs.enabled = false; savePushPrefs(prefs); }
+        return refreshPushSchedule(true);
+      }).catch(function () { return null; });
+    });
+  }
+
+  // sem internet o Firestore só confirma quando voltar: a saída da conta não espera mais que isso
+  function pushWithTimeout(promise, ms) {
+    return Promise.race([promise, new Promise(function (resolve) { setTimeout(resolve, ms); })]);
+  }
+
+  // saída da conta (logout ou exclusão): chamado antes do signOut, com a conta ainda logada
+  function pushCleanupBeforeSignOut(uid, deleteAccount) {
+    if (!uid) return Promise.resolve();
+    var work = pushWithTimeout(disablePushOnThisDevice({ keepSchedule: true }), 5000).then(function () {
+      // a inscrição e o dono saem mesmo se a rede não respondeu
+      return getPushSubscription().then(function (subscription) {
+        return subscription ? subscription.unsubscribe().catch(function () { return false; }) : false;
+      }).then(function () { return writePushOwner("", ""); });
+    });
+    if (deleteAccount && firebaseDbInstance) {
+      work = work.then(function () {
+        return pushDevicesRef(uid).get().then(function (snap) {
+          return Promise.all(snap.docs.map(function (doc) { return doc.ref.delete(); }));
+        }).then(function () {
+          return pushScheduleRef(uid).delete();
+        });
+      });
+    }
+    try { localStorage.removeItem(PUSH_SCHED_KEY_PREFIX + uid); localStorage.removeItem(PUSH_TEST_KEY_PREFIX + uid); } catch (err) { }
+    return pushWithTimeout(work.catch(function () { return null; }), 12000);
+  }
+
+  // a cada carregamento e troca de conta: a inscrição deste aparelho tem de ser da conta logada
+  function checkPushOwner() {
+    var owner = readPushOwner();
+    var uid = firebaseCurrentUser ? String(firebaseCurrentUser.uid || "") : "";
+    if (!owner.uid) {
+      // sem dono registrado: nenhuma inscrição deve sobrar (ex.: dados do site apagados)
+      return getPushSubscription().then(function (subscription) {
+        if (subscription) return subscription.unsubscribe().catch(function () { return false; });
+        return writePushOwner("", "");
+      });
+    }
+    if (owner.uid !== uid) {
+      // saiu ou outra conta entrou: os avisos da conta anterior param aqui
+      return getPushSubscription().then(function (subscription) {
+        return subscription ? subscription.unsubscribe().catch(function () { return false; }) : false;
+      }).then(function () { return writePushOwner("", ""); });
+    }
+    return getPushSubscription().then(function (subscription) {
+      if (!subscription) {
+        // permissão retirada nas configurações do navegador: o registro do aparelho sai também
+        if (owner.device && firebaseDbInstance) pushDevicesRef(uid).doc(owner.device).delete().catch(function () { });
+        return writePushOwner("", "");
+      }
+      return pushDeviceId(subscription.endpoint).then(function (deviceId) {
+        // mesma inscrição, já confirmada hoje: nada a gravar
+        if (deviceId === owner.device && Date.now() - owner.seen < 86400000) return null;
+        // o navegador pode renovar a inscrição: grava a nova e apaga a antiga
+        if (deviceId !== owner.device && owner.device) pushDevicesRef(uid).doc(owner.device).delete().catch(function () { });
+        return savePushDevice(uid, subscription).then(function (savedId) { return writePushOwner(uid, savedId); });
+      });
+    }).catch(function () { return null; });
+  }
+
+  function readPushSchedMeta(uid) {
+    try {
+      var meta = JSON.parse(localStorage.getItem(PUSH_SCHED_KEY_PREFIX + uid) || "null");
+      return meta && typeof meta === "object" ? meta : {};
+    } catch (err) { return {}; }
+  }
+
+  function refreshPushSchedule(force) {
+    if (!firebaseDbInstance || !firebaseCurrentUser || !getPushPublicKey()) return Promise.resolve(false);
+    var uid = String(firebaseCurrentUser.uid || "");
+    // estado de outra conta (ainda trocando) ou saindo: não grava a agenda de ninguém
+    if (!uid || runtimeStateOwner !== uid || authExitInProgress || readLogoutPurgeUid() === uid) return Promise.resolve(false);
+    var state = ensureStateShape(loadState());
+    var prefs = getPushPrefs(state);
+    var meta = readPushSchedMeta(uid);
+    if (!prefs.enabled && !meta.count && !force) return Promise.resolve(false);
+    var now = Date.now();
+    var keep = {};
+    (meta.ids || []).forEach(function (id) { keep[id] = true; });
+    var reminders = prefs.enabled ? buildPushReminders(state, prefs, now, keep) : [];
+    var testAt = 0;
+    try { testAt = Number(localStorage.getItem(PUSH_TEST_KEY_PREFIX + uid) || 0); } catch (err) { }
+    if (prefs.enabled && testAt && testAt > now - PUSH_KEEP_SENT_MS) {
+      reminders.unshift({ id: "test_" + testAt, at: testAt, title: "Teste do Sól de Sóter", body: "Os lembretes estão chegando neste aparelho.", url: "tarefas.html", tag: "test" });
+    }
+    var signature = JSON.stringify(reminders);
+    if (!force && meta.sig === signature && now - Number(meta.at || 0) < PUSH_REWRITE_MS) return Promise.resolve(false);
+    var nextAt = reminders.length ? Math.min.apply(null, reminders.map(function (r) { return r.at; })) : null;
+    return pushScheduleRef(uid).set({ v: 1, reminders: reminders, nextAt: nextAt, updatedAt: now }, { merge: true }).then(function () {
+      try {
+        localStorage.setItem(PUSH_SCHED_KEY_PREFIX + uid, JSON.stringify({
+          sig: signature, at: now, count: reminders.length, ids: reminders.map(function (r) { return r.id; })
+        }));
+      } catch (err) { }
+      return true;
+    }).catch(function (err) {
+      console.warn("[Lembretes] Falha ao gravar a agenda:", err && err.message ? err.message : err);
+      return false;
+    });
+  }
+
+  function schedulePushRefresh(delay) {
+    if (!getPushPublicKey()) return;
+    if (pushRefreshTimer) clearTimeout(pushRefreshTimer);
+    pushRefreshTimer = setTimeout(function () {
+      pushRefreshTimer = 0;
+      if (pushRefreshRunning) return;
+      pushRefreshRunning = refreshPushSchedule(false).then(function () { pushRefreshRunning = null; }, function () { pushRefreshRunning = null; });
+    }, delay == null ? 4000 : delay);
+  }
+
+  function sendPushTest() {
+    var uid = firebaseCurrentUser ? String(firebaseCurrentUser.uid || "") : "";
+    if (!uid) return Promise.reject(new Error("not_signed_in"));
+    try { localStorage.setItem(PUSH_TEST_KEY_PREFIX + uid, String(Date.now())); } catch (err) { }
+    return getPushRegistration().then(function (reg) {
+      if (reg && reg.showNotification && window.Notification && window.Notification.permission === "granted") {
+        return reg.showNotification("Sól de Sóter", {
+          body: "Notificações funcionando neste aparelho. O teste pelo servidor chega em até ~10 minutos.",
+          icon: "img/icon-192.png",
+          tag: "soter-test-local"
+        });
+      }
+      return null;
+    }).then(function () { return refreshPushSchedule(true); });
+  }
+
+  // ── Painel "Lembretes no celular" ────────────────────────────────────
+  var PUSH_TYPE_LABELS = {
+    tasks: ["Tarefas com horário", "Aviso antes da hora marcada na tarefa."],
+    review: ["Cards da Revisão", "Um aviso no dia em que há cards para revisar."],
+    bills: ["Contas das Finanças", "Saídas agendadas e recorrentes."],
+    gym: ["Treino do dia", "Nos dias de treino, se ainda não foi concluído."],
+    abandon: ["Ante-abandono", "Livros, séries e mangás parados há 7, 14 e 30 dias."],
+    travel: ["Viagens se aproximando", "7 dias antes, na véspera e no dia."]
+  };
+
+  function pushTimeSelect(id, value) {
+    var options = [];
+    for (var h = 6; h <= 23; h += 1) {
+      ["00", "30"].forEach(function (mm) {
+        var t = String(h).padStart(2, "0") + ":" + mm;
+        options.push('<option value="' + t + '"' + (t === value ? " selected" : "") + ">" + t + "</option>");
+      });
+    }
+    if (options.join("").indexOf('value="' + value + '"') < 0) options.unshift('<option value="' + value + '" selected>' + value + "</option>");
+    return '<select class="push-select" id="' + id + '" aria-label="Horário">' + options.join("") + "</select>";
+  }
+
+  function pushTypeControls(type, prefs) {
+    var p = prefs[type];
+    if (type === "tasks") {
+      return '<select class="push-select" id="push-tasks-lead" aria-label="Antecedência">' + PUSH_TASK_LEADS.map(function (lead) {
+        var label = lead === 0 ? "Na hora" : lead >= 60 ? (lead / 60) + " h antes" : lead + " min antes";
+        return '<option value="' + lead + '"' + (lead === p.lead ? " selected" : "") + ">" + label + "</option>";
+      }).join("") + "</select>";
+    }
+    var extra = type === "bills"
+      ? '<select class="push-select" id="push-bills-when" aria-label="Quando"><option value="day"' + (p.when === "day" ? " selected" : "") + '>No dia</option><option value="eve"' + (p.when === "eve" ? " selected" : "") + ">Na véspera</option></select>"
+      : "";
+    return extra + pushTimeSelect("push-" + type + "-time", p.time);
+  }
+
+  function renderPushModal() {
+    var body = document.getElementById("push-modal-body");
+    if (!body) return;
+    var state = ensureStateShape(loadState());
+    var prefs = getPushPrefs(state);
+    var support = getPushSupport();
+    var signedIn = !!firebaseCurrentUser;
+    var active = isPushActiveHere();
+    var status;
+    var actions = "";
+    if (!signedIn) status = "Entre na sua conta para ativar os lembretes.";
+    else if (support === "ios-install") status = "No iPhone e no iPad os lembretes funcionam com o site instalado: toque em Compartilhar → “Adicionar à Tela de Início” e abra o Sól de Sóter por lá.";
+    else if (support === "unsupported") status = "Este navegador não recebe notificações.";
+    else if (support === "denied") status = "As notificações deste site estão bloqueadas nas configurações do navegador. Libere por lá e volte aqui.";
+    else if (active) {
+      status = "Ativado neste aparelho.";
+      actions = '<button type="button" class="push-btn" id="push-test-btn"><i class="ico ico-send" aria-hidden="true"></i> Enviar teste</button>' +
+        '<button type="button" class="push-btn push-btn-ghost" id="push-disable-btn">Desativar neste aparelho</button>';
+    } else {
+      status = "Este aparelho ainda não recebe lembretes.";
+      actions = '<button type="button" class="push-btn push-btn-primary" id="push-enable-btn"><i class="ico ico-bell-ring" aria-hidden="true"></i> Ativar neste aparelho</button>';
+    }
+    var rows = PUSH_TYPES.map(function (type) {
+      var label = PUSH_TYPE_LABELS[type];
+      return '<div class="push-row">' +
+        '<label class="push-check"><input type="checkbox" id="push-' + type + '-on"' + (prefs[type].on ? " checked" : "") + '>' +
+        '<span><strong>' + label[0] + "</strong><em>" + label[1] + "</em></span></label>" +
+        '<div class="push-row-ctrl">' + pushTypeControls(type, prefs) + "</div></div>";
+    }).join("");
+    body.innerHTML =
+      '<div class="push-status' + (active ? " is-on" : "") + '"><i class="ico ' + (active ? "ico-bell-ring" : "ico-bell-off") + '" aria-hidden="true"></i><div><p id="push-status-text">' + status + '</p><p class="push-devices" id="push-devices"></p></div></div>' +
+      (actions ? '<div class="push-actions">' + actions + "</div>" : "") +
+      '<p class="push-msg" id="push-msg" role="status"></p>' +
+      '<h3 class="push-sub">O que avisar</h3>' + rows +
+      '<label class="push-check push-privacy"><input type="checkbox" id="push-hide"' + (prefs.hideDetails ? " checked" : "") + '><span><strong>Esconder detalhes na tela bloqueada</strong><em>Mostra só “Lembrete: tarefa”, sem nome nem valores.</em></span></label>' +
+      '<p class="push-note">Os avisos saem a cada ~10 minutos, então podem chegar alguns minutos depois do horário. As escolhas valem para todos os aparelhos ativados nesta conta.</p>';
+    if (signedIn && firebaseDbInstance) {
+      pushDevicesRef(firebaseCurrentUser.uid).get().then(function (snap) {
+        var el = document.getElementById("push-devices");
+        if (el) el.textContent = snap.size ? "Aparelhos ativados nesta conta: " + snap.size + "." : "Nenhum aparelho ativado nesta conta.";
+      }).catch(function () { });
+    }
+  }
+
+  function pushMessage(text) {
+    var el = document.getElementById("push-msg");
+    if (el) el.textContent = text || "";
+  }
+
+  function pushErrorText(err) {
+    var code = err && err.message ? err.message : "";
+    if (code === "denied") return "Permissão negada. Libere as notificações deste site nas configurações do navegador.";
+    if (code === "not_signed_in") return "Entre na sua conta para ativar.";
+    if (code === "ios-install") return "Instale o site na Tela de Início para receber lembretes no iPhone.";
+    return "Não foi possível concluir. Tente de novo em instantes.";
+  }
+
+  function readPushPrefsFromModal() {
+    var prefs = getPushPrefs(ensureStateShape(loadState()));
+    PUSH_TYPES.forEach(function (type) {
+      var on = document.getElementById("push-" + type + "-on");
+      if (on) prefs[type].on = on.checked;
+      var time = document.getElementById("push-" + type + "-time");
+      if (time) prefs[type].time = pushValidTime(time.value, prefs[type].time);
+    });
+    var lead = document.getElementById("push-tasks-lead");
+    if (lead) prefs.tasks.lead = Number(lead.value);
+    var when = document.getElementById("push-bills-when");
+    if (when) prefs.bills.when = when.value === "eve" ? "eve" : "day";
+    var hide = document.getElementById("push-hide");
+    if (hide) prefs.hideDetails = hide.checked;
+    return prefs;
+  }
+
+  function mountPushModal() {
+    if (pushModalMounted || !document.body) return;
+    pushModalMounted = true;
+    var wrap = document.createElement("div");
+    wrap.className = "push-modal";
+    wrap.id = "push-modal";
+    wrap.setAttribute("role", "dialog");
+    wrap.setAttribute("aria-modal", "true");
+    wrap.setAttribute("aria-labelledby", "push-modal-title");
+    wrap.innerHTML =
+      '<div class="push-modal-bd" data-push-close></div>' +
+      '<div class="push-modal-card">' +
+      '  <div class="push-modal-head"><h2 id="push-modal-title"><i class="ico ico-bell-ring" aria-hidden="true"></i> Lembretes no celular</h2>' +
+      '  <button type="button" class="push-modal-close" id="push-modal-close" data-close aria-label="Fechar"><i class="ico ico-x" aria-hidden="true"></i></button></div>' +
+      '  <div class="push-modal-body" id="push-modal-body"></div>' +
+      "</div>";
+    document.body.appendChild(wrap);
+    wrap.addEventListener("click", function (event) {
+      var target = event.target;
+      if (target.closest("[data-push-close], #push-modal-close")) { closePushModal(); return; }
+      var button = target.closest("button");
+      if (!button) return;
+      if (button.id === "push-enable-btn") {
+        button.disabled = true;
+        pushMessage("Ativando…");
+        enablePushOnThisDevice().then(function () {
+          renderPushModal();
+          pushMessage("Pronto! Este aparelho vai receber os lembretes.");
+        }, function (err) {
+          renderPushModal();
+          pushMessage(pushErrorText(err));
+        });
+      } else if (button.id === "push-disable-btn") {
+        button.disabled = true;
+        disablePushOnThisDevice().then(function () {
+          renderPushModal();
+          pushMessage("Desativado neste aparelho.");
+        });
+      } else if (button.id === "push-test-btn") {
+        button.disabled = true;
+        sendPushTest().then(function () {
+          button.disabled = false;
+          pushMessage("Teste enviado: um aviso agora, deste aparelho, e outro pelo servidor em até ~10 minutos.");
+        }, function (err) {
+          button.disabled = false;
+          pushMessage(pushErrorText(err));
+        });
+      }
+    });
+    wrap.addEventListener("change", function () {
+      savePushPrefs(readPushPrefsFromModal());
+      schedulePushRefresh(800);
+      pushMessage("Preferências salvas.");
+    });
+  }
+
+  function openPushModal() {
+    mountPushModal();
+    renderPushModal();
+    var modal = document.getElementById("push-modal");
+    if (!modal) return;
+    modal.classList.add("open");
+    document.body.classList.add("push-modal-open");
+    var close = document.getElementById("push-modal-close");
+    if (close) close.focus();
+  }
+
+  function closePushModal() {
+    var modal = document.getElementById("push-modal");
+    if (modal) modal.classList.remove("open");
+    document.body.classList.remove("push-modal-open");
+  }
+
+  function initPushReminders() {
+    if (!getPushPublicKey()) return;
+    // para conferir no console o que seria agendado: SoterPush.preview()
+    window.SoterPush = {
+      open: openPushModal,
+      preview: function (nowMs) {
+        var state = ensureStateShape(loadState());
+        return buildPushReminders(state, getPushPrefs(state), Number(nowMs) || Date.now(), {});
+      }
+    };
+    Array.prototype.forEach.call(document.querySelectorAll("[data-open-push]"), function (el) {
+      el.hidden = false;
+      el.addEventListener("click", function (event) {
+        event.preventDefault();
+        // aberto pela gaveta do celular: fecha a gaveta antes
+        var drawerClose = document.getElementById("header-mobile-close");
+        if (el.closest(".header-mobile-drawer") && drawerClose) drawerClose.click();
+        openPushModal();
+      });
+    });
+    window.addEventListener("soter:firebase-auth-changed", function () {
+      checkPushOwner().then(function () { schedulePushRefresh(2500); });
+    });
+    window.addEventListener("soter:storage-hydrated", function () { schedulePushRefresh(2500); });
+    window.addEventListener("soter:remote-state-applied", function () { schedulePushRefresh(); });
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "visible") schedulePushRefresh(2500);
+    });
+  }
+
   renderHeader();
   renderFooter();
   syncScrollbarCompensation();
@@ -7136,6 +7967,7 @@ window.SoterUtils = window.SoterUtils || (function () {
   startTaskTimeReminderWatcher();
   tryHydrateFromFile();
   initFirebaseSync().catch(function () { });
+  initPushReminders();
 }());
 
 window.createLiquidBar = function (canvas, opts) {

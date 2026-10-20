@@ -1,0 +1,16 @@
+{
+  "name": "Sól de Sóter",
+  "short_name": "Sól de Sóter",
+  "description": "Planejamento pessoal: tarefas, finanças, estudos, leituras e mais.",
+  "lang": "pt-BR",
+  "start_url": "./apresentacao.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#04040c",
+  "theme_color": "#04040c",
+  "icons": [
+    { "src": "img/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "img/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "img/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

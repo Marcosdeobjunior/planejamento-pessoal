@@ -50,5 +50,32 @@ service cloud.firestore {
 
     // Subcoleções mais fundas não são usadas: nenhuma regra as libera (tudo o que não casa
     // com uma regra é negado).
+
+    // Lembretes no celular (docs/LEMBRETES.md). A agenda é calculada pelo site e lida pelo
+    // envio (GitHub Actions, com conta de serviço, que não passa por estas regras).
+    // "sent" e "lastRunAt" são do envio: o site não grava neles.
+    match /pushSchedules/{uid} {
+      allow read, delete: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['v', 'reminders', 'nextAt', 'updatedAt', 'sent', 'lastRunAt'])
+        && request.resource.data.reminders is list
+        && request.resource.data.reminders.size() <= 200
+        && (request.resource.data.nextAt == null || request.resource.data.nextAt is number)
+        && (resource == null
+              ? !('sent' in request.resource.data) && !('lastRunAt' in request.resource.data)
+              : !request.resource.data.diff(resource.data).affectedKeys().hasAny(['sent', 'lastRunAt']));
+
+      // aparelhos inscritos: só o endereço de entrega do navegador e as chaves dele
+      match /devices/{deviceId} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid)
+          && request.resource.data.keys().hasOnly(['endpoint', 'keys', 'ua', 'createdAt', 'lastSeen'])
+          && request.resource.data.endpoint is string
+          && request.resource.data.endpoint.size() <= 1000
+          && request.resource.data.endpoint.matches('https://.+')
+          && request.resource.data.keys is map
+          && request.resource.data.keys.keys().hasOnly(['p256dh', 'auth']);
+      }
+    }
   }
 }

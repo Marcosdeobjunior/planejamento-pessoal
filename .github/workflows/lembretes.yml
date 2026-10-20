@@ -1,0 +1,49 @@
+# Lembretes no celular: a cada ~10 minutos envia os lembretes que chegaram na hora.
+# Configuração (chaves e Secrets): docs/LEMBRETES.md. Sem os Secrets, roda e não faz nada.
+name: Lembretes
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+# uma rodada por vez (se o GitHub atrasar e duas se encontrarem, a segunda espera)
+concurrency:
+  group: lembretes
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: write   # só para o passo "manter ativo" abaixo
+
+jobs:
+  enviar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: push
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: push/package-lock.json
+      - run: npm ci --omit=dev --no-audit --no-fund
+        working-directory: push
+      - run: node send.mjs
+        working-directory: push
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+      # O GitHub desliga agendamentos de repositórios públicos sem commits há 60 dias.
+      # Uma vez por dia, reativa este workflow pela API (sem criar commits).
+      - name: Manter ativo
+        if: github.event_name == 'schedule' && github.event.schedule == '*/10 * * * *'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$(date -u +%H%M)" \< "0010" ]; then
+            gh api -X PUT "repos/${{ github.repository }}/actions/workflows/lembretes.yml/enable" && echo "reativado"
+          fi
