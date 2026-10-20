@@ -90,11 +90,13 @@ jobs:
           name: sol-de-soter-apk
           path: sol-de-soter-*.apk
           retention-days: 30
+      # a Release é um atalho para baixar no celular; se o GitHub recusar, o .apk continua nos Artifacts
       - name: Publicar a Release
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          trap 'echo "::error::Sem permissão para criar a Release. Em Settings → Actions → General → Workflow permissions, marque \"Read and write permissions\" e salve. O .apk desta execução está em Artifacts, no fim da página."' ERR
+          trap 'echo "::warning::O GitHub não deixou criar a Release. O .apk desta execução está em Artifacts, no fim da página do resumo (sol-de-soter-apk)."' ERR
           gh release create "app-v$VERSION_NAME" "sol-de-soter-$VERSION_NAME.apk" \
             --repo "${{ github.repository }}" --target "${{ github.sha }}" \
             --title "App Android $VERSION_NAME" \
