@@ -60,7 +60,12 @@ jobs:
           BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
           yes | bubblewrap update --skipVersionUpgrade
-          yes | bubblewrap build --skipPwaValidation
+          # o log do Gradle é enorme: em caso de erro, mostra só o "What went wrong"
+          if ! (yes | bubblewrap build --skipPwaValidation > build.log 2>&1); then
+            grep -n -A25 "What went wrong" build.log || tail -80 build.log
+            exit 1
+          fi
+          tail -5 build.log
           ls -la *.apk *.aab
       - name: Publicar a Release
         env:
