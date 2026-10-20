@@ -313,7 +313,6 @@ body.side-collapsed .side{width:0;min-width:0;flex:0 0 0;opacity:0;pointer-event
   transition:border-color .2s,background .2s;
 }
 .blk[data-t="page"] .pagelink:hover{border-color:rgba(200,169,110,.4);background:rgba(200,169,110,.06)}
-.blk.drop-target{box-shadow:0 2px 0 var(--accent1)}
 
 .md-b{font-weight:600;color:#f2edff}
 .md-i{font-style:italic}
@@ -674,6 +673,40 @@ td.nm:hover{color:var(--accent1)}
   font-family:var(--font-mono);font-size:8.5px;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted);
 }
 .pmcust .reset:hover{color:var(--accent4);border-color:rgba(224,107,139,.4)}
+.pmcust .tiles,.pmcust .qrow{display:flex;gap:6px;margin:0 0 12px}
+.pmcust .tiles button,.pmcust .qrow button{
+  flex:1;min-width:0;height:40px;display:grid;place-items:center;border-radius:9px;
+  border:1px solid var(--border);color:var(--muted);transition:border-color .18s,background .18s,color .18s;
+}
+.pmcust .tiles button:hover,.pmcust .qrow button:hover{border-color:var(--border-2);color:var(--text)}
+.pmcust .tiles button.on,.pmcust .qrow button.on{border-color:rgba(200,169,110,.55);background:rgba(200,169,110,.1);color:var(--accent1)}
+.menu .kbd{margin-left:auto;font-family:var(--font-mono);font-size:9px;font-weight:400;opacity:.55;padding-left:10px;white-space:nowrap}
+
+/* ---------------- arrastar (blocos e árvore) ---------------- */
+.gut .drag{touch-action:none}
+.gut .drag:active{cursor:grabbing}
+.blk.arrastando{opacity:.32}
+.row.arrastando{opacity:.35}
+.row{-webkit-touch-callout:none}
+.arraste-fantasma{
+  position:fixed;left:0;top:0;z-index:2001;pointer-events:none;margin:0;
+  background:var(--bg2);border:1px solid rgba(200,169,110,.35);border-radius:10px;
+  box-shadow:0 18px 44px rgba(0,0,0,.55);opacity:.96;max-height:150px;overflow:hidden;
+  will-change:transform;
+}
+.arraste-fantasma .gut,.arraste-fantasma .add,.arraste-fantasma .cnt{display:none}
+.arraste-fantasma.row{background:rgba(26,26,39,.96);color:var(--text)}
+.arraste-linha{
+  position:fixed;z-index:2000;height:2px;border-radius:2px;background:var(--accent1);pointer-events:none;
+  box-shadow:0 0 10px rgba(200,169,110,.55);transition:top .08s ease,left .08s ease,width .08s ease;
+}
+.arraste-linha::before{
+  content:'';position:absolute;left:-4px;top:-3px;width:8px;height:8px;border-radius:50%;
+  border:2px solid var(--accent1);background:var(--bg);box-sizing:border-box;
+}
+.row.drop-dentro{background:rgba(200,169,110,.14);box-shadow:inset 0 0 0 1px rgba(200,169,110,.45);color:var(--text)}
+.colvazia.drop-dentro{opacity:1;color:var(--accent1);border-color:var(--accent1);background:rgba(200,169,110,.06)}
+body.arrastando-algo,body.arrastando-algo *{cursor:grabbing!important;user-select:none!important}
 
 /* ícone como imagem ou cor */
 .icoimg{display:inline-block;background-size:cover;background-position:center;border-radius:5px;vertical-align:-.16em}
@@ -1099,7 +1132,9 @@ function novoMapa(nome){
   return S.maps[id];
 }
 const orfa=p=>p.parentId&&!S.pages[p.parentId];
-const kids=id=>daArea().filter(p=>!p.trashed&&(p.parentId===id||(id===null&&orfa(p)))).sort((a,b)=>a.created-b.created);
+/* ordem manual (arrastar na árvore) em p.ord; quem nunca foi arrastado segue a data de criação */
+const ordem=p=>p.ord!=null?p.ord:p.created;
+const kids=id=>daArea().filter(p=>!p.trashed&&(p.parentId===id||(id===null&&orfa(p)))).sort((a,b)=>ordem(a)-ordem(b));
 const P=()=>S.pages[S.activeId];
 const trashList=()=>daArea().filter(p=>p.trashed).sort((a,b)=>(b.trashedAt||0)-(a.trashedAt||0));
 function visible(id){
@@ -1443,6 +1478,8 @@ function ico(v,tam){
   }
   return esc(v);
 }
+/* cópia funda: grade e vistas são objetos e não podem ficar compartilhados */
+function copiaBlocos(l){return JSON.parse(JSON.stringify(l)).map(b=>Object.assign(b,{id:uid()}))}
 function mkBlock(t,text){return{id:uid(),t:t||'p',text:text||'',checked:false,icon:'✦'}}
 function mkPage(title,parentId,icon){
   marcaReal();
@@ -1588,7 +1625,7 @@ function propsHTML(p){
       ${mostrar?icn('ico-chevron-down'):icn('ico-chevron-right')} ${escondidas.length} propriedade${escondidas.length>1?'s':''} oculta${escondidas.length>1?'s':''}</button>`:''}
     <button class="addprop" data-addprop><span><i class="ico ico-plus" aria-hidden="true"></i></span>propriedade</button></div>`;
 }
-const gut=id=>`<div class="gut"><button data-plus="${id}" title="Inserir abaixo"><i class="ico ico-plus" aria-hidden="true"></i></button><button class="drag" draggable="true" data-drag="${id}" title="Arraste, ou clique para opções"><i class="ico ico-grip-vertical" aria-hidden="true"></i></button></div>`;
+const gut=id=>`<div class="gut"><button data-plus="${id}" title="Inserir abaixo"><i class="ico ico-plus" aria-hidden="true"></i></button><button class="drag" data-drag="${id}" title="Arraste, ou clique para opções"><i class="ico ico-grip-vertical" aria-hidden="true"></i></button></div>`;
 
 /* ---- blocos sem texto editável ---- */
 function midiaHTML(p,b){
@@ -1685,11 +1722,6 @@ function blockHTML(p,b,i,list){
   }
   if(ehVista(b.t))
     return `<div class="blk" data-t="${b.t}" data-id="${b.id}">${gut(b.id)}<div class="dbwrap">${dbHTML(p,b)}</div></div>`;
-  if(b.t==='page'){
-    const sub=S.pages[b.text];
-    return `<div class="blk" data-t="page" data-id="${b.id}">${gut(b.id)}
-      <span class="pagelink" data-page="${esc(b.text)}">${sub?ico(sub.icon,'15px'):icn('ico-file-x')} ${sub?esc(sub.title||'Sem título'):'página removida'}${sub&&sub.trashed?' <small style="opacity:.6">(na lixeira)</small>':''}</span></div>`;
-  }
   const ph=b.t==='p'?"digite / para blocos, [[ para ligar, + para criar página":
     b.t.indexOf('h')===0?'título':b.t==='quote'?'citação':b.t==='code'?'código':
     b.t==='todo'?'tarefa':b.t==='callout'?'aviso':'escreva algo';
@@ -1816,7 +1848,7 @@ function dbHTML(p,b){
       const capa=s.cover||GAL_FUNDO[Math.abs(galHash(s.id))%GAL_FUNDO.length];
       const props=keys.filter(k=>(s.props[k]||{}).v).slice(0,gs==='p'?1:3);
       const txt=resumo(s,gs==='p'?0:gs==='m'?90:190);
-      return `<article class="gcard" data-card="${s.id}" data-page="${s.id}" draggable="true">
+      return `<article class="gcard" data-page="${s.id}">
         <div class="gcap" style="background:${capa}"><span class="gico">${ico(s.icon,'18px')}</span></div>
         <div class="gbody">
           <b>${esc(s.title||'Sem título')}</b>
@@ -2181,6 +2213,8 @@ document.addEventListener('input',e=>{
   if(ti){
     const p=pageOf(ti);p.title=ti.innerText.trim();p.updated=Date.now();
     save();renderTree();renderCrumb();
+    const pt=S.peekId===p.id&&document.querySelector('.peek-top .t');
+    if(pt)pt.innerHTML=ico(p.icon,'14px')+' '+esc(p.title||'Sem título');
   }
 });
 
@@ -2196,8 +2230,19 @@ document.addEventListener('keydown',e=>{
   if(mod&&e.key==='\\'){e.preventDefault();return toggleSideCollapse()}
   if(mod&&(e.key===';'||e.key===':')){e.preventDefault();
     const alvo=S.peekId?S.pages[S.peekId]:P();
-    if(alvo){pmView='custom';openPageMenu($('#btnMore'),alvo)}
+    if(alvo)openPageMenu($('#btnMore'),alvo,'custom');
     return;}
+  /* atalhos anunciados no menu ⋯ (antes não faziam nada) */
+  if(mod&&e.altKey&&e.key.toLowerCase()==='l'){
+    const alvo=S.peekId?S.pages[S.peekId]:P();
+    if(alvo){e.preventDefault();pmCopyLink(alvo)}
+    return;
+  }
+  if(mod&&!e.shiftKey&&!e.altKey&&e.key.toLowerCase()==='d'&&S.view==='page'){
+    const alvo=S.peekId?S.pages[S.peekId]:P();
+    if(alvo){e.preventDefault();closePMenu();pmDuplicate(alvo)}
+    return;
+  }
   if(e.key==='Escape'&&S.peekId&&!menuEl){S.peekId=null;save();renderPeek();renderTree();return}
   if(menuEl&&['ArrowDown','ArrowUp','Enter','Escape','Tab'].indexOf(e.key)>=0)return menuKeys(e);
 
@@ -2221,6 +2266,7 @@ document.addEventListener('keydown',e=>{
     b.text=b.text.slice(0,caret);
     const cont=['bullet','num','todo'].indexOf(b.t)>=0?b.t:'p';
     const nb=mkBlock(cont,rest);
+    if(b.colg){nb.colg=b.colg;nb.coli=b.coli||0}   /* continua na mesma coluna */
     p.blocks.splice(i+1,0,nb);
     refresh(host,'blocks');focusBlock(host,nb.id,0);save();return;
   }
@@ -2229,16 +2275,70 @@ document.addEventListener('keydown',e=>{
     if(i>0){
       e.preventDefault();
       const prev=p.blocks[i-1];
-      if(['divider','page','table','board','gallery'].indexOf(prev.t)>=0){
+      if(prev.t==='divider'||prev.t==='page'){
         p.blocks.splice(i-1,1);limpaColunas(p);refresh(host,'blocks');focusBlock(host,b.id,0);save();return;
+      }
+      /* imagem, vista, tabela etc. não recebem texto: antes o texto ia parar
+         dentro do endereço da imagem. Linha vazia some e o cursor sobe. */
+      if(semTexto(prev.t)||prev.t==='pagelink'||ocultos(p.blocks).has(prev.id)){
+        if(b.text)return;
+        const acima=ctVizinho(host,ct,-1);
+        p.blocks.splice(i,1);
+        if(!p.blocks.length)p.blocks=[mkBlock()];
+        limpaColunas(p);refresh(host,'blocks');save();
+        if(acima)focusBlock(host,acima,-1);
+        return;
       }
       const pos=prev.text.length;
       prev.text+=b.text;p.blocks.splice(i,1);
       limpaColunas(p);refresh(host,'blocks');focusBlock(host,prev.id,pos);save();return;
     }
   }
-  if(e.key==='ArrowUp'&&caret===0&&i>0){e.preventDefault();focusBlock(host,p.blocks[i-1].id,-1)}
-  if(e.key==='ArrowDown'&&caret===len&&i<p.blocks.length-1){e.preventDefault();focusBlock(host,p.blocks[i+1].id,0)}
+  /* Ctrl+Shift+↑/↓ move o bloco inteiro, como no Notion */
+  if(mod&&e.shiftKey&&(e.key==='ArrowUp'||e.key==='ArrowDown')){
+    e.preventDefault();
+    return moveBlocoTecla(host,b.id,e.key==='ArrowUp'?-1:1,caret);
+  }
+  /* setas pulam blocos escondidos ou sem texto (antes o cursor travava neles) */
+  if(e.key==='ArrowUp'&&caret===0){
+    const v=ctVizinho(host,ct,-1);if(v){e.preventDefault();focusBlock(host,v,-1)}
+  }
+  if(e.key==='ArrowDown'&&caret===len){
+    const v=ctVizinho(host,ct,1);if(v){e.preventDefault();focusBlock(host,v,0)}
+  }
+});
+/* id do bloco editável anterior/seguinte na ordem em que aparece na tela */
+function ctVizinho(host,ct,dir){
+  const todos=[].slice.call(host.querySelectorAll('[data-blocks] .ct[data-b]'));
+  const k=todos.indexOf(ct);
+  const v=todos[k+dir];
+  return v?v.dataset.b:null;
+}
+/* título: Enter desce para o primeiro bloco; propriedade: Enter confirma */
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Enter'||e.shiftKey||e.isComposing)return;
+  const ti=e.target.closest&&e.target.closest('[data-title]');
+  if(ti){
+    e.preventDefault();
+    const host=hostOf(ti),p=pageOf(ti);if(!host||!p)return;
+    const prim=host.querySelector('[data-blocks] .ct[data-b]');
+    if(prim)focusBlock(host,prim.dataset.b,0);
+    else{const nb=mkBlock();p.blocks.unshift(nb);refresh(host,'blocks');save();focusBlock(host,nb.id,0)}
+    return;
+  }
+  const pv=e.target.closest&&e.target.closest('.pval,[data-cel],[data-leg],.btnedit');
+  if(pv){e.preventDefault();pv.blur()}
+});
+/* colar sempre como texto puro: HTML colado deixava fontes e cores estranhas
+   no bloco até ele perder o foco */
+document.addEventListener('paste',e=>{
+  const alvo=e.target.closest&&e.target.closest('[contenteditable]');
+  if(!alvo||!e.clipboardData)return;
+  const txt=e.clipboardData.getData('text/plain');
+  e.preventDefault();
+  if(!txt)return;
+  /* nos blocos a quebra de linha é mantida; título e propriedades ficam numa linha só */
+  document.execCommand('insertText',false,alvo.classList.contains('ct')?txt:txt.replace(/\s*\n\s*/g,' '));
 });
 
 function wrapSel(host,ct,b,mark){
@@ -2251,6 +2351,8 @@ function addBlock(host,afterId,t,text,focus){
   const p=S.pages[host.dataset.pid];
   const i=p.blocks.findIndex(b=>b.id===afterId);
   const nb=mkBlock(t,text);
+  const ref=p.blocks[i];
+  if(ref&&ref.colg){nb.colg=ref.colg;nb.coli=ref.coli||0}
   p.blocks.splice(i+1,0,nb);refresh(host,'blocks');save();
   if(focus)focusBlock(host,nb.id,0);
   return nb;
@@ -2534,8 +2636,9 @@ function menuKeys(e){
 
 /* ---------------- menu de opções da página (botão ⋯) ---------------- */
 function closePMenu(){if(pmenuEl){pmenuEl.remove();pmenuEl=null}}
-function openPageMenu(anchorEl,p){
-  if(!pmenuEl)pmView='main';
+function openPageMenu(anchorEl,p,vista){
+  /* Ctrl+; pede a tela "Personalizar" direto (antes era sobrescrita por 'main') */
+  pmView=vista||(pmenuEl?pmView:'main');
   closePMenu();closeMenu();
   pmenuFresh=true;setTimeout(()=>{pmenuFresh=false},0);
   const r=anchorEl.getBoundingClientRect();
@@ -2655,7 +2758,7 @@ function pmCopyContent(p){
 }
 function pmDuplicate(p){
   const id=mkPage(p.title+' (cópia)',p.parentId,p.icon);
-  S.pages[id].blocks=p.blocks.map(b=>Object.assign({},b,{id:uid()}));
+  S.pages[id].blocks=copiaBlocos(p.blocks);
   S.pages[id].props=JSON.parse(JSON.stringify(p.props));
   S.pages[id].propOrder=p.propOrder.slice();
   S.pages[id].cover=p.cover;
@@ -3041,7 +3144,7 @@ document.addEventListener('click',e=>{
     }
     if(t.closest('[data-cfgdup]')){
       const id=mkPage(pc.title+' (cópia)',pc.parentId,pc.icon);
-      S.pages[id].blocks=pc.blocks.map(b=>Object.assign({},b,{id:uid()}));
+      S.pages[id].blocks=copiaBlocos(pc.blocks);
       S.pages[id].props=JSON.parse(JSON.stringify(pc.props));
       S.pages[id].propOrder=pc.propOrder.slice();
       S.pages[id].cover=pc.cover;
@@ -3148,21 +3251,28 @@ document.addEventListener('click',e=>{
       const id=drag.dataset.drag,r=drag.getBoundingClientRect();
       const naColuna=!!(p.blocks.find(x=>x.id===id)||{}).colg;
       const itensBloco=[];
-      if(naColuna)itensBloco.push({label:'sair das colunas',ic:icn('ico-arrow-left-to-line'),run:()=>{
-        const b=p.blocks.find(x=>x.id===id);delete b.colg;delete b.coli;
-        limpaColunas(p);refresh(host,'blocks');save();
-      }});
+      const anima=fn=>{flip(host,'[data-blocks] .blk[data-id]','data-id',()=>{fn();limpaColunas(p);refresh(host,'blocks')});syncOthers(host);save()};
+      if(naColuna)itensBloco.push({label:'sair das colunas',ic:icn('ico-arrow-left-to-line'),grupo:'Ações',run:()=>anima(()=>{
+        /* vai para logo depois do grupo: no meio dele, partia as colunas em duas */
+        const b=p.blocks.find(x=>x.id===id),g=b.colg;
+        p.blocks.splice(p.blocks.indexOf(b),1);
+        let ult=-1;p.blocks.forEach((x,k)=>{if(x.colg===g)ult=k});
+        delete b.colg;delete b.coli;
+        p.blocks.splice(ult+1,0,b);
+      })});
+      itensBloco.push({label:'mover para cima',ic:icn('ico-arrow-up'),kbd:'Ctrl Shift ↑',grupo:'Ações',run:()=>moveBlocoTecla(host,id,-1)});
+      itensBloco.push({label:'mover para baixo',ic:icn('ico-arrow-down'),kbd:'Ctrl Shift ↓',grupo:'Ações',run:()=>moveBlocoTecla(host,id,1)});
+      itensBloco.push({label:'duplicar',ic:icn('ico-copy-plus'),grupo:'Ações',run:()=>anima(()=>{
+        const i=p.blocks.findIndex(b=>b.id===id);
+        p.blocks.splice(i+1,0,Object.assign(JSON.parse(JSON.stringify(p.blocks[i])),{id:uid()}));
+      })});
+      itensBloco.push({label:'excluir',ic:icn('ico-trash-2'),grupo:'Ações',run:()=>anima(()=>{
+        p.blocks=p.blocks.filter(b=>b.id!==id);
+        if(!p.blocks.length)p.blocks=[mkBlock()];
+      })});
       BLOCK_TYPES.filter(x=>['page','table','board','gallery','list','col2','col3','col4'].indexOf(x[0])<0)
         .forEach(x=>itensBloco.push({label:'virar '+x[1].toLowerCase(),ic:x[2],grupo:x[4],
           run:()=>setType(host,id,x[0])}));
-      itensBloco.push({label:'duplicar',ic:icn('ico-copy-plus'),run:()=>{
-        const i=p.blocks.findIndex(b=>b.id===id);
-        p.blocks.splice(i+1,0,Object.assign({},p.blocks[i],{id:uid()}));refresh(host,'blocks');save();
-      }});
-      itensBloco.push({label:'excluir',ic:icn('ico-trash-2'),run:()=>{
-        p.blocks=p.blocks.filter(b=>b.id!==id);
-        if(!p.blocks.length)p.blocks=[mkBlock()];limpaColunas(p);refresh(host,'blocks');save();
-      }});
       return openMenu(r.left,r.bottom+8,itensBloco,'Bloco');
     }
     const vc=t.closest('[data-vcfg]');
@@ -3415,52 +3525,356 @@ document.addEventListener('mouseup',()=>{
   mapDrag=null;
 });
 
-/* arrastar */
+/* ---- arrastar cartões do quadro entre colunas (arrastar nativo) ---- */
 document.addEventListener('dragstart',e=>{
-  const d=e.target.closest&&e.target.closest('[data-drag]');
-  if(d){dragging={type:'block',id:d.dataset.drag,host:hostOf(d)};e.dataTransfer.effectAllowed='move';return}
   const c=e.target.closest&&e.target.closest('[data-card]');
-  if(c)dragging={type:'card',id:c.dataset.card};
+  if(c){dragging={type:'card',id:c.dataset.card};e.dataTransfer.effectAllowed='move'}
 });
 document.addEventListener('dragover',e=>{
   if(!dragging)return;
   e.preventDefault();
-  if(dragging.type==='block'){
-    document.querySelectorAll('.drop-target').forEach(x=>x.classList.remove('drop-target'));
-    const b=e.target.closest('.blk');if(b)b.classList.add('drop-target');
-  }else{
-    document.querySelectorAll('.drop.over').forEach(x=>x.classList.remove('over'));
-    const d=e.target.closest('[data-drop]');if(d)d.classList.add('over');
-  }
+  const d=e.target.closest('[data-drop]');
+  document.querySelectorAll('.drop.over').forEach(x=>{if(x!==d)x.classList.remove('over')});
+  if(d)d.classList.add('over');
 });
 document.addEventListener('drop',e=>{
   if(!dragging)return;
   e.preventDefault();
-  if(dragging.type==='block'){
-    document.querySelectorAll('.drop-target').forEach(x=>x.classList.remove('drop-target'));
-    const tgt=e.target.closest('.blk'),host=dragging.host;
-    if(tgt&&hostOf(tgt)===host&&tgt.dataset.id!==dragging.id){
-      const p=S.pages[host.dataset.pid];
-      const alvo=p.blocks.find(b=>b.id===tgt.dataset.id);
-      const from=p.blocks.findIndex(b=>b.id===dragging.id),to=p.blocks.findIndex(b=>b.id===tgt.dataset.id);
-      const m=p.blocks.splice(from,1)[0];
-      if(alvo&&alvo.colg){m.colg=alvo.colg;m.coli=alvo.coli||0}
-      else{delete m.colg;delete m.coli}
-      p.blocks.splice(to,0,m);limpaColunas(p);refresh(host,'blocks');save();
-    }
-  }else{
-    document.querySelectorAll('.drop.over').forEach(x=>x.classList.remove('over'));
-    const d=e.target.closest('[data-drop]');
-    if(d){
-      const s=S.pages[dragging.id];
-      s.props[d.dataset.key]={type:'selecao',v:d.dataset.drop};
-      if(s.propOrder.indexOf(d.dataset.key)<0)s.propOrder.unshift(d.dataset.key);
-      save();render();
-    }
+  document.querySelectorAll('.drop.over').forEach(x=>x.classList.remove('over'));
+  const d=e.target.closest('[data-drop]');
+  const s=S.pages[dragging.id];
+  if(d&&s&&slug((s.props[d.dataset.key]||{}).v||'')!==slug(d.dataset.drop)){
+    s.props[d.dataset.key]={type:'selecao',v:d.dataset.drop};
+    if(s.propOrder.indexOf(d.dataset.key)<0)s.propOrder.unshift(d.dataset.key);
+    s.updated=Date.now();
+    /* antes era render(): o painel lateral voltava para o topo a cada cartão movido */
+    save();refreshSurfaces();
   }
   dragging=null;
 });
-document.addEventListener('dragend',()=>{dragging=null});
+document.addEventListener('dragend',()=>{
+  dragging=null;
+  document.querySelectorAll('.drop.over').forEach(x=>x.classList.remove('over'));
+});
+/* redesenha os blocos de todas as superfícies abertas, menos a que está sendo editada */
+function refreshSurfaces(){
+  document.querySelectorAll('.surface[data-pid]').forEach(h=>{
+    if(h.contains(document.activeElement)&&document.activeElement.isContentEditable)return;
+    refresh(h,'blocks');refresh(h,'props');
+  });
+}
+
+/* ============================================================
+   Arrastar com o ponteiro (mouse, caneta e toque)
+   — blocos pela alça ⋮⋮ e páginas na árvore lateral.
+   Um "fantasma" segue o dedo, uma linha dourada mostra onde vai
+   cair, a área rola sozinha perto das bordas e, ao soltar, os
+   vizinhos deslizam para o lugar novo (FLIP).
+   ============================================================ */
+const menosMov=()=>window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+/* anima elementos do seletor do lugar antigo para o novo depois de muda() trocar o DOM */
+function flip(raiz,seletor,chave,muda){
+  const antes=new Map();
+  if(raiz)raiz.querySelectorAll(seletor).forEach(el=>antes.set(el.getAttribute(chave),el.getBoundingClientRect()));
+  muda();
+  if(!raiz||menosMov()||!Element.prototype.animate)return;
+  raiz.querySelectorAll(seletor).forEach(el=>{
+    const a=antes.get(el.getAttribute(chave));
+    if(!a){el.animate([{opacity:0},{opacity:1}],{duration:180,easing:'ease-out'});return}
+    const r=el.getBoundingClientRect();
+    const dx=a.left-r.left,dy=a.top-r.top;
+    if(Math.abs(dx)<1&&Math.abs(dy)<1)return;
+    el.animate([{transform:'translate('+dx+'px,'+dy+'px)'},{transform:'none'}],
+      {duration:220,easing:'cubic-bezier(.2,.8,.2,1)'});
+  });
+}
+let arraste=null,suprimeClique=false;
+/* o clique que encerra um arraste não deve abrir menu nem página */
+document.addEventListener('click',e=>{
+  if(!suprimeClique)return;
+  suprimeClique=false;e.preventDefault();e.stopPropagation();
+},true);
+/* no toque, enquanto arrasta, a página não pode rolar junto */
+document.addEventListener('touchmove',e=>{if(arraste&&arraste.ativo)e.preventDefault()},{passive:false});
+document.addEventListener('contextmenu',e=>{if(arraste)e.preventDefault()});
+
+function rolagemDe(el){
+  for(let n=el;n&&n!==document.body;n=n.parentElement){
+    const o=getComputedStyle(n).overflowY;
+    if((o==='auto'||o==='scroll')&&n.scrollHeight>n.clientHeight)return n;
+  }
+  return null;
+}
+function fantasma(el){
+  const r=el.getBoundingClientRect();
+  const g=el.cloneNode(true);
+  g.classList.add('arraste-fantasma');g.classList.remove('on','arrastando');
+  g.removeAttribute('data-id');g.removeAttribute('data-page');
+  g.querySelectorAll('[contenteditable]').forEach(x=>x.removeAttribute('contenteditable'));
+  g.querySelectorAll('[id]').forEach(x=>x.removeAttribute('id'));
+  g.style.width=r.width+'px';
+  document.body.appendChild(g);
+  return g;
+}
+function linhaArraste(){
+  let l=document.querySelector('.arraste-linha');
+  if(!l){l=document.createElement('div');l.className='arraste-linha';document.body.appendChild(l)}
+  return l;
+}
+function limpaMarcas(){
+  document.querySelectorAll('.drop-dentro').forEach(x=>x.classList.remove('drop-dentro'));
+  const l=document.querySelector('.arraste-linha');if(l)l.style.display='none';
+}
+function fimArraste(aplicar){
+  const a=arraste;arraste=null;
+  if(!a)return;
+  clearTimeout(a.toqueT);clearTimeout(a.abreT);
+  cancelAnimationFrame(a.raf);
+  document.body.classList.remove('arrastando-algo');
+  if(a.fant)a.fant.remove();
+  if(a.el)a.el.classList.remove('arrastando');
+  const l=document.querySelector('.arraste-linha');if(l)l.remove();
+  limpaMarcas();
+  if(a.ativo){
+    suprimeClique=true;setTimeout(()=>{suprimeClique=false},350);
+    if(aplicar&&a.alvo)(a.tipo==='bloco'?soltaBloco:soltaPagina)(a);
+  }
+}
+function comecaArraste(a){
+  a.ativo=true;
+  try{window.getSelection().removeAllRanges()}catch(e){}
+  if(document.activeElement&&document.activeElement.isContentEditable)document.activeElement.blur();
+  closeMenu();
+  a.fant=fantasma(a.el);
+  a.el.classList.add('arrastando');
+  document.body.classList.add('arrastando-algo');
+  if(navigator.vibrate&&a.toque)try{navigator.vibrate(12)}catch(e){}
+  const passo=()=>{
+    if(arraste!==a)return;
+    /* rola sozinho perto das bordas, mais rápido quanto mais perto */
+    if(a.rola){
+      const r=a.rola.getBoundingClientRect(),m=56;
+      let v=0;
+      if(a.y<r.top+m)v=-Math.ceil((r.top+m-a.y)/4);
+      else if(a.y>r.bottom-m)v=Math.ceil((a.y-(r.bottom-m))/4);
+      if(v){a.rola.scrollTop+=Math.max(-24,Math.min(24,v));miraArraste(a)}
+    }
+    a.raf=requestAnimationFrame(passo);
+  };
+  a.raf=requestAnimationFrame(passo);
+  moveFantasma(a);miraArraste(a);
+}
+function moveFantasma(a){
+  if(a.fant)a.fant.style.transform='translate('+(a.x-a.dx)+'px,'+(a.y-a.dy)+'px) rotate(.6deg)';
+}
+function miraArraste(a){(a.tipo==='bloco'?miraBloco:miraPagina)(a)}
+
+document.addEventListener('pointerdown',e=>{
+  if(arraste||e.button>0)return;
+  const alca=e.target.closest&&e.target.closest('[data-drag]');
+  if(alca){
+    const host=hostOf(alca),blk=alca.closest('.blk');
+    if(!host||!blk||host.closest('.locked')||host.classList.contains('locked'))return;
+    e.preventDefault();          /* sem seleção de texto e sem tirar o foco antes da hora */
+    const r=blk.getBoundingClientRect();
+    arraste={tipo:'bloco',id:alca.dataset.drag,host,el:blk,x0:e.clientX,y0:e.clientY,x:e.clientX,y:e.clientY,
+      dx:Math.min(e.clientX-r.left,40),dy:Math.min(e.clientY-r.top,30),rola:rolagemDe(host),toque:e.pointerType==='touch'};
+    return;
+  }
+  const row=e.target.closest&&e.target.closest('#tree .row[data-page]');
+  if(row&&!e.target.closest('button,.tw')){
+    const r=row.getBoundingClientRect();
+    const a={tipo:'pagina',id:row.dataset.page,el:row,x0:e.clientX,y0:e.clientY,x:e.clientX,y:e.clientY,
+      dx:-14,dy:-10,rola:$('#tree'),toque:e.pointerType!=='mouse'};   /* fantasma ao lado do dedo, sem cobrir o alvo */
+    arraste=a;
+    /* no toque a árvore precisa rolar: o arraste só começa depois de segurar */
+    if(a.toque)a.toqueT=setTimeout(()=>{if(arraste===a&&!a.ativo)comecaArraste(a)},380);
+  }
+});
+document.addEventListener('pointermove',e=>{
+  const a=arraste;if(!a)return;
+  a.x=e.clientX;a.y=e.clientY;
+  if(!a.ativo){
+    const d=Math.hypot(a.x-a.x0,a.y-a.y0);
+    if(a.tipo==='pagina'&&a.toque){if(d>8)fimArraste(false);return}   /* rolou antes de segurar */
+    if(d<5)return;
+    comecaArraste(a);
+  }
+  e.preventDefault();
+  moveFantasma(a);miraArraste(a);
+});
+document.addEventListener('pointerup',()=>{if(arraste)fimArraste(true)});
+document.addEventListener('pointercancel',()=>{if(arraste)fimArraste(false)});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&arraste&&arraste.ativo){e.stopPropagation();fimArraste(false)}},true);
+window.addEventListener('blur',()=>{if(arraste)fimArraste(false)});
+
+/* ---- blocos ---- */
+/* o bloco e, se for um título/alternante dobrado, tudo que ele esconde */
+function unidadeBloco(p,id){
+  const L=p.blocks,i=L.findIndex(b=>b.id===id);
+  if(i<0)return [];
+  const ids=[id];
+  if(L[i].dobrado&&(L[i].t==='toggle'||L[i].t.indexOf('th')===0)){
+    const esc2=ocultos(L);
+    for(let j=i+1;j<L.length&&esc2.has(L[j].id);j++)ids.push(L[j].id);
+  }
+  return ids;
+}
+function miraBloco(a){
+  const p=S.pages[a.host.dataset.pid];if(!p)return;
+  if(!a.unid)a.unid=unidadeBloco(p,a.id);
+  const linha=linhaArraste();
+  limpaMarcas();a.alvo=null;
+  const sob=document.elementFromPoint(a.x,a.y);
+  const vazia=sob&&sob.closest&&sob.closest('[data-colnovo]');
+  if(vazia&&hostOf(vazia)===a.host){vazia.classList.add('drop-dentro');a.alvo={vazia:vazia.dataset.colnovo};return}
+  /* bloco mais próximo do ponteiro (dentro da coluna em que ele está) */
+  let melhor=null,dist=Infinity;
+  a.host.querySelectorAll('[data-blocks] .blk[data-id]').forEach(el=>{
+    if(a.unid.indexOf(el.dataset.id)>=0)return;
+    const r=el.getBoundingClientRect();
+    if(!r.height)return;
+    const dy=a.y<r.top?r.top-a.y:a.y>r.bottom?a.y-r.bottom:0;
+    const dx=a.x<r.left?r.left-a.x:a.x>r.right?a.x-r.right:0;
+    const d=dy+dx*3;
+    if(d<dist){dist=d;melhor={el,r}}
+  });
+  if(!melhor||dist>160)return;
+  const antes=a.y<melhor.r.top+melhor.r.height/2;
+  a.alvo={id:melhor.el.dataset.id,antes};
+  linha.style.display='block';
+  linha.style.left=melhor.r.left+'px';
+  linha.style.width=melhor.r.width+'px';
+  linha.style.top=((antes?melhor.r.top:melhor.r.bottom)-1)+'px';
+}
+function soltaBloco(a){
+  const host=a.host,p=S.pages[host.dataset.pid];if(!p)return;
+  const unid=a.unid||unidadeBloco(p,a.id);
+  const movidos=unid.map(id=>p.blocks.find(b=>b.id===id)).filter(Boolean);
+  if(!movidos.length)return;
+  const resto=p.blocks.filter(b=>unid.indexOf(b.id)<0);
+  let pos,colg=null,coli=0;
+  if(a.alvo.vazia){
+    const pr=a.alvo.vazia.split(':');colg=pr[0];coli=+pr[1];
+    pos=0;resto.forEach((x,k)=>{if(x.colg===colg)pos=k+1});
+  }else{
+    const alvoB=resto.find(b=>b.id===a.alvo.id);if(!alvoB)return;
+    pos=resto.indexOf(alvoB);
+    if(!a.alvo.antes){
+      /* depois de um título dobrado = depois de tudo que ele esconde */
+      const esc2=ocultos(p.blocks);
+      pos++;
+      if(alvoB.dobrado)while(pos<resto.length&&esc2.has(resto[pos].id))pos++;
+    }
+    if(alvoB.colg){colg=alvoB.colg;coli=alvoB.coli||0}
+  }
+  const antes=p.blocks.map(b=>b.id+':'+(b.colg||'')+(b.coli||'')).join();
+  movidos.forEach(m=>{if(colg){m.colg=colg;m.coli=coli}else{delete m.colg;delete m.coli}});
+  resto.splice(pos,0,...movidos);
+  p.blocks=resto;
+  if(p.blocks.map(b=>b.id+':'+(b.colg||'')+(b.coli||'')).join()===antes)return;
+  limpaColunas(p);p.updated=Date.now();
+  flip(host,'[data-blocks] .blk[data-id]','data-id',()=>refresh(host,'blocks'));
+  syncOthers(host);save();
+}
+/* Ctrl+Shift+↑/↓ (e "mover para cima/baixo" no menu do bloco): troca de lugar
+   com o vizinho visível, pulando seções dobradas e grupos de colunas inteiros */
+function moveBlocoTecla(host,id,dir,caret){
+  const p=S.pages[host.dataset.pid];if(!p)return;
+  const L=p.blocks,esc2=ocultos(L);
+  const b=L.find(x=>x.id===id);if(!b)return;
+  const mesmaCol=x=>x.colg===b.colg&&(x.coli||0)===(b.coli||0);
+  /* unidades na ordem: [ids...] */
+  const unids=[];
+  for(let k=0;k<L.length;){
+    const x=L[k];
+    if(esc2.has(x.id)||(b.colg&&!mesmaCol(x))){k++;continue}
+    if(!b.colg&&x.colg){
+      const g=x.colg,u=[];
+      while(k<L.length&&L[k].colg===g)u.push(L[k++].id);
+      unids.push(u);continue;
+    }
+    const u=[x.id];k++;
+    while(k<L.length&&esc2.has(L[k].id)&&(!b.colg||mesmaCol(L[k])))u.push(L[k++].id);
+    unids.push(u);
+  }
+  const ui=unids.findIndex(u=>u[0]===id);
+  const viz=unids[ui+dir];
+  if(ui<0||!viz)return;
+  const meus=unids[ui];
+  const movidos=meus.map(i=>L.find(x=>x.id===i));
+  const resto=L.filter(x=>meus.indexOf(x.id)<0);
+  let pos=resto.findIndex(x=>x.id===(dir<0?viz[0]:viz[viz.length-1]));
+  if(dir>0)pos++;
+  resto.splice(pos,0,...movidos);
+  p.blocks=resto;p.updated=Date.now();
+  flip(host,'[data-blocks] .blk[data-id]','data-id',()=>refresh(host,'blocks'));
+  if(caret!=null)focusBlock(host,id,caret);
+  syncOthers(host);save();
+}
+
+/* ---- páginas na árvore lateral ---- */
+function miraPagina(a){
+  const linha=linhaArraste();
+  limpaMarcas();a.alvo=null;
+  const sob=document.elementFromPoint(a.x,a.y);
+  const row=sob&&sob.closest&&sob.closest('#tree .row[data-page]');
+  if(!row||row===a.el){clearTimeout(a.abreT);a.abrePara=null;return}
+  const alvo=S.pages[row.dataset.page];
+  const proibidos=descendantIds(a.id);proibidos.add(a.id);
+  if(!alvo||proibidos.has(alvo.id))return;
+  const r=row.getBoundingClientRect();
+  const f=(a.y-r.top)/r.height;
+  let modo=f<.28?'antes':f>.72?'depois':'dentro';
+  /* "depois" de uma página aberta com filhas = primeira filha */
+  if(modo==='depois'&&alvo.expanded&&kids(alvo.id).length)modo='primeira';
+  a.alvo={id:alvo.id,modo};
+  if(modo==='dentro'){
+    row.classList.add('drop-dentro');
+    /* segurar sobre uma página fechada abre ela */
+    if(a.abrePara!==alvo.id){
+      clearTimeout(a.abreT);a.abrePara=alvo.id;
+      if(!alvo.expanded&&kids(alvo.id).length)a.abreT=setTimeout(()=>{
+        if(arraste===a&&a.abrePara===alvo.id){alvo.expanded=true;renderTree();
+          const el=document.querySelector('#tree .row[data-page="'+a.id+'"]');
+          if(el){a.el=el;el.classList.add('arrastando')}
+          miraArraste(a)}
+      },650);
+    }
+    return;
+  }
+  clearTimeout(a.abreT);a.abrePara=null;
+  const recuo=parseFloat(row.style.paddingLeft)||8;
+  const extra=modo==='primeira'?15:0;
+  linha.style.display='block';
+  linha.style.left=(r.left+recuo+extra+18)+'px';
+  linha.style.width=Math.max(40,r.width-recuo-extra-22)+'px';
+  linha.style.top=((modo==='antes'?r.top:r.bottom)-1)+'px';
+}
+function soltaPagina(a){
+  const p=S.pages[a.id],alvo=S.pages[a.alvo.id];
+  if(!p||!alvo)return;
+  let pai,idx;
+  if(a.alvo.modo==='dentro'){pai=alvo.id;idx=Infinity}
+  else if(a.alvo.modo==='primeira'){pai=alvo.id;idx=0}
+  else{
+    pai=alvo.parentId&&S.pages[alvo.parentId]?alvo.parentId:null;
+    const irmas=kids(pai).filter(x=>x.id!==p.id);
+    idx=irmas.indexOf(alvo)+(a.alvo.modo==='depois'?1:0);
+  }
+  const irmas=kids(pai).filter(x=>x.id!==p.id);
+  idx=Math.max(0,Math.min(irmas.length,idx));
+  irmas.splice(idx,0,p);
+  const mudouPai=(p.parentId||null)!==pai;
+  irmas.forEach((x,k)=>{x.ord=k});
+  if(mudouPai){p.parentId=pai;p.updated=Date.now()}
+  if(pai)S.pages[pai].expanded=true;
+  flip($('#tree'),'.row[data-page]','data-page',renderTree);
+  renderCrumb();
+  if(mudouPai)refreshSurfaces();
+  save();
+  if(mudouPai)toast('movida para '+(pai?'“'+(S.pages[pai].title||'Sem título')+'”':'o nível superior'));
+}
 
 /* ---------------- grafo ---------------- */
 let limpaGrafo=null;
