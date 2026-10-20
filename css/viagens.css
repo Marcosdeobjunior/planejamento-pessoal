@@ -198,7 +198,7 @@ select.inp option{background:#0d0c1e;}
   #btn-add, .btn-filter { min-height: 40px; }
   .mdc { width: 40px; height: 40px; }
   /* no toque, o mapa só se move com dois dedos: um dedo rola a página */
-  .map-touch-hint { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 500; pointer-events: none;
+  .map-touch-hint { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); z-index: 500; pointer-events: none;
     padding: 6px 12px; border-radius: 999px; background: rgba(8, 7, 20, .85); color: var(--text); font: 600 11px var(--fu); white-space: nowrap; }
 }
 @media (max-width: 640px) {

@@ -1417,6 +1417,7 @@ body[data-page="wishlist"] .app-content {
   #tc { bottom: calc(16px + var(--bottom-nav-h)); right: 16px; left: 16px; align-items: flex-end; }
   #btn-add, .ws-tab, .ws-btn-filter { min-height: 40px; }
   .ws-mdc { width: 40px; height: 40px; }
+  .ws-card-check { width: 36px; height: 36px; }
 }
 @media (max-width: 640px) {
   .ws-mo { padding: 0; align-items: flex-end; }

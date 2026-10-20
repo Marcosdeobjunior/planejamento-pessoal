@@ -2313,9 +2313,11 @@ body.push-modal-open { overflow: hidden; }
     border-radius: 20px 20px 0 0;
     box-shadow: 0 -24px 60px rgba(0, 0, 0, 0.5);
     transform: translateY(100%);
+    visibility: hidden; /* fechada não aparece (nem em captura de página inteira) */
+    transition: transform 0.28s ease, visibility 0s linear 0.28s;
     z-index: 172;
   }
-  .header-mobile-drawer.is-open { transform: translateY(0); }
+  .header-mobile-drawer.is-open { transform: translateY(0); visibility: visible; transition: transform 0.28s ease; }
   .header-mobile-drawer::before {
     content: ""; display: block; width: 40px; height: 4px; margin: 0 auto 12px;
     border-radius: 999px; background: rgba(255, 255, 255, 0.18);

@@ -1803,3 +1803,21 @@ body.rpg-reading-open [data-app-header] {
     padding-bottom: var(--bottom-nav-h, 0px);
   }
 }
+
+@media (max-width: 560px) {
+  /* "Voltar" da tela de conquistas sempre à mão: flutua acima da barra inferior */
+  .rpg-reading-close {
+    position: fixed;
+    right: 16px;
+    bottom: calc(var(--bottom-nav-h, 0px) + 14px);
+    z-index: 3;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, .45);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    background: linear-gradient(135deg, rgba(60, 46, 24, .92), rgba(46, 34, 80, .92));
+  }
+
+  #rpg-reading-achievements {
+    padding-bottom: calc(var(--bottom-nav-h, 0px) + 70px);
+  }
+}

@@ -371,3 +371,11 @@
     font-size: 13px;
   }
 }
+
+/* Celular (etapa 13): margem lateral no tutorial (antes o texto encostava na borda) e espaço
+   para a barra inferior do app no fim da rolagem. */
+@media (max-width: 1100px) {
+  #rpg-tutorial .san-body {
+    padding: 24px 16px calc(64px + var(--bottom-nav-h, 0px));
+  }
+}

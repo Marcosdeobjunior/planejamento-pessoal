@@ -2013,6 +2013,7 @@ body.sn-drawer-lock { overflow: hidden !important; }
 @media (max-width: 900px) {
   body.sn-hub-open .bottom-nav,
   body.sn-modal-open .bottom-nav,
+  body:has(#sn-hub.open) .bottom-nav,
   body:has(#sn-analytics.open) .bottom-nav,
   body:has(#sn-modal.open) .bottom-nav { display: none; }
   #sn-hub, #sn-analytics, #hub-drawer { height: 100vh; height: 100dvh; }
