@@ -46,6 +46,9 @@ jobs:
           npm install -g @bubblewrap/cli@1.25.0
           mkdir -p ~/.bubblewrap
           echo "{\"jdkPath\":\"$JAVA_HOME\",\"androidSdkPath\":\"$ANDROID_HOME\"}" > ~/.bubblewrap/config.json
+          # o Bubblewrap procura o sdkmanager em <sdk>/tools/bin (formato antigo do SDK)
+          [ -e "$ANDROID_HOME/tools" ] || ln -s "$ANDROID_HOME/cmdline-tools/latest" "$ANDROID_HOME/tools"
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "build-tools;36.1.0" "platforms;android-36" > /dev/null
       - name: Gerar o projeto e o .apk
         working-directory: android
         env:
