@@ -4504,7 +4504,9 @@ function miraPagina(a){
     const host=sob&&hostOf(sob);
     if(!host||host.classList.contains('locked')||sob.closest('.cover,.pico,[data-title],.ptools,[data-props],.lockbadge'))return;
     const ct=sob.closest('.ct[data-b]');
-    if(ct&&hostOf(ct)===host){
+    /* nas bordas de cima e de baixo do bloco vale como "entre blocos" */
+    const rb=ct&&ct.closest('.blk').getBoundingClientRect();
+    if(ct&&hostOf(ct)===host&&a.y>rb.top+8&&a.y<rb.bottom-8){
       const pt=posNoTexto(ct,a.x,a.y);
       if(pt){
         a.alvo={tipo:'texto',host,bid:ct.dataset.b,vis:pt.vis,cru:ct===document.activeElement};
