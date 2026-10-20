@@ -2020,6 +2020,7 @@ body.sn-drawer-lock { overflow: hidden !important; }
   .hub-back-btn, .hub-nav-btn, .san-back-btn { min-height: 40px; }
   .sn-action-btn { width: 36px; height: 36px; }
   .sn-meta-add-btn { min-width: 40px; min-height: 40px; }
+  #hub-drawer .hub-section-action { min-height: 36px; }
 }
 @media (max-width: 640px) {
   .sn-modal-backdrop { padding: 0; align-items: flex-end; }

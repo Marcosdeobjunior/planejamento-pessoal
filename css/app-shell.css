@@ -2339,3 +2339,9 @@ body.push-modal-open { overflow: hidden; }
 @media (max-width: 900px) and (prefers-reduced-motion: reduce) {
   .header-mobile-drawer { transition: none; }
 }
+
+/* com um diálogo aberto (modal, hub, gaveta), a barra inferior sai da frente dos botões dele */
+@media (max-width: 900px) {
+  body:has([role="dialog"][aria-modal="true"].open) .bottom-nav,
+  body:has(.push-modal.open) .bottom-nav { display: none; }
+}
