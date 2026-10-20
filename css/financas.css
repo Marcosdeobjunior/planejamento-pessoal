@@ -2392,6 +2392,7 @@ body.fin-cal-dragging * {
 
   /* categorias: uma coluna */
   .fin-cat-manager-grid { grid-template-columns: 1fr; }
+  .fin-cat-manager-section .fin-btn { min-width: 42px; min-height: 42px; }
 
   /* recorrências: lista em cima, editor embaixo */
   .fin-recurring-layout { grid-template-columns: minmax(0, 1fr); gap: 14px; }
