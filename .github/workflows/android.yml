@@ -37,7 +37,22 @@ jobs:
             echo "::error::Faltam os Secrets ANDROID_KEYSTORE_B64 e ANDROID_KEYSTORE_PASSWORD (ver docs/APP_ANDROID.md)."
             exit 1
           fi
-          echo "$ANDROID_KEYSTORE_B64" | base64 -d > android/android.keystore
+          # tolera espaços e quebras de linha que entram ao colar o Secret pelo celular
+          B64=$(printf '%s' "$ANDROID_KEYSTORE_B64" | tr -d ' \r\n\t')
+          PW=$(printf '%s' "$ANDROID_KEYSTORE_PASSWORD" | tr -d ' \r\n\t')
+          echo "::add-mask::$PW"
+          echo "KS_PASS=$PW" >> "$GITHUB_ENV"
+          echo "Chave recebida: ${#B64} caracteres (a gerada tem 3528)."
+          if ! printf '%s' "$B64" | base64 -d > android/android.keystore 2>/dev/null; then
+            echo "::error::O Secret ANDROID_KEYSTORE_B64 não é um base64 válido (incompleto ou com caracteres a mais). Cole de novo o conteúdo inteiro do arquivo .b64."
+            exit 1
+          fi
+          if ! keytool -list -keystore android/android.keystore -storepass "$PW" -alias soter > /dev/null 2>&1; then
+            echo "::error::A chave abriu, mas a senha (ANDROID_KEYSTORE_PASSWORD) não confere ou o alias não é 'soter'."
+            exit 1
+          fi
+          # impressão digital (pública): tem de ser a mesma do assetlinks.json
+          keytool -list -v -keystore android/android.keystore -storepass "$PW" -alias soter | grep "SHA256:"
       - name: Versão (número da execução)
         run: |
           cd android
@@ -56,8 +71,8 @@ jobs:
       - name: Gerar o projeto e o .apk
         working-directory: android
         env:
-          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ env.KS_PASS }}
+          BUBBLEWRAP_KEY_PASSWORD: ${{ env.KS_PASS }}
         run: |
           yes | bubblewrap update --skipVersionUpgrade
           # o log do Gradle é enorme: em caso de erro, mostra só o "What went wrong"
