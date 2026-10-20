@@ -1238,3 +1238,55 @@
     #tracker-hub .hub-nav, #collection-hub .hub-nav { flex-direction: row; align-items: center; }
     #tracker-hub .hub-hero-meta, #collection-hub .hub-hero-meta { flex-direction: row; align-items: center; gap: 6px; }
   }
+
+/* ══════════════════════════════════════════
+   CELULAR (etapa 13): o app-shell dá a barra inferior e a folha "Mais" em todas as páginas;
+   o menu próprio antigo da biblioteca (#mobile-nav/#overlay, sem botão que o abra) fica escondido.
+══════════════════════════════════════════ */
+#mobile-nav, #overlay { display: none !important; }
+
+@media (max-width: 640px) {
+  /* topo: citação e meta compactas */
+  .page-title { font-size: 30px; }
+  .library-top { gap: 10px; margin-bottom: 16px; }
+  .quote-panel { min-height: 0; padding: 18px 16px; }
+  .quote-text { font-size: 22px; max-width: 100%; }
+  .quote-author { margin-top: 8px; font-size: 15px; }
+  .goal-panel { padding: 14px 16px; min-height: 0; }
+  .goal-main strong { font-size: 34px; }
+  .goal-main span { font-size: 20px; }
+  .mini-stats { gap: 8px; margin-top: 8px; }
+  .mini-stat { padding: 10px 8px; }
+  .mini-stat .card-big-num { font-size: 30px; }
+
+  /* abas rápidas numa linha, rolando para o lado */
+  .quick-tabs { flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; gap: 6px; padding: 6px; -webkit-overflow-scrolling: touch; }
+  .quick-tabs::-webkit-scrollbar { display: none; }
+  .quick-tab { flex: 0 0 auto; white-space: nowrap; min-height: 40px; padding: 8px 14px; font-size: 13px; }
+
+  /* capas em 2 colunas */
+  .tracker-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+
+  /* alvos de toque e campos sem zoom automático (iOS amplia campos com menos de 16px) */
+  .filter-chip { min-height: 40px; padding: 8px 12px; font-size: 12px; }
+  .modal-close { width: 40px; height: 40px; font-size: 14px; top: 10px; right: 10px; }
+  .mstar { min-width: 40px; min-height: 40px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+  .th-star { min-width: 40px; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; }
+  .th-stars { gap: 0; }
+  .img-url-row .btn, .adapt-editor-remove, .filter-panel .btn { min-height: 40px; }
+  .inp, .hd-inp, .img-url-row .inp,
+  .modal input:not([type=checkbox]):not([type=radio]), .modal select, .modal textarea,
+  #th-drawer input:not([type=checkbox]):not([type=radio]), #th-drawer select, #th-drawer textarea,
+  .hub-card input:not([type=checkbox]):not([type=radio]), .hub-card select, .hub-card textarea { font-size: 16px; }
+
+  /* modal do item: folha que sobe de baixo, com rolagem interna e o fechar sempre à vista */
+  .modal-backdrop { padding: 0; align-items: flex-end; }
+  .modal { max-width: none; max-height: 94vh; max-height: 94dvh; border-radius: 20px 20px 0 0; border-bottom: 0; }
+  .modal-body { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  /* demais janelas (citações, metas, coleção): mesma folha */
+  .hub-backdrop { padding: 0; align-items: flex-end; }
+  .hub-card { width: 100%; max-height: 92vh; max-height: 92dvh; border-radius: 20px 20px 0 0; padding: 16px 14px calc(16px + env(safe-area-inset-bottom, 0px)); }
+  /* painéis em tela cheia: altura real da tela visível (sem a barra do navegador) */
+  #tracker-hub, #collection-hub { height: 100vh; height: 100dvh; }
+  #th-drawer { height: 100vh; height: 100dvh; bottom: auto; }
+}

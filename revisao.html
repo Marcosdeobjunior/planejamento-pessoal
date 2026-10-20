@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://apis.google.com https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://unpkg.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.google.com https://nominatim.openstreetmap.org https://api.open-meteo.com https://geocoding-api.open-meteo.com; frame-src https://*.firebaseapp.com https://www.google.com https://recaptcha.google.com https://www.youtube.com https://player.vimeo.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#04040c">
 <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
 <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
@@ -385,6 +385,31 @@ canvas.achart{width:100%;display:block;}
 @media(max-width:1000px){.stat-tiles{grid-template-columns:repeat(3,1fr);}.dash-grid,.analytics-grid{grid-template-columns:1fr;}.dash-grid-3,.analytics-grid-3{grid-template-columns:1fr 1fr;}.hdr{padding:0 20px;}.footer{padding:18px;}}
 @media(max-width:640px){.tabs-inner{overflow-x:auto;width:100%;}.tab{flex:1 0 auto;padding:13px 8px;font-size:12px;}.stat-tiles{grid-template-columns:1fr 1fr;}.dash-grid-3,.analytics-grid-3{grid-template-columns:1fr;}.rating-area{gap:8px;}.rating-btn{min-width:80px;padding:12px 16px;}.hnav{display:none;}.frow{grid-template-columns:1fr;}}
 @media(max-width:420px){.tab .ico{display:none;}.tab{padding:13px 6px;letter-spacing:0;}}
+/* celular (etapa 13): faixa "hora de estudar" empilhada, modais como folha de baixo, sessão de estudo
+   com as notas fixas acima da barra inferior do app, alvos de toque de 40 px e campos de 16 px */
+@media(max-width:640px){
+  .review-cta{flex-wrap:wrap;padding:18px;gap:14px;}
+  .cta-pulse{width:46px;height:46px;font-size:20px;}
+  .cta-info{flex:1 1 0;min-width:0;}
+  .cta-title{font-size:20px;line-height:1.25;}
+  .review-cta .btn{width:100%;justify-content:center;}
+  .ov{align-items:flex-end;padding:0;}
+  .modal{max-width:none;border-radius:20px 20px 0 0;max-height:92vh;max-height:92dvh;padding:20px 18px calc(18px + env(safe-area-inset-bottom,0px));}
+  .mcls{width:40px;height:40px;}
+  .fi,.fsel,.fta{font-size:16px;}
+  .deck-menu-btn{min-width:40px;min-height:40px;font-size:15px;}
+  #rev-exit{min-height:40px;}
+  .flashcard-area{min-height:300px;margin-bottom:16px;}
+  .flashcard{min-height:280px;}
+  .fc-face{padding:28px 20px;}
+  .fc-content{font-size:22px;}
+  .rating-area{position:sticky;bottom:calc(var(--bottom-nav-h,0px) + 10px);z-index:5;flex-wrap:nowrap;gap:6px;padding:8px;margin:0 -8px;border-radius:16px;background:rgba(6,6,16,.86);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
+  .rating-btn{flex:1 1 0;min-width:0;padding:12px 4px;font-size:12.5px;}
+  .toasts{left:16px;right:16px;bottom:calc(16px + var(--bottom-nav-h,0px));}
+}
+/* tela de toque: sem as dicas de teclado */
+.hint-tap{display:none;}
+@media(hover:none){.kbd-hint,.rating-btn .rb-key,.hint-click{display:none;}.hint-tap{display:inline;}}
 </style>
 </head>
 <body data-page="revisao">
@@ -1402,7 +1427,7 @@ function renderReviewCard(){
           '<span class="fc-label">Pergunta</span>'+
           '<div class="fc-content">'+escHtml(card.front)+'</div>'+
           (card.note?'<div class="fc-note"><i class="ico ico-lightbulb" aria-hidden="true"></i> '+escHtml(card.note)+'</div>':'')+
-          '<div class="fc-hint"><i class="ico ico-pointer" aria-hidden="true"></i> Clique para revelar a resposta</div>'+
+          '<div class="fc-hint"><i class="ico ico-pointer" aria-hidden="true"></i> <span class="hint-click">Clique</span><span class="hint-tap">Toque</span> para revelar a resposta</div>'+
         '</div>'+
         '<div class="fc-face fc-back">'+
           '<span class="fc-deck-tag" style="background:rgba('+hexToRgb(deck.color)+',.15);color:'+deck.color+'">'+escHtml(deck.icon)+' '+escHtml(deck.id?deckPath(deck):deck.name)+'</span>'+
@@ -1418,7 +1443,7 @@ function renderReviewCard(){
       '<button class="rating-btn rb-good"  data-q="3" data-idx="2">Good<span class="rb-key">3</span></button>'+
       '<button class="rating-btn rb-easy"  data-q="5" data-idx="3">Easy<span class="rb-key">4</span></button>'+
     '</div>'+
-    '<p style="text-align:center;font-size:11px;font-family:var(--fm);color:var(--muted);margin-top:12px">Pressione <kbd style="background:rgba(255,255,255,.1);padding:1px 6px;border-radius:4px">Espaço</kbd> para revelar</p>';
+    '<p class="kbd-hint" style="text-align:center;font-size:11px;font-family:var(--fm);color:var(--muted);margin-top:12px">Pressione <kbd style="background:rgba(255,255,255,.1);padding:1px 6px;border-radius:4px">Espaço</kbd> para revelar</p>';
 
   // Fix preview HTML
   var ratingArea=wrap.querySelector('#rating-area');

@@ -169,10 +169,22 @@
 
   function initMap(noMap) {
     if (noMap || typeof window.L === "undefined") {
-      document.getElementById("map").innerHTML = '<div style="height:500px;display:flex;align-items:center;justify-content:center;color:#858099;font-family:DM Mono,monospace;font-size:11px;flex-direction:column;gap:8px"><span>Mapa indisponivel - sem conexao</span></div>';
+      document.getElementById("map").innerHTML = '<div style="height:100%;min-height:300px;display:flex;align-items:center;justify-content:center;color:#858099;font-family:DM Mono,monospace;font-size:11px;flex-direction:column;gap:8px"><span>Mapa indisponivel - sem conexao</span></div>';
       return;
     }
-    lmap = window.L.map("map", { worldCopyJump: true, minZoom: 2, maxZoom: 18, zoomControl: true }).setView([-14, -51], 3);
+    // tela de toque: um dedo rola a página; o mapa se move e dá zoom com dois dedos
+    var touchOnly = !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
+    lmap = window.L.map("map", { worldCopyJump: true, minZoom: 2, maxZoom: 18, zoomControl: true, dragging: !touchOnly }).setView([-14, -51], 3);
+    if (touchOnly) {
+      var mapEl = document.getElementById("map");
+      var hint = document.createElement("div");
+      hint.className = "map-touch-hint";
+      hint.textContent = "Use dois dedos para mover o mapa";
+      mapEl.appendChild(hint);
+      mapEl.addEventListener("touchstart", function (event) {
+        if (event.touches.length > 1) hint.style.display = "none";
+      }, { passive: true });
+    }
     window.L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: "&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors",
       maxZoom: 19

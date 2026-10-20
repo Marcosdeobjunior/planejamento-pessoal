@@ -2237,3 +2237,138 @@ body.tk-analytics-open .site-header {
 .tk-prior-dot { font-size: .62em; vertical-align: .08em; margin-right: 1px; }
 .tk-focus-icon { color: var(--accent, #c8a96e); }
 .tk-list-tab .ico { margin-right: 2px; }
+
+/* ══ Etapa 13: celular ═══════════════════════════════════════════════════
+   Só abaixo de 720/640px; o desktop não muda. A barra inferior do app-shell ocupa
+   var(--bottom-nav-h) embaixo da tela; os painéis em tela cheia (hub, analytics,
+   modais) ficam por cima dela. */
+.tk-mday-dots { display: none; }
+.tk-cal-agenda { display: none; }
+
+@media (max-width: 720px) {
+  .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  #page-tarefas .grid-4 .card { padding: 14px 16px; }
+  #page-tarefas .grid-4 .card-big-num { font-size: 30px; }
+}
+
+@media (max-width: 900px) {
+  /* foco de hoje empilhado: sem a altura fixa que sobrava vazia */
+  .tk-focus-wrap { height: auto; }
+  .tk-focus-list { height: auto; max-height: 340px; }
+}
+
+@media (max-width: 640px) {
+  #page-tarefas .page-header > div:last-child { width: 100%; }
+  #page-tarefas .page-header .btn { flex: 1; justify-content: center; min-height: 42px; }
+
+  /* lista com abas: uma linha que rola para o lado */
+  .tk-list-section { padding: 16px 14px; }
+  .tk-list-hd { margin-bottom: 12px; }
+  .tk-list-tabs {
+    flex-wrap: nowrap; overflow-x: auto; width: 100%;
+    scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    margin: 0 -2px; padding: 0 2px;
+  }
+  .tk-list-tabs::-webkit-scrollbar { display: none; }
+  .tk-list-tab { flex: 0 0 auto; min-height: 40px; padding: 0 14px; display: inline-flex; align-items: center; gap: 4px; }
+  .tk-list-page-btn { min-width: 40px; height: 40px; }
+  .tk-focus-wrap { padding: 18px 16px; }
+  /* a regra de 560px empilhava (e encolhia) estes itens */
+  .tk-focus-hd, .tk-focus-hd-left { flex-direction: row; align-items: center; }
+  .tk-focus-hd { flex-wrap: nowrap; gap: 10px; }
+  .tk-focus-hd-left { flex: 1; min-width: 0; }
+  .tk-modal-row { align-items: stretch; }
+  .tk-modal-row > * { width: 100%; }
+  .tk-focus-add-btn { min-height: 40px; }
+
+  /* calendário: mês compacto + agenda do dia */
+  .tk-cal-wrap { padding: 16px 12px; }
+  .tk-cal-nav { margin-bottom: 12px; gap: 8px; }
+  .tk-cal-nav .tk-focus-add-btn { display: none; }
+  .tk-cal-title { font-size: 17px; }
+  .tk-cal-arrow, .tk-cal-today-btn { min-width: 40px; height: 40px; }
+  .tk-cal-dow { font-size: 0; letter-spacing: 0; padding-bottom: 6px; }
+  .tk-cal-dow::after { content: attr(data-short); font-size: 11px; letter-spacing: .5px; }
+  .tk-cal-days { gap: 4px; touch-action: pan-y; }
+  .tk-cal-week { column-gap: 4px; }
+  .tk-cal-week .tk-day,
+  .tk-day {
+    min-height: 0; aspect-ratio: 1 / 1; height: auto;
+    padding: 0; border-radius: 12px; gap: 0;
+    align-items: center; justify-content: center;
+  }
+  .tk-day-num {
+    position: static; align-self: center; font-size: 14px; margin: 0;
+    font-family: var(--font-ui); color: rgba(255,255,255,.82);
+  }
+  .tk-day.today .tk-day-num { padding: 1px 6px; }
+  .tk-day:hover { box-shadow: none; }
+  .tk-cal-week .tk-day-tasks,
+  .tk-day-tasks,
+  .tk-cal-week-spans { display: none; }
+  .tk-mday-dots {
+    display: flex; gap: 3px; justify-content: center; height: 5px; margin-top: 4px;
+  }
+  .tk-mday-dot { width: 5px; height: 5px; border-radius: 50%; }
+  .tk-mday-dot.is-done { opacity: .35; }
+
+  .tk-cal-agenda { display: block; margin-top: 16px; border-top: 1px solid rgba(255,255,255,.07); padding-top: 14px; }
+  .tk-agenda-hd { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+  .tk-agenda-date { font-family: var(--font-display); font-size: 16px; font-weight: 700; color: var(--text); }
+  .tk-agenda-add {
+    display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px;
+    border-radius: 10px; border: 1px solid rgba(200,169,110,.35); background: rgba(200,169,110,.1);
+    color: var(--accent1); font: 700 12px var(--font-ui); cursor: pointer; flex-shrink: 0;
+  }
+  .tk-agenda-list { display: flex; flex-direction: column; gap: 8px; }
+  .tk-agenda-item {
+    display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 10px 12px;
+    border-radius: 12px; border: 1px solid rgba(255,255,255,.07); border-left: 3px solid var(--tk-color);
+    background: rgba(255,255,255,.03); color: var(--text); text-align: left; font-family: var(--font-ui);
+    cursor: pointer;
+  }
+  div.tk-agenda-item { cursor: default; }
+  .tk-agenda-item.is-done { opacity: .55; }
+  .tk-agenda-item.is-done .tk-agenda-name { text-decoration: line-through; }
+  .tk-agenda-time { flex: 0 0 auto; min-width: 52px; font: 600 12px var(--font-mono); color: var(--muted); }
+  .tk-agenda-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .tk-agenda-name { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tk-agenda-kind { font-size: 11px; color: var(--muted); }
+  .tk-agenda-go { color: var(--muted); flex-shrink: 0; }
+  .tk-agenda-empty { padding: 18px 4px; text-align: center; font-size: 13px; color: var(--muted); }
+
+  /* campos com 16px: o iPhone não dá zoom ao tocar */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+  select,
+  textarea { font-size: 16px !important; }
+
+  /* modais como folha que sobe de baixo */
+  .tk-modal-bd, .tk-delete-bd { align-items: flex-end; padding: 0; }
+  .tk-modal, .tk-delete-modal {
+    width: 100%; max-width: 100%; border-radius: 20px 20px 0 0; padding: 0;
+    max-height: 92vh; max-height: 92dvh;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .tk-delete-modal { padding: 20px 16px calc(16px + env(safe-area-inset-bottom, 0px)); }
+  .tk-modal-head { padding: 16px 16px 12px; }
+  .tk-modal-body { padding: 16px; }
+  .tk-modal-footer { padding: 12px 16px 16px; }
+  .tk-modal-close { width: 40px; height: 40px; }
+  .tk-modal-save, .tk-modal-cancel { min-height: 44px; }
+
+  /* hub da tarefa e gaveta de edição em tela cheia */
+  #task-hub .hub-nav { flex-direction: row; align-items: center; flex-wrap: wrap; gap: 8px; }
+  #task-hub .hub-back-btn, #task-hub .hub-nav-btn { min-height: 40px; }
+  #task-hub .hub-body { padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px)); }
+  #taskh-drawer { width: 100vw; max-width: 100vw; height: 100dvh; border-left: 0; }
+
+  /* analytics: indicadores em 2 colunas (a regra de 560px deixava um por linha) */
+  #tk-analytics .san-kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  #tk-analytics .san-body { padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px)); }
+
+  /* menu de ações rápidas (toque longo) como folha acima da barra inferior */
+  .tk-quick-actions {
+    left: 8px !important; right: 8px !important; top: auto !important;
+    bottom: calc(var(--bottom-nav-h, 0px) + 8px) !important; width: auto;
+  }
+}

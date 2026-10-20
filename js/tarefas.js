@@ -2541,14 +2541,105 @@ function tkCalUpdateDragGhost(clientX, clientY) {
   ghost.classList.add('show');
 }
 
+// ── Calendário no celular (≤ 640px): mês compacto com pontinhos + agenda do dia ──
+function tkCalIsMobile() {
+  return !!(window.matchMedia && window.matchMedia('(max-width: 640px)').matches);
+}
+
+function tkCalItemColor(item) {
+  if (item.isHoliday) return '#e06b8b';
+  if (item.isDream) return '#7c6fcd';
+  if (item.isReview) return '#6fa8dc';
+  if (item.isGym) return item.cor || '#5ec4a8';
+  return item.cor || TK_PRIOR_COLOR[item.prior] || '#c8a96e';
+}
+
+// tudo o que cai num dia: tarefas (inclusive as de vários dias), feriados, sonhos, revisões e treinos
+function tkCalItemsForDate(ds) {
+  var parts = String(ds).split('-').map(Number);
+  var year = parts[0];
+  var month = parts[1] - 1;
+  var sameDay = function (item) { return item && String(item.data || '').slice(0, 10) === ds; };
+  var items = S.tasks.filter(function (task) {
+    if (!task.data) return false;
+    return tkTaskHasDateRange(task) ? task.data <= ds && task.dataFim >= ds : task.data === ds;
+  });
+  items = tkGetNationalHolidayEntries(year, month).filter(sameDay)
+    .concat(getDreamCalendarEntries(year, month).filter(sameDay))
+    .concat(getReviewCalendarEntries(year, month).filter(sameDay))
+    .concat(items)
+    .concat(tkGetGymCalendarEntries(year, month).filter(sameDay));
+  return items.sort(function (a, b) {
+    if (!!a.isHoliday !== !!b.isHoliday) return a.isHoliday ? -1 : 1;
+    if (a.done !== b.done) return a.done ? 1 : -1;
+    return (a.hora || '99:99').localeCompare(b.hora || '99:99');
+  });
+}
+
+function tkCalAgendaAction(item) {
+  if (item.isHoliday) return '';
+  if (item.isDream) return 'tkOpenDreamDeadline(' + tkJs(String(item.id)) + ')';
+  if (item.isReview) return 'tkOpenReviewPlanner()';
+  if (item.isGym) return 'tkOpenGymDay(' + tkJs(item.data) + ')';
+  return 'taskHubOpen(' + tkJs(item.id) + ')';
+}
+
+function tkCalRenderAgenda() {
+  var box = document.getElementById('tk-cal-agenda');
+  if (!box) return;
+  var ds = tkCalState.selected || tkToday();
+  var date = tkParseDate(ds);
+  var label = date.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+  var items = tkCalItemsForDate(ds);
+  var rows = items.map(function (item) {
+    var kind = item.isHoliday ? (item.holidayType || 'Feriado') : item.isDream ? 'Prazo do sonho' : item.isReview ? 'Revisão' : item.isGym ? 'Treino' : (item.cat || ({ alta: 'Prioridade alta', media: 'Prioridade média', baixa: 'Prioridade baixa' })[item.prior] || 'Tarefa');
+    var when = item.hora ? esc(item.hora) : (tkTaskHasDateRange(item) ? item.data.slice(8, 10) + '/' + item.data.slice(5, 7) + '–' + item.dataFim.slice(8, 10) + '/' + item.dataFim.slice(5, 7) : 'Dia todo');
+    var action = tkCalAgendaAction(item);
+    var tag = action ? 'button type="button" onclick="' + action + '"' : 'div';
+    var close = action ? 'button' : 'div';
+    return '<' + tag + ' class="tk-agenda-item' + (item.done ? ' is-done' : '') + '" style="--tk-color:' + tkCalItemColor(item) + '">' +
+      '<span class="tk-agenda-time">' + when + '</span>' +
+      '<span class="tk-agenda-info"><span class="tk-agenda-name">' + esc(item.nome || 'Tarefa') + '</span>' +
+      '<span class="tk-agenda-kind">' + esc(kind) + (item.done ? ' · concluída' : '') + '</span></span>' +
+      (action ? '<i class="ico ico-chevron-right tk-agenda-go" aria-hidden="true"></i>' : '') +
+      '</' + close + '>';
+  }).join('');
+  box.innerHTML =
+    '<div class="tk-agenda-hd"><div class="tk-agenda-date">' + esc(label.charAt(0).toUpperCase() + label.slice(1)) + '</div>' +
+    '<button type="button" class="tk-agenda-add" onclick="tkModalOpenForDate(' + tkJs(ds) + ')"><i class="ico ico-plus" aria-hidden="true"></i> Tarefa</button></div>' +
+    (rows ? '<div class="tk-agenda-list">' + rows + '</div>' : '<div class="tk-agenda-empty">Nada marcado neste dia.</div>');
+}
+
+// deslizar o dedo na grade troca de mês
+function tkCalInitSwipe() {
+  var grid = document.getElementById('tk-cal-days');
+  if (!grid || grid.dataset.swipeReady === '1') return;
+  grid.dataset.swipeReady = '1';
+  var start = null;
+  grid.addEventListener('touchstart', function (event) {
+    if (!tkCalIsMobile() || event.touches.length !== 1) { start = null; return; }
+    start = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+  }, { passive: true });
+  grid.addEventListener('touchend', function (event) {
+    if (!start || !event.changedTouches.length) return;
+    var dx = event.changedTouches[0].clientX - start.x;
+    var dy = event.changedTouches[0].clientY - start.y;
+    start = null;
+    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    if (dx < 0) tkCalNext(); else tkCalPrev();
+  });
+}
+
 function tkCalInitInteractions() {
   var wrap = document.querySelector('.tk-cal-wrap');
   if (!wrap || wrap.dataset.selectionReady === '1') return;
   wrap.dataset.selectionReady = '1';
   wrap.addEventListener('pointerdown', function (event) {
     if (event.target.closest('.tk-cal-task-card')) return;
+    if (event.pointerType === 'touch') return;
     tkCalStartSelection(event);
   });
+  tkCalInitSwipe();
   document.addEventListener('pointermove', tkCalMoveSelection);
   document.addEventListener('pointerup', tkCalEndSelection);
   document.addEventListener('pointermove', tkCalHandlePointerDragMove);
@@ -2650,6 +2741,13 @@ tkCalRender = function () {
   if (titleEl) titleEl.textContent = TK_MONTHS[tkCalState.month] + ' ' + tkCalState.year;
   const year = tkCalState.year;
   const month = tkCalState.month;
+  // celular: a agenda abaixo da grade mostra o dia selecionado, que tem de estar no mês visível
+  if (tkCalIsMobile()) {
+    const monthKey = year + '-' + String(month + 1).padStart(2, '0');
+    if (String(tkCalState.selected || '').slice(0, 7) !== monthKey) {
+      tkCalState.selected = tkToday().slice(0, 7) === monthKey ? tkToday() : monthKey + '-01';
+    }
+  }
   const selected = tkCalState.selected;
   const today = tkToday();
   const firstDay = new Date(year, month, 1).getDay();
@@ -2783,11 +2881,16 @@ tkCalRender = function () {
           ${task.hora ? `<span style="opacity:.6;margin-right:3px">${esc(task.hora)}</span>` : ''}${esc(task.nome)}
         </div>`;
       }).join('');
+      const dayItems = (byDay[dayNumber] || []).concat(rangedTasks.filter(function (task) { return task.data <= ds && task.dataFim >= ds; }));
+      const mobileDots = dayItems.slice(0, 3).map(function (item) {
+        return '<i class="tk-mday-dot' + (item.done ? ' is-done' : '') + '" style="background:' + tkCalItemColor(item) + '"></i>';
+      }).join('');
       weekCells.push(`<div class="${cls}" data-date="${ds}" style="grid-column:${colIndex + 1}"
           onclick="tkCalSelectDay('${ds}')" ondblclick="tkModalOpenForDate('${ds}')"
           title="${holiday ? holiday.holidayType + ': ' + holiday.nome + ' · ' : ''}Clique para selecionar · Duplo clique para adicionar tarefa">
         <span class="tk-day-num">${dayNumber}</span>
         <div class="tk-day-tasks">${miniCards}</div>
+        <span class="tk-mday-dots" aria-hidden="true">${mobileDots}</span>
       </div>`);
     }
 
@@ -2818,6 +2921,7 @@ tkCalRender = function () {
     </div>`);
   }
   grid.innerHTML = weekMarkup.join('');
+  tkCalRenderAgenda();
   tkCalEnsureSelectionBox();
   tkCalApplySelection(tkCalendarSelection.ids);
 };
@@ -2826,6 +2930,7 @@ tkCalSelectDay = function (ds) {
   if (tkCalendarSelection.justBoxSelected) return;
   tkCalState.selected = ds;
   tkCalRender();
+  if (tkCalIsMobile()) return;
   const listEl = document.getElementById('tk-list-section') || document.querySelector('.tk-list-section');
   if (listEl) listEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };

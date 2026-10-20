@@ -491,7 +491,7 @@ select.inp option { background: var(--bg2); }
   .modal-grid { grid-template-columns: 1fr; }
   .modal-field.span-2 { grid-column: span 1; }
 }
-@media (max-width: 500px) { .tracker-grid { grid-template-columns: 1fr; } }
+/* celular: capas em 2 colunas (ver biblioteca-page.css) */
 
 /* Modal from biblioteca base */
 .modal-backdrop {
@@ -956,7 +956,6 @@ select.inp option { background: var(--bg2); }
 
 @media (max-width: 560px) {
   .grid-4,
-  .tracker-grid,
   .modal-grid,
   .modal-main,
   .modal-side {

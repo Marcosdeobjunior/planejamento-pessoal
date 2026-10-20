@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://apis.google.com https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://unpkg.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.google.com https://nominatim.openstreetmap.org https://api.open-meteo.com https://geocoding-api.open-meteo.com; frame-src https://*.firebaseapp.com https://www.google.com https://recaptcha.google.com https://www.youtube.com https://player.vimeo.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#04040c">
   <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
   <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
@@ -98,12 +98,14 @@
         </div>
       </div>
       <div class="tk-cal-dow-row">
-        <div class="tk-cal-dow">Domingo</div><div class="tk-cal-dow">Segunda</div>
-        <div class="tk-cal-dow">Terça</div><div class="tk-cal-dow">Quarta</div>
-        <div class="tk-cal-dow">Quinta</div><div class="tk-cal-dow">Sexta</div>
-        <div class="tk-cal-dow">Sábado</div>
+        <div class="tk-cal-dow" data-short="D">Domingo</div><div class="tk-cal-dow" data-short="S">Segunda</div>
+        <div class="tk-cal-dow" data-short="T">Terça</div><div class="tk-cal-dow" data-short="Q">Quarta</div>
+        <div class="tk-cal-dow" data-short="Q">Quinta</div><div class="tk-cal-dow" data-short="S">Sexta</div>
+        <div class="tk-cal-dow" data-short="S">Sábado</div>
       </div>
       <div class="tk-cal-days" id="tk-cal-days"></div>
+      <!-- celular: lista do dia selecionado (no desktop o dia aparece nas próprias células) -->
+      <div class="tk-cal-agenda" id="tk-cal-agenda" aria-live="polite"></div>
     </div>
   </section>
   </main>

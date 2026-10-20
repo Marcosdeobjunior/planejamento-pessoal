@@ -1410,3 +1410,26 @@ body[data-page="wishlist"] .app-content {
     max-width: calc(100vw - 32px);
   }
 }
+
+/* ── Celular (etapa 13) ───────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  body:has(.ws-mo.open) .bottom-nav { display: none; }
+  #tc { bottom: calc(16px + var(--bottom-nav-h)); right: 16px; left: 16px; align-items: flex-end; }
+  #btn-add, .ws-tab, .ws-btn-filter { min-height: 40px; }
+  .ws-mdc { width: 40px; height: 40px; }
+  .ws-card-check { width: 36px; height: 36px; }
+}
+@media (max-width: 640px) {
+  .ws-mo { padding: 0; align-items: flex-end; }
+  .ws-md {
+    width: 100%; max-width: none; max-height: 94vh; max-height: 94dvh; overflow-y: auto;
+    border-radius: 20px 20px 0 0; border-bottom: 0;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  }
+  .ws-mdh { position: sticky; top: -1px; z-index: 2; background: inherit; padding-top: 4px; }
+  .ws-md input, .ws-md select, .ws-md textarea, .ws-search-inp { font-size: 16px; }
+}
+@media (max-width: 560px) {
+  /* estatísticas em 2 colunas (antes: 4 cartões altos empilhados) */
+  .ws-stats { grid-template-columns: 1fr 1fr; }
+}

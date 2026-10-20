@@ -1238,6 +1238,8 @@
 
   function finCalStartSelection(event) {
     if (event.button !== 0 || event.target.closest('.fin-cal-ev')) return;
+    // toque e celular: tocar escolhe o dia e deslizar troca o mês (sem seleção por caixa)
+    if (event.pointerType === 'touch' || finCalIsMobile()) return;
     var grid = document.getElementById('cal-grid');
     var box = finCalEnsureSelectionBox();
     if (!grid || !box) return;
@@ -1502,6 +1504,144 @@
     document.addEventListener('pointerup', finCalHandleDragEnd);
   }
 
+  // Celular (≤ 640px): o mês fica compacto (número do dia + pontinhos) e o dia tocado mostra seus
+  // lançamentos logo abaixo ("agenda do dia"). Deslizar na grade troca de mês. No desktop nada muda.
+  var finCalMobileMq = window.matchMedia ? window.matchMedia("(max-width: 640px)") : null;
+  var finCalSelectedDate = null;
+  var FIN_WEEKDAYS_LONG = ["Domingo", "Segunda", "Ter\u00e7a", "Quarta", "Quinta", "Sexta", "S\u00e1bado"];
+
+  function finCalIsMobile() {
+    return !!(finCalMobileMq && finCalMobileMq.matches);
+  }
+
+  function finCalShiftMonth(delta) {
+    calMonth += delta;
+    if (calMonth < 0) { calMonth = 11; calYear -= 1; }
+    if (calMonth > 11) { calMonth = 0; calYear += 1; }
+    renderCalendar();
+  }
+
+  function finCalSelectDay(dateStr) {
+    finCalSelectedDate = dateStr;
+    document.querySelectorAll(".fin-cal-cell[data-date]").forEach(function (cell) {
+      var on = cell.dataset.date === dateStr;
+      cell.classList.toggle("is-selected", on);
+      cell.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+    renderCalAgenda();
+  }
+
+  function renderCalAgenda() {
+    var grid = document.getElementById("cal-grid");
+    if (!grid) return;
+    var box = document.getElementById("fin-cal-agenda");
+    if (!box) {
+      box = document.createElement("div");
+      box.id = "fin-cal-agenda";
+      box.className = "fin-cal-agenda";
+      box.setAttribute("aria-live", "polite");
+      grid.parentNode.insertBefore(box, grid.nextSibling);
+    }
+    var ds = finCalSelectedDate;
+    box.innerHTML = "";
+    if (!ds) return;
+    var parts = ds.split("-");
+    var dateObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    var dayTxs = expandRecurring(dateObj.getFullYear(), dateObj.getMonth()).filter(function (tx) { return tx.date === ds; });
+    dayTxs.sort(function (a, b) { return (isFuture(a) ? 1 : 0) - (isFuture(b) ? 1 : 0); });
+
+    var head = document.createElement("div");
+    head.className = "fin-cal-ag-hd";
+    var titleWrap = document.createElement("div");
+    var dateEl = document.createElement("div");
+    dateEl.className = "fin-cal-ag-date";
+    dateEl.textContent = FIN_WEEKDAYS_LONG[dateObj.getDay()] + ", " + dateObj.getDate() + " de " + MONTHS_PT[dateObj.getMonth()].toLowerCase();
+    titleWrap.appendChild(dateEl);
+    if (txs.length || recurrenceRules.length) {
+      var bal = getCalendarDailyBalances(dateObj.getFullYear(), dateObj.getMonth())[ds] || 0;
+      var balEl = document.createElement("div");
+      balEl.className = "fin-cal-ag-bal " + (bal < 0 ? "neg" : "pos");
+      balEl.textContent = (ds > today() ? "Saldo previsto: " : "Saldo do dia: ") + fmtR(bal);
+      titleWrap.appendChild(balEl);
+    }
+    head.appendChild(titleWrap);
+    var add = document.createElement("button");
+    add.type = "button";
+    add.className = "fin-cal-ag-add";
+    add.innerHTML = '<i class="ico ico-plus" aria-hidden="true"></i> Adicionar';
+    add.setAttribute("aria-label", "Adicionar transa\u00e7\u00e3o em " + fmtD(ds));
+    add.addEventListener("click", function () { openCreateAtDate(ds); });
+    head.appendChild(add);
+    box.appendChild(head);
+
+    if (!dayTxs.length) {
+      var empty = document.createElement("p");
+      empty.className = "fin-cal-ag-empty";
+      empty.textContent = "Nenhum lan\u00e7amento neste dia.";
+      box.appendChild(empty);
+      return;
+    }
+    var list = document.createElement("div");
+    list.className = "fin-cal-ag-list";
+    dayTxs.forEach(function (tx) {
+      var fut = isFuture(tx);
+      var item = document.createElement("button");
+      item.type = "button";
+      item.className = "fin-cal-ag-item " + getTxClass(tx.type) + (fut ? " is-future" : "");
+      var dot = document.createElement("span");
+      dot.className = "fin-cal-ag-dot";
+      dot.setAttribute("aria-hidden", "true");
+      var main = document.createElement("span");
+      main.className = "fin-cal-ag-main";
+      var name = document.createElement("span");
+      name.className = "fin-cal-ag-name";
+      name.textContent = tx.description || tx.category || "Lan\u00e7amento";
+      var meta = document.createElement("span");
+      meta.className = "fin-cal-ag-cat";
+      var bits = [tx.category || ""];
+      if (tx.recurrence === "monthly") bits.push("mensal");
+      else if (tx.recurrence === "weekly") bits.push("semanal");
+      else if (tx._source === "rule") bits.push("recorrente");
+      if (fut) bits.push("futuro");
+      meta.textContent = bits.filter(Boolean).join(" \u00b7 ");
+      main.appendChild(name);
+      main.appendChild(meta);
+      var val = document.createElement("span");
+      val.className = "fin-cal-ag-val";
+      val.textContent = getTxSign(tx.type) + fmtR(tx.value);
+      item.appendChild(dot);
+      item.appendChild(main);
+      item.appendChild(val);
+      item.addEventListener("click", function () { openGeneratedSource(tx); });
+      list.appendChild(item);
+    });
+    box.appendChild(list);
+  }
+
+  function finCalInitSwipe() {
+    var grid = document.getElementById("cal-grid");
+    if (!grid || grid.dataset.finSwipeReady === "1") return;
+    grid.dataset.finSwipeReady = "1";
+    var start = null;
+    grid.addEventListener("touchstart", function (event) {
+      if (!finCalIsMobile() || event.touches.length !== 1) { start = null; return; }
+      start = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+    }, { passive: true });
+    grid.addEventListener("touchend", function (event) {
+      if (!start || !event.changedTouches.length) return;
+      var dx = event.changedTouches[0].clientX - start.x;
+      var dy = event.changedTouches[0].clientY - start.y;
+      start = null;
+      if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      finCalShiftMonth(dx < 0 ? 1 : -1);
+    }, { passive: true });
+    if (finCalMobileMq) {
+      var onChange = function () { renderCalendar(); };
+      if (finCalMobileMq.addEventListener) finCalMobileMq.addEventListener("change", onChange);
+      else if (finCalMobileMq.addListener) finCalMobileMq.addListener(onChange);
+    }
+  }
+
   function renderCalendar() {
     var title = document.getElementById("cal-title");
     title.innerHTML = "<em>" + MONTHS_PT[calMonth] + "</em> " + calYear;
@@ -1545,6 +1685,12 @@
     var daySavings = getCalendarDailySavings(calYear, calMonth);
     var hasData = txs.length > 0 || recurrenceRules.length > 0;
 
+    var monthKey = calYear + "-" + String(calMonth + 1).padStart(2, "0");
+    if (!finCalSelectedDate || finCalSelectedDate.slice(0, 7) !== monthKey) {
+      finCalSelectedDate = todayStr.slice(0, 7) === monthKey ? todayStr : monthKey + "-01";
+    }
+    var mobileCal = finCalIsMobile();
+
     var totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
     var weekRows = totalCells / 7;
     grid.style.gridTemplateRows = "auto repeat(" + weekRows + ", minmax(0, 1fr))";
@@ -1566,24 +1712,30 @@
         (function (dateStr) {
           cell.setAttribute("role", "button");
           cell.setAttribute("tabindex", "0");
-          cell.setAttribute("aria-label", "Adicionar transação em " + fmtD(dateStr));
+          cell.setAttribute("aria-label", (mobileCal ? "Ver lançamentos de " : "Adicionar transação em ") + fmtD(dateStr));
           cell.addEventListener("click", function (event) {
             if (event.target.closest(".fin-cal-ev")) return;
             if (finCalSelection.justBoxSelected) {
               finCalSelection.justBoxSelected = false;
               return;
             }
-            openCreateAtDate(dateStr);
+            if (finCalIsMobile()) finCalSelectDay(dateStr);
+            else openCreateAtDate(dateStr);
           });
           cell.addEventListener("keydown", function (event) {
             if (event.key === "Enter" || event.key === " ") {
               event.preventDefault();
-              openCreateAtDate(dateStr);
+              if (finCalIsMobile()) finCalSelectDay(dateStr);
+              else openCreateAtDate(dateStr);
             }
           });
         }(ds));
         if (ds === todayStr) cell.classList.add("today");
         if (dayNum === bestDay) cell.classList.add("best-buy");
+        if (mobileCal) {
+          cell.classList.toggle("is-selected", ds === finCalSelectedDate);
+          cell.setAttribute("aria-pressed", ds === finCalSelectedDate ? "true" : "false");
+        }
 
         var evs = document.createElement("div");
         evs.className = "fin-cal-events";
@@ -1624,6 +1776,26 @@
         });
         cell.appendChild(evs);
 
+        // celular: um pontinho por tipo de lançamento do dia (o resto fica na agenda abaixo)
+        var dotKinds = {};
+        dayEvs.forEach(function (tx) {
+          var kind = getTxClass(tx.type);
+          var fut = isFuture(tx);
+          if (!dotKinds[kind] || !fut) dotKinds[kind] = fut ? "future" : "now";
+        });
+        var dotKeys = Object.keys(dotKinds);
+        if (dotKeys.length) {
+          var dots = document.createElement("div");
+          dots.className = "fin-cal-dots";
+          dots.setAttribute("aria-hidden", "true");
+          dotKeys.slice(0, 4).forEach(function (kind) {
+            var dot = document.createElement("span");
+            dot.className = "fin-cal-dot " + kind + (dotKinds[kind] === "future" ? " is-future" : "");
+            dots.appendChild(dot);
+          });
+          cell.appendChild(dots);
+        }
+
         if (hasData) {
           var dayBal = dayBalances[ds] || 0;
           var balEl = document.createElement("div");
@@ -1653,7 +1825,9 @@
       grid.appendChild(cell);
     }
     finCalInitInteractions();
+    finCalInitSwipe();
     finCalApplySelection(finCalSelection.ids);
+    renderCalAgenda();
   }
 
   function renderTxList() {
@@ -2538,6 +2712,7 @@
       var ym = nowYM();
       calYear = ym.y;
       calMonth = ym.m;
+      finCalSelectedDate = today();
       renderCalendar();
     });
 

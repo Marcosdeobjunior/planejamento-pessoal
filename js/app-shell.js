@@ -6344,28 +6344,28 @@ window.SoterUtils = window.SoterUtils || (function () {
       '    </div>',
       '    <button class="header-mobile-close" id="header-mobile-close" type="button" aria-label="Fechar menu">\u00d7</button>',
       '  </div>',
-      '  <nav class="header-mobile-nav">',
-      '    <div class="header-mobile-group-label">Pessoal</div>',
-      '    <a class="header-mobile-link" href="sonhos.html">Sonhos</a>',
-      '    <a class="header-mobile-link" href="viagens.html">Viagens</a>',
-      '    <a class="header-mobile-link" href="wishlist.html">Wishlist</a>',
-      '    <a class="header-mobile-link" href="financas.html">Finan\u00e7as</a>',
-      '    <a class="header-mobile-link" href="tarefas.html">Planejamento</a>',
-      '    <a class="header-mobile-link" href="academia.html">Academia</a>',
-      '    <div class="header-mobile-group-label">Estudos</div>',
-      '    <a class="header-mobile-link" href="revisao.html">Revis\u00e3o</a>',
-      '    <div class="header-mobile-group-label">Biblioteca</div>',
-      '    <a class="header-mobile-link" href="livros.html">Livraria</a>',
-      '    <a class="header-mobile-link" href="cinema.html">Cinema</a>',
-      '    <a class="header-mobile-link" href="mangas.html">Mang\u00e1s</a>',
-      '    <div class="header-mobile-group-label">Livro</div>',
-      '    <a class="header-mobile-link" href="projetos.html">Projetos</a>',
+      '  <nav class="header-mobile-nav" aria-label="Outras p\u00e1ginas">',
+      '    <a class="header-mobile-link" data-page="home" href="index.html"><i class="ico ico-house" aria-hidden="true"></i><span>In\u00edcio</span></a>',
+      '    <a class="header-mobile-link" data-page="sonhos" href="sonhos.html"><i class="ico ico-moon" aria-hidden="true"></i><span>Sonhos</span></a>',
+      '    <a class="header-mobile-link" data-page="viagens" href="viagens.html"><i class="ico ico-plane" aria-hidden="true"></i><span>Viagens</span></a>',
+      '    <a class="header-mobile-link" data-page="wishlist" href="wishlist.html"><i class="ico ico-gift" aria-hidden="true"></i><span>Wishlist</span></a>',
+      '    <a class="header-mobile-link" data-page="livros" href="livros.html"><i class="ico ico-library" aria-hidden="true"></i><span>Livraria</span></a>',
+      '    <a class="header-mobile-link" data-page="cinema" href="cinema.html"><i class="ico ico-clapperboard" aria-hidden="true"></i><span>Cinema</span></a>',
+      '    <a class="header-mobile-link" data-page="mangas" href="mangas.html"><i class="ico ico-book-open" aria-hidden="true"></i><span>Mang\u00e1s</span></a>',
+      '    <a class="header-mobile-link" data-page="projetos" href="projetos.html"><i class="ico ico-notebook-pen" aria-hidden="true"></i><span>Projetos</span></a>',
+      '    <a class="header-mobile-link" data-page="rpg" href="rpg.html"><i class="ico ico-swords" aria-hidden="true"></i><span>Usu\u00e1rio</span></a>',
       '  </nav>',
       '  <div class="header-mobile-drawer-actions">',
-      '    <a class="header-mobile-action" href="rpg.html">Usu\u00e1rio</a>',
-      '    <button class="header-mobile-action" type="button" data-open-push hidden><i class="ico ico-bell-ring" aria-hidden="true"></i> Lembretes</button>',
+      '    <button class="header-mobile-action" type="button" data-open-push hidden><i class="ico ico-bell-ring" aria-hidden="true"></i> Lembretes no celular</button>',
       '  </div>',
-      '</aside>'
+      '</aside>',
+      '<nav class="bottom-nav" id="bottom-nav" aria-label="Navega\u00e7\u00e3o principal">',
+      '  <a class="bn-item" data-bn="tarefas" href="tarefas.html"><i class="ico ico-calendar-check" aria-hidden="true"></i><span>Tarefas</span></a>',
+      '  <a class="bn-item" data-bn="financas" href="financas.html"><i class="ico ico-wallet" aria-hidden="true"></i><span>Finan\u00e7as</span></a>',
+      '  <a class="bn-item" data-bn="revisao" href="revisao.html"><i class="ico ico-brain" aria-hidden="true"></i><span>Revis\u00e3o</span></a>',
+      '  <a class="bn-item" data-bn="academia" href="academia.html"><i class="ico ico-dumbbell" aria-hidden="true"></i><span>Academia</span></a>',
+      '  <button class="bn-item bn-more" id="bottom-nav-more" type="button" aria-controls="header-mobile-drawer" aria-expanded="false"><i class="ico ico-layout-grid" aria-hidden="true"></i><span>Mais</span></button>',
+      '</nav>'
     ].join("\n");
   }
 
@@ -6531,6 +6531,7 @@ window.SoterUtils = window.SoterUtils || (function () {
     var profileWidget = document.getElementById("profile-widget");
     var profileTrigger = document.getElementById("profile-trigger");
     var mobileToggle = document.getElementById("header-mobile-toggle");
+    var moreButton = document.getElementById("bottom-nav-more");
     var mobileClose = document.getElementById("header-mobile-close");
     var mobileDrawer = document.getElementById("header-mobile-drawer");
     var mobileBackdrop = document.getElementById("header-mobile-backdrop");
@@ -6544,6 +6545,10 @@ window.SoterUtils = window.SoterUtils || (function () {
       // fechado: os links também saem da navegação por teclado (não só do leitor de tela)
       if (shouldOpen) mobileDrawer.removeAttribute("inert"); else mobileDrawer.setAttribute("inert", "");
       mobileToggle.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
+      if (moreButton) {
+        moreButton.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
+        moreButton.classList.toggle("is-open", shouldOpen);
+      }
       document.body.classList.toggle("mobile-drawer-open", shouldOpen);
     }
 
@@ -6606,6 +6611,15 @@ window.SoterUtils = window.SoterUtils || (function () {
       });
     }
 
+    // celular: o botão "Mais" da barra inferior abre a mesma gaveta, como folha que sobe de baixo
+    if (moreButton) {
+      moreButton.addEventListener("click", function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        setMobileDrawerOpen(!mobileDrawer.classList.contains("is-open"));
+      });
+    }
+
     if (mobileClose) {
       mobileClose.addEventListener("click", function (event) {
         event.preventDefault();
@@ -6626,7 +6640,7 @@ window.SoterUtils = window.SoterUtils || (function () {
     });
 
     document.addEventListener("click", function (event) {
-      var insideHeaderMenu = event.target.closest(".hn-dropdown, .profile-widget, .header-mobile-drawer, .header-mobile-toggle");
+      var insideHeaderMenu = event.target.closest(".hn-dropdown, .profile-widget, .header-mobile-drawer, .header-mobile-toggle, .bottom-nav");
       if (insideHeaderMenu) return;
       closeAllMenus();
     });
@@ -6661,6 +6675,17 @@ window.SoterUtils = window.SoterUtils || (function () {
 
   function highlightCurrentPage() {
     var page = currentPage();
+    var bottomNav = document.getElementById("bottom-nav");
+    if (bottomNav) {
+      document.body.classList.add("has-bottom-nav");
+      var mainItem = bottomNav.querySelector('[data-bn="' + page + '"]');
+      if (mainItem) {
+        mainItem.classList.add("is-active");
+        mainItem.setAttribute("aria-current", "page");
+      } else if (page !== "home") {
+        document.getElementById("bottom-nav-more").classList.add("is-active");
+      }
+    }
     document.querySelectorAll("[data-page]").forEach(function (node) {
       if (node.getAttribute("data-page") === page) {
         node.classList.add("active");

@@ -696,3 +696,103 @@ body {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* Celular (etapa 13): mesma aparência, mais compacta. Hero cabe entre o cabeçalho e a barra
+   inferior; constelações e módulos em 2 colunas, sem a descrição longa; campo de nota com 16 px
+   (o iPhone não dá zoom). */
+@media (max-width: 768px) {
+  .integrated-home .integrated-hero {
+    min-height: calc(100svh - 58px - var(--bottom-nav-h, 0px));
+  }
+
+  .integrated-home .content-section {
+    padding: 3.25rem 0;
+  }
+
+  .integrated-home .nota-input {
+    font-size: 16px;
+  }
+
+  .integrated-home .humor-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 560px) {
+  .integrated-home .const-grid,
+  .integrated-home .mod-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .integrated-home .mod-grid {
+    margin-top: 2rem;
+  }
+
+  .integrated-home .const-card {
+    min-height: 0;
+    padding: 1.25rem 1rem;
+    gap: 0.6rem;
+  }
+
+  .integrated-home .const-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1.2rem;
+  }
+
+  .integrated-home .const-title {
+    font-size: 1.1rem;
+  }
+
+  .integrated-home .const-desc,
+  .integrated-home .mod-desc {
+    display: none;
+  }
+
+  .integrated-home .const-meta {
+    padding-top: 0.75rem;
+  }
+
+  .integrated-home .mod-thumb {
+    height: 110px;
+    padding: 0.75rem 0.5rem 0;
+  }
+
+  .integrated-home .mod-body {
+    padding: 0.9rem 0.9rem 1rem;
+    gap: 0.3rem;
+  }
+
+  .integrated-home .mod-title {
+    font-size: 1.05rem;
+  }
+
+  .integrated-home .mod-count {
+    padding-top: 0.5rem;
+  }
+
+  .integrated-home .ritmo-block,
+  .integrated-home .rpg-left,
+  .integrated-home .rpg-right {
+    padding: 1.5rem 1.15rem;
+  }
+
+  .integrated-home .humor-grid {
+    gap: 0.4rem;
+  }
+
+  .integrated-home .humor-btn {
+    padding: 0.45rem 0.6rem;
+  }
+
+  .integrated-home .ind-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .integrated-home .ind-item {
+    padding: 1.1rem 0.4rem;
+  }
+}
