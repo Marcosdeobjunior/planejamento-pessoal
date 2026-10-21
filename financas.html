@@ -81,26 +81,19 @@
               <div class="fin-bd-bars" id="bd-bars"></div>
             </div>
 
-            <div class="fin-savings-card" id="fin-savings-card" role="button" tabindex="0" aria-label="Editar meta da poupança">
+            <div class="fin-savings-card" id="fin-savings-card">
               <div class="fin-savings-head">
-                <div class="fin-savings-title">Poupança</div>
-                <div class="fin-savings-badge" id="fin-savings-badge">0%</div>
+                <div class="fin-savings-title">Caixinhas</div>
+                <div class="fin-boxes-head-right">
+                  <div class="fin-savings-badge" id="fin-boxes-count">0 caixinhas</div>
+                  <button class="fin-boxes-add" id="fin-boxes-new" type="button" aria-label="Nova caixinha" title="Nova caixinha"><i class="ico ico-plus" aria-hidden="true"></i></button>
+                </div>
               </div>
-              <div class="fin-savings-amount" id="fin-savings-amount">R$ 0,00</div>
-              <div class="fin-savings-sub" id="fin-savings-sub">Transferido para a poupança e fora do saldo disponível</div>
-              <div class="fin-savings-goal-row">
-                <div class="fin-savings-goal-label">Meta</div>
-                <div class="fin-savings-goal-display" id="fin-savings-goal-display">Clique para editar</div>
-                <input class="fin-savings-goal-input" id="fin-savings-goal-input" type="number" min="0" step="0.01" placeholder="0,00" aria-label="Meta da poupança">
-              </div>
-              <div class="fin-savings-bar">
-                <div class="fin-savings-fill" id="fin-savings-fill" style="width:0%"></div>
-              </div>
-              <div class="fin-savings-estimate" id="fin-savings-estimate">Sem aportes suficientes para estimar</div>
-              <div class="fin-savings-meta">
-                <span id="fin-savings-meta-left">Meta atual</span>
-                <span id="fin-savings-meta-right">R$ 0,00</span>
-              </div>
+              <div class="fin-savings-amount" id="fin-boxes-total">R$ 0,00</div>
+              <div class="fin-savings-sub" id="fin-boxes-sub">Guardado e fora do saldo disponível</div>
+              <div class="fin-boxes-dist" id="fin-boxes-dist" aria-hidden="true"></div>
+              <div class="fin-boxes-featured" id="fin-boxes-featured"></div>
+              <button class="fin-boxes-more" id="fin-boxes-more" type="button"><i class="ico ico-layout-grid" aria-hidden="true"></i> Ver todas</button>
             </div>
             <div class="fin-actions-card">
               <div class="fin-actions-title">Ações</div>
@@ -202,7 +195,7 @@
 
       <div class="san-charts-row">
         <div class="san-card fin-analytics-savings-card" style="flex:1">
-          <div class="san-card-title"><span class="san-card-title-icon"><i class="ico ico-landmark" aria-hidden="true"></i></span>Poupança</div>
+          <div class="san-card-title"><span class="san-card-title-icon"><i class="ico ico-landmark" aria-hidden="true"></i></span>Caixinhas</div>
           <div class="fin-analytics-savings-head">
             <div>
               <div class="fin-analytics-savings-amount" id="st-save-amount">R$ 0</div>
@@ -221,7 +214,7 @@
         <div class="san-card fin-analytics-savings-average-card" style="flex:0 0 260px">
           <div class="san-card-title"><span class="san-card-title-icon"><i class="ico ico-trending-up" aria-hidden="true"></i></span>Média mensal</div>
           <div class="fin-analytics-savings-average-value" id="st-save-average">R$ 0,00</div>
-          <div class="fin-analytics-savings-average-sub">Média dos aportes mensais realizados na poupança.</div>
+          <div class="fin-analytics-savings-average-sub">Média dos aportes mensais realizados nas caixinhas.</div>
         </div>
       </div>
 
@@ -245,6 +238,74 @@
   </div>
 
   <div class="fin-toasts" id="toasts"></div>
+
+  <div class="fin-overlay" id="modal-boxes">
+    <div class="fin-modal fin-modal-boxes">
+      <div class="fin-modal-hd">
+        <h3 id="fbx-title">Caixinhas</h3>
+        <button class="fin-mclose" id="fbx-close" aria-label="Fechar"><i class="ico ico-x" aria-hidden="true"></i></button>
+      </div>
+
+      <section id="fbx-list-view">
+        <div class="fbx-overview" id="fbx-overview"></div>
+        <div class="fbx-toolbar">
+          <label class="fbx-search">
+            <i class="ico ico-search" aria-hidden="true"></i>
+            <input type="search" id="fbx-search" placeholder="Buscar caixinha" aria-label="Buscar caixinha">
+          </label>
+          <select class="fin-fsel fbx-sort" id="fbx-sort" aria-label="Ordenar caixinhas">
+            <option value="featured">Destaques</option>
+            <option value="progress">Mais perto da meta</option>
+            <option value="balance">Maior saldo</option>
+            <option value="deadline">Prazo mais próximo</option>
+            <option value="name">Nome</option>
+          </select>
+          <button class="fin-btn fin-btn-gold fin-btn-sm" type="button" data-box-action="new"><i class="ico ico-plus" aria-hidden="true"></i> Nova caixinha</button>
+        </div>
+        <div class="fin-seg fbx-tabs" id="fbx-tabs">
+          <button class="fin-seg-btn active" type="button" data-tab="active">Ativas <span class="fbx-tab-count">0</span></button>
+          <button class="fin-seg-btn" type="button" data-tab="done">Concluídas <span class="fbx-tab-count">0</span></button>
+          <button class="fin-seg-btn" type="button" data-tab="archived">Arquivadas <span class="fbx-tab-count">0</span></button>
+        </div>
+        <div class="fbx-grid" id="fbx-grid"></div>
+      </section>
+
+      <section id="fbx-detail-view" hidden></section>
+
+      <section id="fbx-form-view" hidden>
+        <div class="fin-fg">
+          <label class="fin-fl" for="fbx-name">Nome *</label>
+          <input type="text" class="fin-fi" id="fbx-name" maxlength="40" placeholder="Ex: Viagem, Reserva de emergência, Carro...">
+        </div>
+        <div class="fin-frow">
+          <div class="fin-fg">
+            <label class="fin-fl" for="fbx-goal">Meta (R$)</label>
+            <input type="number" class="fin-fi" id="fbx-goal" min="0" step="0.01" placeholder="Opcional">
+          </div>
+          <div class="fin-fg">
+            <label class="fin-fl" for="fbx-deadline">Prazo</label>
+            <input type="date" class="fin-fi" id="fbx-deadline">
+          </div>
+        </div>
+        <div class="fin-fg">
+          <span class="fin-fl">Ícone</span>
+          <div class="fbx-picks" id="fbx-emojis"></div>
+        </div>
+        <div class="fin-fg">
+          <span class="fin-fl">Cor</span>
+          <div class="fbx-picks" id="fbx-colors"></div>
+        </div>
+        <div class="fin-fg">
+          <label class="fin-fl" for="fbx-note">Objetivo</label>
+          <input type="text" class="fin-fi" id="fbx-note" maxlength="120" placeholder="Para que é esse dinheiro? (opcional)">
+        </div>
+        <div class="fin-modal-acts">
+          <button class="fin-btn fin-btn-ghost fin-btn-sm" type="button" data-box-action="cancel-form">Cancelar</button>
+          <button class="fin-btn fin-btn-gold" type="button" data-box-action="save-form"><i class="ico ico-save" aria-hidden="true"></i> Salvar caixinha</button>
+        </div>
+      </section>
+    </div>
+  </div>
 
   <div class="fin-overlay" id="modal-tx">
     <div class="fin-modal">
@@ -278,7 +339,7 @@
 
       <div class="fin-frow">
         <div class="fin-fg">
-          <label class="fin-fl">Categoria</label>
+          <label class="fin-fl" id="mtx-cat-label" for="mtx-cat">Categoria</label>
           <select class="fin-fsel" id="mtx-cat"></select>
         </div>
         <div class="fin-fg">
@@ -331,7 +392,7 @@
         </section>
       </div>
 
-      <div class="fin-cat-manager-note">A categoria Poupança é fixa para transferências de reserva.</div>
+      <div class="fin-cat-manager-note">Aportes e retiradas não usam categoria: eles são separados por caixinha.</div>
 
       <div class="fin-modal-acts">
         <button class="fin-btn fin-btn-ghost fin-btn-sm" id="mc-cancel">Cancelar</button>
@@ -379,8 +440,8 @@
               <select class="fin-fsel" id="mr-type">
                 <option value="in">Entrada</option>
                 <option value="out">Saída</option>
-                <option value="save">Guardar na poupança</option>
-                <option value="save_withdraw">Retirar da poupança</option>
+                <option value="save">Guardar na caixinha</option>
+                <option value="save_withdraw">Retirar da caixinha</option>
               </select>
             </div>
             <div class="fin-fg">
@@ -391,7 +452,7 @@
 
           <div class="fin-frow">
             <div class="fin-fg">
-              <label class="fin-fl">Categoria</label>
+              <label class="fin-fl" id="mr-category-label" for="mr-category">Categoria</label>
               <select class="fin-fsel" id="mr-category"></select>
             </div>
             <div class="fin-fg">
