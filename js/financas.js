@@ -631,7 +631,8 @@
       if (date > entry.lastDate) entry.lastDate = date;
     });
     Object.keys(stats).forEach(function (id) {
-      stats[id].balance = Math.max(0, cents(stats[id].balance));
+      // saldo real, mesmo negativo: assim a soma das caixinhas sempre bate com o total guardado
+      stats[id].balance = cents(stats[id].balance);
       stats[id].month = cents(stats[id].month);
     });
     return stats;
@@ -2321,7 +2322,7 @@
     var balance = stat ? stat.balance : 0;
     var goal = Number(box.goal || 0);
     var pct = goal > 0 ? Math.max(0, Math.min(100, Math.round((balance / goal) * 100))) : 0;
-    return { balance: balance, goal: goal, pct: pct, done: goal > 0 && cents(balance) >= cents(goal), missing: Math.max(0, cents(goal - balance)) };
+    return { balance: balance, goal: goal, pct: pct, done: goal > 0 && cents(balance) >= cents(goal), missing: Math.max(0, cents(goal - Math.max(0, balance))), negative: balance < 0 };
   }
 
   function getBoxStatus(box, stat) {
@@ -2406,8 +2407,8 @@
         '<span class="fbx-emoji">' + esc(box.emoji) + "</span>" +
         '<span class="fbx-row-body">' +
           '<span class="fbx-row-name">' + esc(box.name) + (box.pinned ? ' <i class="ico ico-pin" aria-hidden="true"></i>' : "") + "</span>" +
-          '<span class="fbx-row-top"><span class="fbx-row-val">' + fmtR(progress.balance) + '</span><span class="fbx-row-meta">' +
-            (progress.goal <= 0 ? "Sem meta" : progress.done ? '<i class="ico ico-circle-check" aria-hidden="true"></i> Concluída' : progress.pct + "% de " + fmtR(progress.goal)) + "</span></span>" +
+          '<span class="fbx-row-top"><span class="fbx-row-val' + (progress.negative ? " fbx-neg" : "") + '">' + fmtR(progress.balance) + '</span><span class="fbx-row-meta">' +
+            (progress.negative ? '<i class="ico ico-triangle-alert" aria-hidden="true"></i> Retiradas maiores que aportes' : progress.goal <= 0 ? "Sem meta" : progress.done ? '<i class="ico ico-circle-check" aria-hidden="true"></i> Concluída' : progress.pct + "% de " + fmtR(progress.goal)) + "</span></span>" +
           (progress.goal > 0 ? boxBarHtml(box, progress) : "") +
         "</span>" +
       "</button>";
@@ -2489,9 +2490,10 @@
         '<span class="fbx-card-hd"><span class="fbx-emoji">' + esc(box.emoji) + '</span>' +
           (box.pinned ? '<i class="ico ico-pin fbx-card-pin" aria-label="Fixada"></i>' : "") + "</span>" +
         '<span class="fbx-card-name">' + esc(box.name) + "</span>" +
-        '<span class="fbx-card-val">' + fmtR(progress.balance) + "</span>" +
+        '<span class="fbx-card-val' + (progress.negative ? " fbx-neg" : "") + '">' + fmtR(progress.balance) + "</span>" +
         (progress.goal > 0 ? boxBarHtml(box, progress) : '<span class="fbx-bar fbx-bar-none"></span>') +
         '<span class="fbx-card-meta">' + esc(boxGoalText(progress)) + "</span>" +
+        (progress.negative ? '<span class="fbx-card-deadline late"><i class="ico ico-triangle-alert" aria-hidden="true"></i> Retiradas maiores que aportes</span>' : "") +
         (deadline ? '<span class="fbx-card-deadline' + (deadline.late ? " late" : "") + '"><i class="ico ico-calendar" aria-hidden="true"></i> ' + deadline.text + "</span>" : "") +
       "</button>";
     }).join("");
@@ -2519,10 +2521,14 @@
           "</div>" +
           '<div class="fbx-hero-pct">' + (progress.goal > 0 ? progress.pct + "%" : "—") + "</div>" +
         "</div>" +
-        '<div class="fbx-hero-val">' + fmtR(progress.balance) + "</div>" +
+        '<div class="fbx-hero-val' + (progress.negative ? " fbx-neg" : "") + '">' + fmtR(progress.balance) + "</div>" +
         (progress.goal > 0 ? boxBarHtml(box, progress) : "") +
         '<div class="fbx-hero-meta"><span>' + (progress.goal > 0 ? "Meta " + fmtR(progress.goal) : "Sem meta definida") + "</span><span>" + (progress.goal > 0 && !progress.done ? "Faltam " + fmtR(progress.missing) : "") + "</span></div>" +
       "</div>" +
+      (progress.negative
+        ? '<div class="fbx-warn"><i class="ico ico-triangle-alert" aria-hidden="true"></i><span>As retiradas desta caixinha somam ' + fmtR(Math.abs(progress.balance)) +
+          ' a mais que os aportes. Provavelmente algum aporte (ou regra recorrente) foi para outra caixinha, ou a retirada era de outra. Abra a movimentação abaixo e escolha a caixinha certa.</span></div>'
+        : "") +
       '<div class="fbx-actions">' +
         '<button type="button" class="fin-btn fin-btn-gold fin-btn-sm" data-box-action="save"><i class="ico ico-piggy-bank" aria-hidden="true"></i> Guardar</button>' +
         '<button type="button" class="fin-btn fin-btn-ghost fin-btn-sm" data-box-action="withdraw"' + (progress.balance > 0 ? "" : " disabled") + '><i class="ico ico-coins" aria-hidden="true"></i> Retirar</button>' +
