@@ -5,7 +5,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.jsdelivr.net https://apis.google.com https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://unpkg.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.google.com https://nominatim.openstreetmap.org https://api.open-meteo.com https://geocoding-api.open-meteo.com; frame-src https://*.firebaseapp.com https://www.google.com https://recaptcha.google.com https://www.youtube.com https://player.vimeo.com; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#04040c">
-  <meta name="description" content="Sól de Sóter — painel principal do espaço pessoal. Biblioteca, sonhos, finanças, planejamento e evolução reunidos.">
+  <meta name="description" content="Sól de Sóter — painel principal do espaço pessoal: o seu dia, o que está em andamento e a sua evolução.">
   <meta name="robots" content="noindex, nofollow">
   <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
   <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
@@ -22,7 +22,7 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Josefin+Sans:wght@200;300;400;500&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=Syne:wght@400;500;600;700&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/design-system.css">
   <link rel="stylesheet" href="css/icons.css">
   <link rel="stylesheet" href="css/components.css">
@@ -33,256 +33,169 @@
   <canvas id="bg-canvas" aria-hidden="true" role="presentation"></canvas>
   <div data-app-header></div>
 
-  <main class="app-content integrated-home">
-    <section class="integrated-hero reveal-up">
-      <div class="hero-glow"></div>
-      <div class="hero-glow hero-glow-secondary"></div>
-
-      <div class="hero-eyebrow">&#10022; &nbsp; Espa&ccedil;o pessoal ativo</div>
-      <h1>Seu universo,<br><em>organizado.</em></h1>
-      <p class="hero-sub">
-        S&oacute;l de S&oacute;ter re&uacute;ne biblioteca, sonhos, viagens, finan&ccedil;as, planejamento e evolu&ccedil;&atilde;o pessoal em um &uacute;nico sistema coeso, projetado para refletir quem voc&ecirc; realmente &eacute;.
-      </p>
-
-      <div class="hero-actions">
-        <a href="rpg.html" class="btn-primary"><i class="ico ico-user" aria-hidden="true"></i> Abrir Usu&aacute;rio</a>
-        <a href="tarefas.html" class="btn-ghost">Ver Planejamento</a>
-        <a href="livros.html" class="btn-ghost">Biblioteca &rarr;</a>
-      </div>
-
-      <div class="hero-date-pill" id="homeDate"></div>
-    </section>
-
-    <section class="stats-bar reveal-up" aria-label="Resumo r&aacute;pido">
-      <div class="stat-item">
-        <div class="stat-num" data-stat="modules">10</div>
-        <div class="stat-label">M&oacute;dulos</div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-num" data-stat="records">0</div>
-        <div class="stat-label">Registros</div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-num" id="hero-rpg-level">1</div>
-        <div class="stat-label">N&iacute;vel RPG</div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-num" data-stat="notifications">0</div>
-        <div class="stat-label">Notifica&ccedil;&otilde;es</div>
-      </div>
-    </section>
-
-    <section class="content-section section-dark reveal-up" id="constelacoes">
-      <div class="section-tag">&#10022; &nbsp; Constela&ccedil;&otilde;es</div>
-      <h2 class="section-title">As &aacute;reas centrais<br>do ecossistema</h2>
-      <p class="section-desc">Cada frente alimenta o sistema com m&eacute;tricas, progresso e contexto, formando um &uacute;nico organismo vivo.</p>
-
-      <div class="const-grid">
-        <a href="livros.html" class="const-card">
-          <div class="const-icon"><i class="ico ico-library" aria-hidden="true"></i></div>
-          <div class="const-title">Biblioteca</div>
-          <div class="const-desc">Livros, cinema e mang&aacute;s em um acervo unificado, com hist&oacute;rico e continuidade real de leitura.</div>
-          <div class="const-meta" data-stat="library-detail">0 m&iacute;dias</div>
-        </a>
-        <a href="sonhos.html" class="const-card">
-          <div class="const-icon"><i class="ico ico-moon" aria-hidden="true"></i></div>
-          <div class="const-title">Pessoal</div>
-          <div class="const-desc">Sonhos, viagens, wishlist e finan&ccedil;as conectam desejo, planejamento e execu&ccedil;&atilde;o em um s&oacute; fluxo.</div>
-          <div class="const-meta" data-stat="personal-detail">0 metas</div>
-        </a>
-        <a href="tarefas.html" class="const-card">
-          <div class="const-icon"><i class="ico ico-circle-check" aria-hidden="true"></i></div>
-          <div class="const-title">Planejamento</div>
-          <div class="const-desc">Tarefas, revis&atilde;o e treino transformam inten&ccedil;&atilde;o em rotina consistente e mensur&aacute;vel.</div>
-          <div class="const-meta" data-stat="planning-detail">0 frentes</div>
-        </a>
-        <a href="rpg.html" class="const-card">
-          <div class="const-icon"><i class="ico ico-swords" aria-hidden="true"></i></div>
-          <div class="const-title">Evolu&ccedil;&atilde;o</div>
-          <div class="const-desc">O RPG consolida esfor&ccedil;o, n&iacute;vel, atributos, conquistas e leitura do seu avan&ccedil;o real.</div>
-          <div class="const-meta">N&iacute;vel <span id="constellation-rpg-level">1</span> &middot; <span id="constellation-rpg-title">Iniciante</span></div>
-        </a>
-      </div>
-    </section>
-
-    <section class="content-section reveal-up" id="modulos">
-      <div class="section-tag">&#10022; &nbsp; Acesso R&aacute;pido</div>
-      <h2 class="section-title">M&oacute;dulos em destaque</h2>
-      <p class="section-desc">Entradas diretas para os principais n&uacute;cleos do sistema.</p>
-
-      <div class="mod-grid">
-        <a href="rpg.html" class="mod-card">
-          <img class="mod-thumb" src="img/conquista-evolucao.webp" loading="lazy" decoding="async" alt="Usu&aacute;rio" onerror="this.style.background='#1a1a28';this.removeAttribute('src')">
-          <div class="mod-body">
-            <div class="mod-tag">Evolu&ccedil;&atilde;o</div>
-            <div class="mod-title">Usu&aacute;rio</div>
-            <div class="mod-desc">N&iacute;vel, atributos, classe, XP, skills, achievements e estado geral do personagem.</div>
-            <div class="mod-count">N&iacute;vel <span id="featured-rpg-level">1</span> &middot; <span id="featured-rpg-title">Iniciante</span></div>
-          </div>
-        </a>
-        <a href="livros.html" class="mod-card">
-          <img class="mod-thumb" src="img/conquista-leitura.webp" loading="lazy" decoding="async" alt="Livraria" onerror="this.style.background='#1a1a28';this.removeAttribute('src')">
-          <div class="mod-body">
-            <div class="mod-tag">Biblioteca</div>
-            <div class="mod-title">Livraria</div>
-            <div class="mod-desc">Monitore leituras, p&aacute;ginas, notas e continuidade do que est&aacute; em progresso.</div>
-            <div class="mod-count"><span id="hs-livros">0</span> livros</div>
-          </div>
-        </a>
-        <a href="cinema.html" class="mod-card">
-          <img class="mod-thumb" src="img/conquista-cinema.webp" loading="lazy" decoding="async" alt="Cinema" onerror="this.style.background='#1a1a28';this.removeAttribute('src')">
-          <div class="mod-body">
-            <div class="mod-tag">Biblioteca</div>
-            <div class="mod-title">Cinema</div>
-            <div class="mod-desc">Filmes e s&eacute;ries com status, reviews e andamento em uma mesma trilha.</div>
-            <div class="mod-count"><span id="hs-filmes">0</span> t&iacute;tulos</div>
-          </div>
-        </a>
-        <a href="sonhos.html" class="mod-card">
-          <img class="mod-thumb" src="img/conquista-sonhos.webp" loading="lazy" decoding="async" alt="Sonhos" onerror="this.style.background='#1a1a28';this.removeAttribute('src')">
-          <div class="mod-body">
-            <div class="mod-tag">Pessoal</div>
-            <div class="mod-title">Sonhos</div>
-            <div class="mod-desc">Transforme desejos em metas, cronogramas e progresso concreto.</div>
-            <div class="mod-count" data-stat="dreams">0 sonhos</div>
-          </div>
-        </a>
-        <a href="viagens.html" class="mod-card">
-          <img class="mod-thumb" src="img/conquista-viagens.webp" loading="lazy" decoding="async" alt="Viagens" onerror="this.style.background='#1a1a28';this.removeAttribute('src')">
-          <div class="mod-body">
-            <div class="mod-tag">Pessoal</div>
-            <div class="mod-title">Viagens</div>
-            <div class="mod-desc">Mapeie destinos, custos, datas e rotas em um painel unificado.</div>
-            <div class="mod-count"><span id="hs-viagens">0</span> viagens</div>
-          </div>
-        </a>
-        <a href="wishlist.html" class="mod-card">
-          <img class="mod-thumb" src="img/conquista-wishlist.webp" loading="lazy" decoding="async" alt="Wishlist" onerror="this.style.background='#1a1a28';this.removeAttribute('src')">
-          <div class="mod-body">
-            <div class="mod-tag">Pessoal</div>
-            <div class="mod-title">Wishlist</div>
-            <div class="mod-desc">Priorize desejos, categorize aquisi&ccedil;&otilde;es e acompanhe conquistas reais.</div>
-            <div class="mod-count" data-stat="wishlist">0 desejos</div>
-          </div>
-        </a>
-      </div>
-    </section>
-
-    <section class="content-section section-dark reveal-up" id="ritmo">
-      <div class="section-tag">&#10022; &nbsp; Ritmo do Dia</div>
-      <h2 class="section-title">Rotas r&aacute;pidas<br>do momento</h2>
-
-      <div class="ritmo-grid">
-        <div class="ritmo-block">
-          <div class="ritmo-num">01 &nbsp;&middot;&nbsp; Humor</div>
-          <h3>Como voc&ecirc; est&aacute; agora?</h3>
-          <p>Registre rapidamente seu estado atual para acompanhar padr&otilde;es ao longo do tempo.</p>
-          <div class="humor-grid">
-            <button class="humor-btn" type="button" aria-label="Humor: Cansado" onclick="setMood(this,'&#128564;')">&#128564;</button>
-            <button class="humor-btn" type="button" aria-label="Humor: Neutro" onclick="setMood(this,'&#128528;')">&#128528;</button>
-            <button class="humor-btn" type="button" aria-label="Humor: Bem" onclick="setMood(this,'&#128578;')">&#128578;</button>
-            <button class="humor-btn" type="button" aria-label="Humor: Feliz" onclick="setMood(this,'&#128516;')">&#128516;</button>
-            <button class="humor-btn" type="button" aria-label="Humor: Empolgado" onclick="setMood(this,'&#129321;')">&#129321;</button>
-            <button class="humor-btn" type="button" aria-label="Humor: Irritado" onclick="setMood(this,'&#128548;')">&#128548;</button>
-            <button class="humor-btn" type="button" aria-label="Humor: Preocupado" onclick="setMood(this,'&#128543;')">&#128543;</button>
-          </div>
-          <div class="humor-estado">Humor atual: <span id="moodDisplay">&mdash;</span></div>
+  <main class="app-content home">
+    <!-- Abertura: a constelação animada do fundo ocupa a direita, por isso o texto fica à esquerda -->
+    <section class="home-hero" aria-labelledby="homeGreeting">
+      <div class="home-hero-copy">
+        <p class="home-date" id="homeDate"></p>
+        <h1 class="home-greeting" id="homeGreeting">Ol&aacute;<em>.</em></h1>
+        <p class="home-brief" id="homeBrief">Preparando o seu dia&hellip;</p>
+        <div class="home-hero-actions">
+          <a class="ds-btn ds-btn--gold ds-btn--lg" id="homePrimaryAction" href="tarefas.html">
+            <i class="ico ico-calendar-check" aria-hidden="true"></i> <span>Abrir planejamento</span>
+          </a>
+          <a class="ds-btn ds-btn--ghost ds-btn--lg" href="#hoje">Ver meu dia</a>
         </div>
+      </div>
+      <a class="home-scroll" href="#hoje">
+        <span>Seu dia</span>
+        <i class="ico ico-arrow-down" aria-hidden="true"></i>
+      </a>
+    </section>
 
-        <div class="ritmo-block">
-          <div class="ritmo-num">02 &nbsp;&middot;&nbsp; Nota R&aacute;pida</div>
-          <h3>Guarde o que importa</h3>
-          <p>Registre uma lembran&ccedil;a, foco ou inten&ccedil;&atilde;o do momento antes que passe.</p>
-          <textarea class="nota-input" id="quickNote" placeholder="Escreva aqui sua nota do momento..." oninput="saveNote()"></textarea>
+    <!-- Hoje -->
+    <section class="home-section" id="hoje" aria-labelledby="hojeTitle">
+      <header class="home-section-head">
+        <p class="home-kicker">Hoje</p>
+        <h2 id="hojeTitle">O que pede sua <em>aten&ccedil;&atilde;o</em></h2>
+      </header>
+
+      <div class="ds-stat-grid home-stats">
+        <a class="ds-stat ds-stat--teal home-stat" href="tarefas.html">
+          <div class="ds-stat-label">Para hoje</div>
+          <div class="ds-stat-value" id="statToday">0</div>
+          <div class="ds-stat-sub" id="statTodaySub">tarefas pendentes</div>
+          <i class="ico ico-calendar-check home-stat-ico" aria-hidden="true"></i>
+        </a>
+        <a class="ds-stat ds-stat--rose home-stat" href="tarefas.html">
+          <div class="ds-stat-label">Atrasadas</div>
+          <div class="ds-stat-value" id="statOverdue">0</div>
+          <div class="ds-stat-sub">tarefas vencidas</div>
+          <i class="ico ico-alarm-clock home-stat-ico" aria-hidden="true"></i>
+        </a>
+        <a class="ds-stat ds-stat--violet home-stat" href="revisao.html">
+          <div class="ds-stat-label">Revis&otilde;es</div>
+          <div class="ds-stat-value" id="statReview">0</div>
+          <div class="ds-stat-sub" id="statReviewSub">cards para revisar</div>
+          <i class="ico ico-brain home-stat-ico" aria-hidden="true"></i>
+        </a>
+        <a class="ds-stat ds-stat--gold home-stat" href="rpg.html">
+          <div class="ds-stat-label">Miss&otilde;es</div>
+          <div class="ds-stat-value" id="statMissions">0/4</div>
+          <div class="ds-stat-sub" id="statMissionsSub">conclu&iacute;das hoje</div>
+          <i class="ico ico-target home-stat-ico" aria-hidden="true"></i>
+        </a>
+      </div>
+
+      <div class="home-today-grid">
+        <section class="ds-card home-agenda" aria-labelledby="agendaTitle">
+          <div class="ds-card-head">
+            <h3 class="ds-card-label" id="agendaTitle">Agenda de hoje</h3>
+            <a class="ds-btn ds-btn--ghost ds-btn--sm" href="tarefas.html">Planejamento <i class="ico ico-arrow-right" aria-hidden="true"></i></a>
+          </div>
+          <div class="ds-card-body">
+            <ul class="home-agenda-list" id="homeAgenda"></ul>
+          </div>
+        </section>
+
+        <section class="ds-card home-missions" aria-labelledby="missionsTitle">
+          <div class="ds-card-head">
+            <h3 class="ds-card-label" id="missionsTitle">Miss&otilde;es do dia</h3>
+            <span class="home-chip" id="missionsXp">+0 XP</span>
+          </div>
+          <div class="ds-card-body">
+            <ul class="home-mission-list" id="homeMissions"></ul>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <!-- Em andamento -->
+    <section class="home-section" id="andamento" aria-labelledby="andamentoTitle">
+      <header class="home-section-head">
+        <p class="home-kicker">Em andamento</p>
+        <h2 id="andamentoTitle">Continue de onde <em>parou</em></h2>
+      </header>
+      <div class="home-progress-grid" id="homeProgress"></div>
+    </section>
+
+    <!-- Nota rápida -->
+    <section class="home-section" id="nota" aria-labelledby="notaTitle">
+      <header class="home-section-head">
+        <p class="home-kicker">Nota r&aacute;pida</p>
+        <h2 id="notaTitle">Guarde o que <em>importa</em></h2>
+      </header>
+
+      <section class="ds-card home-note" aria-label="Nota r&aacute;pida">
+        <div class="ds-card-head">
+          <label class="ds-card-label" for="quickNote">Uma lembran&ccedil;a, um foco ou uma inten&ccedil;&atilde;o</label>
+          <span class="home-note-status" id="quickNoteStatus" aria-live="polite"></span>
+        </div>
+        <div class="ds-card-body">
+          <textarea class="ds-field home-note-input" id="quickNote" rows="5" placeholder="Escreva aqui&hellip;"></textarea>
+        </div>
+      </section>
+    </section>
+
+    <!-- Evolução -->
+    <section class="home-section" id="evolucao" aria-labelledby="evolucaoTitle">
+      <header class="home-section-head">
+        <p class="home-kicker">Evolu&ccedil;&atilde;o</p>
+        <h2 id="evolucaoTitle">Seu <em>personagem</em></h2>
+      </header>
+
+      <div class="ds-card home-evolution">
+        <div class="home-level">
+          <p class="home-mini-label">N&iacute;vel</p>
+          <div class="home-level-num" id="rpgLevel">1</div>
+          <p class="home-level-title"><span id="rpgTitle">Iniciante</span> <span class="home-level-class" id="rpgClass"></span></p>
+          <div class="home-xp">
+            <canvas class="home-xp-bar" id="rpgXpBar" aria-hidden="true"></canvas>
+          </div>
+          <p class="home-xp-label" id="rpgXpLabel">0 XP</p>
+          <div class="home-streaks" id="rpgStreaks"></div>
+          <a class="ds-btn ds-btn--ghost" href="rpg.html">Ver perfil completo <i class="ico ico-arrow-right" aria-hidden="true"></i></a>
+        </div>
+        <div class="home-attrs">
+          <p class="home-mini-label">Atributos</p>
+          <ul class="home-attr-list" id="rpgAttrs"></ul>
         </div>
       </div>
     </section>
 
-    <section class="content-section reveal-up" id="panorama">
-      <div class="section-tag">&#10022; &nbsp; Panorama</div>
-      <h2 class="section-title">Indicadores r&aacute;pidos</h2>
+    <!-- Todos os módulos -->
+    <section class="home-section" id="modulos" aria-labelledby="modulosTitle">
+      <header class="home-section-head">
+        <p class="home-kicker">Atalhos</p>
+        <h2 id="modulosTitle">Todos os <em>m&oacute;dulos</em></h2>
+      </header>
 
-      <div class="ind-grid">
-        <a class="ind-item" href="livros.html">
-          <div class="ind-icon"><i class="ico ico-library" aria-hidden="true"></i></div>
-          <div class="ind-val" id="ht-livros">0</div>
-          <div class="ind-lbl">Livros</div>
-        </a>
-        <a class="ind-item" href="cinema.html">
-          <div class="ind-icon"><i class="ico ico-clapperboard" aria-hidden="true"></i></div>
-          <div class="ind-val" id="ht-cinema">0</div>
-          <div class="ind-lbl">Filmes</div>
-        </a>
-        <a class="ind-item" href="mangas.html">
-          <div class="ind-icon"><i class="ico ico-book-open" aria-hidden="true"></i></div>
-          <div class="ind-val" id="ht-mangas">0</div>
-          <div class="ind-lbl">Mang&aacute;s</div>
-        </a>
-        <a class="ind-item" href="tarefas.html">
-          <div class="ind-icon"><i class="ico ico-circle-check" aria-hidden="true"></i></div>
-          <div class="ind-val" id="ht-tarefas">0</div>
-          <div class="ind-lbl">Tarefas</div>
-        </a>
-        <a class="ind-item" href="sonhos.html">
-          <div class="ind-icon"><i class="ico ico-moon" aria-hidden="true"></i></div>
-          <div class="ind-val" id="hs-dreams">0</div>
-          <div class="ind-lbl">Sonhos</div>
-        </a>
-        <a class="ind-item" href="wishlist.html">
-          <div class="ind-icon"><i class="ico ico-target" aria-hidden="true"></i></div>
-          <div class="ind-val" id="hs-wishlist">0</div>
-          <div class="ind-lbl">Wishlist</div>
-        </a>
-      </div>
-    </section>
-
-    <section class="content-section section-dark reveal-up" id="rpg">
-      <div class="section-tag">&#10022; &nbsp; Evolu&ccedil;&atilde;o</div>
-      <h2 class="section-title">Seu avan&ccedil;o atual</h2>
-      <p class="section-desc">O RPG transforma uso real do sistema em progresso mensur&aacute;vel de personagem.</p>
-
-      <div class="rpg-inner">
-        <div class="rpg-left">
-          <div class="rpg-level" id="hs-level-2">1</div>
-          <div class="rpg-title"><span id="hs-rpg-title-2">Iniciante</span> &nbsp;&middot;&nbsp; Viajante</div>
-          <div class="xp-bar-wrap">
-            <canvas class="xp-bar" id="hs-xp-bar-2"></canvas>
+      <div class="home-module-groups">
+        <div class="home-module-group">
+          <h3 class="home-mini-label">Pessoal</h3>
+          <div class="home-module-grid">
+            <a class="home-module" href="tarefas.html" style="--tone: var(--ds-teal)"><span class="home-module-icon"><i class="ico ico-calendar-check" aria-hidden="true"></i></span><span class="home-module-name">Planejamento</span><span class="home-module-meta" data-meta="tarefas"></span></a>
+            <a class="home-module" href="financas.html" style="--tone: var(--ds-gold)"><span class="home-module-icon"><i class="ico ico-wallet" aria-hidden="true"></i></span><span class="home-module-name">Finan&ccedil;as</span><span class="home-module-meta" data-meta="financas"></span></a>
+            <a class="home-module" href="sonhos.html" style="--tone: var(--ds-violet)"><span class="home-module-icon"><i class="ico ico-moon" aria-hidden="true"></i></span><span class="home-module-name">Sonhos</span><span class="home-module-meta" data-meta="sonhos"></span></a>
+            <a class="home-module" href="viagens.html" style="--tone: var(--ds-sky)"><span class="home-module-icon"><i class="ico ico-plane" aria-hidden="true"></i></span><span class="home-module-name">Viagens</span><span class="home-module-meta" data-meta="viagens"></span></a>
+            <a class="home-module" href="wishlist.html" style="--tone: var(--ds-rose)"><span class="home-module-icon"><i class="ico ico-gift" aria-hidden="true"></i></span><span class="home-module-name">Wishlist</span><span class="home-module-meta" data-meta="wishlist"></span></a>
+            <a class="home-module" href="academia.html" style="--tone: var(--ds-amber)"><span class="home-module-icon"><i class="ico ico-dumbbell" aria-hidden="true"></i></span><span class="home-module-name">Academia</span><span class="home-module-meta" data-meta="academia"></span></a>
           </div>
-          <div class="xp-label" id="xp-progress-label">0 XP &nbsp;&middot;&nbsp; 0 XP para o pr&oacute;ximo n&iacute;vel</div>
-          <a href="rpg.html" class="btn-primary rpg-link" style="margin-top:2rem">Ver perfil completo</a>
         </div>
-
-        <div class="rpg-right">
-          <div class="rpg-aux-title">Atributos</div>
-          <div class="attr-row">
-            <div class="attr-name">Intelecto</div>
-            <div class="attr-bar-wrap"><div class="attr-bar" id="attr-intellect"></div></div>
-            <div class="attr-val" id="attr-intellect-val">0</div>
+        <div class="home-module-group">
+          <h3 class="home-mini-label">Biblioteca</h3>
+          <div class="home-module-grid">
+            <a class="home-module" href="livros.html" style="--tone: var(--ds-gold)"><span class="home-module-icon"><i class="ico ico-library" aria-hidden="true"></i></span><span class="home-module-name">Livraria</span><span class="home-module-meta" data-meta="livros"></span></a>
+            <a class="home-module" href="cinema.html" style="--tone: var(--ds-amber)"><span class="home-module-icon"><i class="ico ico-clapperboard" aria-hidden="true"></i></span><span class="home-module-name">Cinema</span><span class="home-module-meta" data-meta="cinema"></span></a>
+            <a class="home-module" href="mangas.html" style="--tone: var(--ds-rose)"><span class="home-module-icon"><i class="ico ico-book-open" aria-hidden="true"></i></span><span class="home-module-name">Mang&aacute;s</span><span class="home-module-meta" data-meta="mangas"></span></a>
           </div>
-          <div class="attr-row">
-            <div class="attr-name">Forca</div>
-            <div class="attr-bar-wrap"><div class="attr-bar" id="attr-strength"></div></div>
-            <div class="attr-val" id="attr-strength-val">0</div>
-          </div>
-          <div class="attr-row">
-            <div class="attr-name">Sabedoria</div>
-            <div class="attr-bar-wrap"><div class="attr-bar" id="attr-wisdom"></div></div>
-            <div class="attr-val" id="attr-wisdom-val">0</div>
-          </div>
-          <div class="attr-row">
-            <div class="attr-name">Disciplina</div>
-            <div class="attr-bar-wrap"><div class="attr-bar" id="attr-discipline"></div></div>
-            <div class="attr-val" id="attr-discipline-val">0</div>
-          </div>
-          <div class="attr-row">
-            <div class="attr-name">Exploracao</div>
-            <div class="attr-bar-wrap"><div class="attr-bar" id="attr-exploration"></div></div>
-            <div class="attr-val" id="attr-exploration-val">0</div>
-          </div>
-          <div class="attr-row">
-            <div class="attr-name">Prestigio</div>
-            <div class="attr-bar-wrap"><div class="attr-bar" id="attr-prestige"></div></div>
-            <div class="attr-val" id="attr-prestige-val">0</div>
+        </div>
+        <div class="home-module-group">
+          <h3 class="home-mini-label">Estudos e cria&ccedil;&atilde;o</h3>
+          <div class="home-module-grid">
+            <a class="home-module" href="revisao.html" style="--tone: var(--ds-violet)"><span class="home-module-icon"><i class="ico ico-brain" aria-hidden="true"></i></span><span class="home-module-name">Revis&atilde;o</span><span class="home-module-meta" data-meta="revisao"></span></a>
+            <a class="home-module" href="projetos.html" style="--tone: var(--ds-sky)"><span class="home-module-icon"><i class="ico ico-notebook-pen" aria-hidden="true"></i></span><span class="home-module-name">Projetos</span><span class="home-module-meta">Livro</span></a>
+            <a class="home-module" href="rpg.html" style="--tone: var(--ds-gold)"><span class="home-module-icon"><i class="ico ico-swords" aria-hidden="true"></i></span><span class="home-module-name">Usu&aacute;rio</span><span class="home-module-meta" data-meta="rpg"></span></a>
           </div>
         </div>
       </div>
@@ -294,5 +207,6 @@
   <script src="js/firebase-config.js"></script>
   <script src="js/app-shell.js"></script>
   <script src="js/index.js"></script>
+  <script src="js/home.js"></script>
 </body>
 </html>
