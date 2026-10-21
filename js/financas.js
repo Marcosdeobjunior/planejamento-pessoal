@@ -16,6 +16,15 @@
   var editRuleId = null;
   var savingsAnalyticsModel = null;
 
+  // Caixinhas: cada aporte/retirada pertence a uma caixinha (tx.boxId / rule.boxId).
+  // Lançamentos antigos, sem caixinha, caem na caixinha padrão "Poupança".
+  var DEFAULT_BOX_ID = "poupanca";
+  var savingsBoxes = [];
+  var boxView = { tab: "active", query: "", sort: "featured", screen: "list", detailId: null, editId: null };
+  var BOX_FEATURED_LIMIT = 3;
+  var BOX_EMOJIS = ["\uD83C\uDFE6", "\uD83D\uDEDF", "\u2708\uFE0F", "\uD83C\uDFE0", "\uD83D\uDE97", "\uD83C\uDF93", "\uD83D\uDC8D", "\uD83C\uDF81", "\uD83D\uDCBB", "\uD83D\uDCF1", "\uD83C\uDFD6\uFE0F", "\uD83D\uDC36", "\uD83C\uDFAE", "\uD83D\uDCB0", "\uD83E\uDE7A", "\u2764\uFE0F"];
+  var BOX_COLORS = ["#c8a96e", "#5ec4a8", "#7c6fcd", "#4ab0e8", "#e06b8b", "#e8864a", "#4ade80", "#f5c2e7"];
+
   // Interações do calendário: seleção múltipla, arraste e cópia.
   // IDs sempre apontam para transações-base, não para instâncias visuais de recorrência.
   var finCalSelection = {
@@ -100,6 +109,8 @@
       savingsGoal = Number(data[DATA_KEY].savingsGoal || 0);
       categorySets = normalizeCategorySets(data[DATA_KEY].categorySets);
       recurrenceRules = normalizeRecurrenceRules(data[DATA_KEY].recurrenceRules);
+      savingsBoxes = normalizeSavingsBoxes(data[DATA_KEY].savingsBoxes, savingsGoal);
+      reconcileSavingsBoxes();
       return;
     }
     if (Array.isArray(data.financas)) {
@@ -107,6 +118,8 @@
       savingsGoal = Number(data.financasSavingsGoal || 0);
       categorySets = normalizeCategorySets(data.financasCategorySets);
       recurrenceRules = normalizeRecurrenceRules(data.financasRecurrenceRules);
+      savingsBoxes = normalizeSavingsBoxes(null, savingsGoal);
+      reconcileSavingsBoxes();
       persist();
       return;
     }
@@ -115,12 +128,14 @@
     savingsGoal = 0;
     categorySets = normalizeCategorySets();
     recurrenceRules = normalizeRecurrenceRules();
+    savingsBoxes = normalizeSavingsBoxes();
   }
 
   function persist() {
     var state = getState();
     if (!state.data || typeof state.data !== "object") state.data = {};
-    state.data[DATA_KEY] = { txs: txs.slice(), savingsGoal: savingsGoal, categorySets: cloneCategorySets(categorySets), recurrenceRules: cloneRecurrenceRules(recurrenceRules) };
+    savingsGoal = getActiveBoxesGoal();
+    state.data[DATA_KEY] = { txs: txs.slice(), savingsGoal: savingsGoal, savingsBoxes: cloneRecurrenceRules(savingsBoxes), categorySets: cloneCategorySets(categorySets), recurrenceRules: cloneRecurrenceRules(recurrenceRules) };
     state.data.financas = txs.slice();
     state.data.financasSavingsGoal = savingsGoal;
     state.data.financasCategorySets = cloneCategorySets(categorySets);
@@ -163,9 +178,83 @@
         day: Math.max(1, Number(rule.day || 20)),
         avoidWeekend: rule.avoidWeekend !== false,
         fixedAvoidHoliday: !!rule.fixedAvoidHoliday,
-        holidays: Array.isArray(rule.holidays) ? rule.holidays.filter(Boolean) : []
+        holidays: Array.isArray(rule.holidays) ? rule.holidays.filter(Boolean) : [],
+        boxId: String(rule.boxId || "")
       };
     });
+  }
+
+  function normalizeSavingsBoxes(source, legacyGoal) {
+    var seen = {};
+    var boxes = (Array.isArray(source) ? source : []).map(function (box, index) {
+      var id = String(box && box.id || "") || uid();
+      return {
+        id: id,
+        name: String(box.name || "").trim() || "Caixinha",
+        emoji: String(box.emoji || "") || BOX_EMOJIS[0],
+        color: /^#[0-9a-f]{6}$/i.test(String(box.color || "")) ? box.color : BOX_COLORS[index % BOX_COLORS.length],
+        goal: Math.max(0, cents(box.goal)),
+        deadline: /^\d{4}-\d{2}-\d{2}$/.test(String(box.deadline || "")) ? box.deadline : "",
+        note: String(box.note || "").trim(),
+        pinned: !!box.pinned,
+        archived: !!box.archived,
+        createdAt: String(box.createdAt || today())
+      };
+    }).filter(function (box) {
+      if (seen[box.id]) return false;
+      seen[box.id] = true;
+      return true;
+    });
+    // primeira vez (ou dados antigos): a poupança única vira a caixinha padrão, com a meta que já existia
+    if (!boxes.length) {
+      boxes.push({
+        id: DEFAULT_BOX_ID,
+        name: "Poupan\u00e7a",
+        emoji: BOX_EMOJIS[0],
+        color: BOX_COLORS[0],
+        goal: Math.max(0, cents(legacyGoal)),
+        deadline: "",
+        note: "",
+        pinned: true,
+        archived: false,
+        createdAt: today()
+      });
+    }
+    return boxes;
+  }
+
+  // Garante que todo aporte/retirada aponte para uma caixinha existente.
+  function reconcileSavingsBoxes() {
+    var fallback = savingsBoxes[0].id;
+    txs.forEach(function (tx) {
+      if (isSavingsType(tx.type) && !getBoxById(tx.boxId)) tx.boxId = fallback;
+    });
+    recurrenceRules.forEach(function (rule) {
+      if (isSavingsType(rule.type) && !getBoxById(rule.boxId)) rule.boxId = fallback;
+    });
+  }
+
+  function getBoxById(id) {
+    if (!id) return null;
+    for (var i = 0; i < savingsBoxes.length; i += 1) {
+      if (savingsBoxes[i].id === id) return savingsBoxes[i];
+    }
+    return null;
+  }
+
+  function getTxBoxId(tx) {
+    if (!tx) return "";
+    return getBoxById(tx.boxId) ? tx.boxId : (savingsBoxes[0] ? savingsBoxes[0].id : "");
+  }
+
+  function matchesBox(tx, boxId) {
+    return !boxId || getTxBoxId(tx) === boxId;
+  }
+
+  function getActiveBoxesGoal() {
+    return cents(savingsBoxes.reduce(function (sum, box) {
+      return sum + (box.archived ? 0 : Number(box.goal || 0));
+    }, 0));
   }
 
   function normalizeCategorySets(source) {
@@ -371,7 +460,8 @@
       category: rule.category || (isSavingsType(rule.type) ? "Poupança" : "Outros"),
       recurrence: "rule",
       future: date > today(),
-      note: rule.note || ""
+      note: rule.note || "",
+      boxId: rule.boxId || ""
     };
   }
 
@@ -489,30 +579,72 @@
     return result;
   }
 
-  function getSavingsBalanceUntil(dateStr, ignoreTxId) {
-    var balance = 0;
+  // Percorre cada ocorrência de aporte/retirada (únicos, mensais, semanais e regras) até endStr.
+  function forEachSavingsOccurrenceUntil(endStr, fn) {
     txs.forEach(function (tx) {
-      if (ignoreTxId && tx.id === ignoreTxId) return;
       if (!isSavingsType(tx.type)) return;
       if (tx.recurrence === "monthly") {
-        getMonthlyOccurrenceDates(tx.date, dateStr).forEach(function () {
-          balance += getSavingsDelta(tx);
+        getMonthlyOccurrenceDates(tx.date, endStr).forEach(function (occurrenceDate) {
+          fn(tx, occurrenceDate);
         });
       } else if (tx.recurrence === "weekly") {
         var weeklyCur = new Date(tx.date + "T12:00:00");
-        var endWeekly = new Date(dateStr + "T12:00:00");
+        var endWeekly = new Date(endStr + "T12:00:00");
         while (weeklyCur <= endWeekly) {
-          balance += getSavingsDelta(tx);
+          fn(tx, getMonthDateStr(weeklyCur.getFullYear(), weeklyCur.getMonth(), weeklyCur.getDate()));
           weeklyCur.setDate(weeklyCur.getDate() + 7);
         }
-      } else if (tx.date <= dateStr) {
-        balance += getSavingsDelta(tx);
+      } else if (tx.date <= endStr) {
+        fn(tx, tx.date);
       }
     });
-    getRuleOccurrencesUntil(dateStr).forEach(function (tx) {
-      if (isSavingsType(tx.type)) balance += getSavingsDelta(tx);
+    getRuleOccurrencesUntil(endStr).forEach(function (tx) {
+      if (isSavingsType(tx.type)) fn(tx, tx.date);
+    });
+  }
+
+  function getSavingsBalanceUntil(dateStr, ignoreTxId, boxId) {
+    var balance = 0;
+    forEachSavingsOccurrenceUntil(dateStr, function (tx) {
+      if (ignoreTxId && tx.id === ignoreTxId) return;
+      if (!matchesBox(tx, boxId)) return;
+      balance += getSavingsDelta(tx);
     });
     return cents(balance);
+  }
+
+  // Saldo atual, movimento do mês e última movimentação de cada caixinha.
+  function getBoxStats() {
+    var todayStr = today();
+    var monthKey = todayStr.slice(0, 7);
+    var stats = {};
+    savingsBoxes.forEach(function (box) {
+      stats[box.id] = { balance: 0, month: 0, count: 0, lastDate: "" };
+    });
+    forEachSavingsOccurrenceUntil(todayStr, function (tx, date) {
+      var entry = stats[getTxBoxId(tx)];
+      if (!entry) return;
+      var delta = getSavingsDelta(tx);
+      entry.balance += delta;
+      entry.count += 1;
+      if (date.slice(0, 7) === monthKey) entry.month += delta;
+      if (date > entry.lastDate) entry.lastDate = date;
+    });
+    Object.keys(stats).forEach(function (id) {
+      stats[id].balance = Math.max(0, cents(stats[id].balance));
+      stats[id].month = cents(stats[id].month);
+    });
+    return stats;
+  }
+
+  function getBoxMovements(boxId, limit) {
+    var items = [];
+    forEachSavingsOccurrenceUntil(today(), function (tx, date) {
+      if (!matchesBox(tx, boxId)) return;
+      items.push({ tx: tx, date: date, delta: getSavingsDelta(tx) });
+    });
+    items.sort(function (a, b) { return b.date.localeCompare(a.date); });
+    return items.slice(0, limit || 8);
   }
 
   // Projeção da meta com base nos lançamentos já cadastrados no sistema:
@@ -525,7 +657,7 @@
   var SAVINGS_SCHEDULE_YEARS_STEPS = [5, 10, 25, 50, 100];
   var SAVINGS_CHART_MAX_POINTS = 36;
 
-  function getSavingsScheduledEvents(startExclusive, endStr) {
+  function getSavingsScheduledEvents(startExclusive, endStr, boxId) {
     var events = [];
     function add(date, delta) {
       if (!delta) return;
@@ -533,7 +665,7 @@
       events.push({ date: date, delta: delta });
     }
     txs.forEach(function (tx) {
-      if (!isSavingsType(tx.type)) return;
+      if (!isSavingsType(tx.type) || !matchesBox(tx, boxId)) return;
       var delta = getSavingsDelta(tx);
       if (tx.recurrence === "monthly") {
         getMonthlyOccurrenceDates(tx.date, endStr).forEach(function (occurrenceDate) {
@@ -551,7 +683,7 @@
       }
     });
     getRuleOccurrencesUntil(endStr).forEach(function (tx) {
-      if (isSavingsType(tx.type)) add(tx.date, getSavingsDelta(tx));
+      if (isSavingsType(tx.type) && matchesBox(tx, boxId)) add(tx.date, getSavingsDelta(tx));
     });
     events.sort(function (a, b) { return a.date.localeCompare(b.date); });
     return events;
@@ -579,7 +711,7 @@
     return sim;
   }
 
-  function getSavingsProjection(reserve, goal) {
+  function getSavingsProjection(reserve, goal, boxId) {
     reserve = Number(reserve || 0);
     goal = Number(goal || 0);
     var missing = Math.max(0, cents(goal - reserve));
@@ -600,9 +732,9 @@
 
     var t = new Date(today() + "T12:00:00");
     var hasRecurring = txs.some(function (tx) {
-      return isSavingsType(tx.type) && (tx.recurrence === "monthly" || tx.recurrence === "weekly");
+      return isSavingsType(tx.type) && matchesBox(tx, boxId) && (tx.recurrence === "monthly" || tx.recurrence === "weekly");
     }) || recurrenceRules.some(function (rule) {
-      return !!rule && isSavingsType(rule.type) && Number(rule.value) > 0;
+      return !!rule && isSavingsType(rule.type) && matchesBox(rule, boxId) && Number(rule.value) > 0;
     });
     // sem recorrência, todos os lançamentos são finitos: uma única busca de 100 anos pega qualquer data futura.
     // com recorrência, amplia por etapas e para assim que a meta é atingida.
@@ -612,7 +744,7 @@
     for (s = 0; s < steps.length; s += 1) {
       var horizon = new Date(t.getFullYear() + steps[s], t.getMonth() + 1, 0, 12, 0, 0);
       var horizonStr = getMonthDateStr(horizon.getFullYear(), horizon.getMonth(), horizon.getDate());
-      var events = getSavingsScheduledEvents(today(), horizonStr);
+      var events = getSavingsScheduledEvents(today(), horizonStr, boxId);
       if (!events.length) return result;
       sim = simulateSavingsSchedule(reserve, goal, events);
       if (sim.etaDate) break;
@@ -669,32 +801,32 @@
     return result;
   }
 
-  function getSavingsPaceEstimate(reserve, goal) {
+  function getSavingsPaceEstimate(reserve, goal, boxId) {
     if (goal <= 0) {
       return { summary: "Defina uma meta para calcular a estimativa.", metaLeft: "Meta atual" };
     }
     if (cents(goal - reserve) <= 0) {
       return { summary: "Objetivo concluído. A meta já foi atingida.", metaLeft: "Meta atingida" };
     }
-    var p = getSavingsProjection(reserve, goal);
+    var p = getSavingsProjection(reserve, goal, boxId);
     if (p.mode === "none") {
-      return { summary: "Não há aportes futuros lançados na poupança. Lance aportes para ver quando a meta será atingida.", metaLeft: "Meta atual" };
+      return { summary: "Não há aportes futuros lançados" + (boxId ? " nesta caixinha" : " nas caixinhas") + ". Lance aportes para ver quando a meta será atingida.", metaLeft: "Meta atual" };
     }
     if (p.mode === "insufficient" && p.endless) {
       return {
-        summary: "Mesmo repetindo os lançamentos recorrentes por décadas, a poupança não alcança a meta. Aumente os aportes ou reduza as retiradas.",
+        summary: "Mesmo repetindo os lançamentos recorrentes por décadas, o saldo não alcança a meta. Aumente os aportes ou reduza as retiradas.",
         metaLeft: "Sem data prevista"
       };
     }
     if (p.mode === "insufficient") {
       return {
-        summary: "Os lançamentos até " + fmtD(p.lastEventDate) + " levam a poupança a " + fmtR(p.finalBalance) + ". Ainda faltam " + fmtR(Math.max(0, goal - p.finalBalance)) + " — lance mais aportes para ver a data.",
+        summary: "Os lançamentos até " + fmtD(p.lastEventDate) + " levam o saldo a " + fmtR(p.finalBalance) + ". Ainda faltam " + fmtR(Math.max(0, goal - p.finalBalance)) + " — lance mais aportes para ver a data.",
         metaLeft: "Sem data prevista"
       };
     }
     var qtd = p.plannedCount === 1 ? "1 lançamento" : p.plannedCount + " lançamentos";
     return {
-      summary: "Com os " + qtd + " já programados na poupança, a meta é atingida em " + fmtD(p.etaDate) + ".",
+      summary: "Com os " + qtd + " já programados, a meta é atingida em " + fmtD(p.etaDate) + ".",
       metaLeft: "Previsto " + fmtD(p.etaDate)
     };
   }
@@ -763,6 +895,7 @@
     document.getElementById("st-eco").style.color = eco >= 20 ? "var(--fin-teal)" : eco >= 0 ? "var(--fin-amber)" : "var(--fin-rose)";
     document.getElementById("st-eco-sub").textContent = eco >= 20 ? "Ótima economia" : eco >= 0 ? "Equilibrado" : "Gastos acima da renda";
 
+    savingsGoal = getActiveBoxesGoal();
     var reserve = Math.max(0, savingsTotal);
     var reservePct = savingsGoal > 0 ? Math.max(0, Math.min(100, Math.round((reserve / savingsGoal) * 100))) : 0;
     var reserveMonth = monthTxs.reduce(function (sum, tx) {
@@ -808,14 +941,6 @@
     var projectedDate = savingsProjection.etaDate;
     var projectedDays = savingsProjection.daysToGoal;
     var projectionSeries = savingsProjection.series;
-    var reserveAmount = document.getElementById("fin-savings-amount");
-    var reserveBadge = document.getElementById("fin-savings-badge");
-    var reserveFill = document.getElementById("fin-savings-fill");
-    var reserveRight = document.getElementById("fin-savings-meta-right");
-    var reserveSub = document.getElementById("fin-savings-sub");
-    var reserveEstimate = document.getElementById("fin-savings-estimate");
-    var reserveGoalInput = document.getElementById("fin-savings-goal-input");
-    var reserveGoalDisplay = document.getElementById("fin-savings-goal-display");
     var analyticsSaveAmount = document.getElementById("st-save-amount");
     var analyticsSavePct = document.getElementById("st-save-pct");
     var analyticsSaveFill = document.getElementById("st-save-fill");
@@ -826,15 +951,6 @@
     var analyticsSaveMissing = document.getElementById("st-save-missing");
     var analyticsSaveDays = document.getElementById("st-save-days");
     var analyticsSaveDate = document.getElementById("st-save-date");
-    if (reserveAmount) reserveAmount.textContent = fmtR(reserve);
-    if (reserveBadge) reserveBadge.textContent = reservePct + "%";
-    if (reserveFill) reserveFill.style.width = reservePct + "%";
-    if (reserveRight) reserveRight.textContent = fmtR(savingsGoal);
-    if (reserveGoalInput) reserveGoalInput.value = savingsGoal ? String(savingsGoal) : "";
-    if (reserveGoalDisplay) reserveGoalDisplay.textContent = savingsGoal > 0 ? fmtR(savingsGoal) : "Clique para editar";
-    var paceEstimate = getSavingsPaceEstimate(reserve, savingsGoal);
-    if (reserveEstimate) reserveEstimate.textContent = paceEstimate.summary;
-    document.getElementById("fin-savings-meta-left").textContent = paceEstimate.metaLeft;
     if (analyticsSaveAmount) analyticsSaveAmount.textContent = fmtR(reserve);
     if (analyticsSavePct) analyticsSavePct.textContent = reservePct + "%";
     if (analyticsSaveFill) analyticsSaveFill.style.width = reservePct + "%";
@@ -844,11 +960,8 @@
     if (analyticsSaveMissing) analyticsSaveMissing.textContent = fmtR(reserveMissing);
     if (analyticsSaveDays) analyticsSaveDays.textContent = projectedDays === null ? "Sem aportes futuros suficientes" : (projectedDays === 0 ? "0 dias" : projectedDays + " dias");
     if (analyticsSaveDate) analyticsSaveDate.textContent = projectedDate ? fmtD(projectedDate) : "Sem projeção";
-    if (reserveSub) {
-      reserveSub.textContent = reserve > 0 ? "Movido entre saldo e poupança, sem tratar como gasto." : "Use guardar e retirar para mover valores entre saldo e poupança.";
-    }
     if (analyticsSaveSub) {
-      analyticsSaveSub.textContent = reserve > 0 ? "Saldo líquido acumulado na poupança, já considerando retiradas." : "Use transferências de poupança para construir sua reserva.";
+      analyticsSaveSub.textContent = reserve > 0 ? "Soma de todas as caixinhas, já considerando retiradas." : "Use guardar e retirar para construir suas caixinhas.";
     }
     savingsAnalyticsModel = {
       reserve: reserve,
@@ -861,6 +974,7 @@
       monthSeries: reserveMonthSeries,
       projectionSeries: projectionSeries
     };
+    renderBoxesSummary(getBoxStats(), reserve);
   }
 
   function drawSimpleLineChart(canvasId, points, options) {
@@ -1423,10 +1537,11 @@
       recurrence: '',
       note: source.note || ''
     };
+    if (isSavingsType(copy.type)) copy.boxId = getTxBoxId(source);
     txs.push(copy);
-    if (copy.type === 'save_withdraw' && copy.value > getSavingsBalanceUntil(copy.date, copy.id)) {
+    if (copy.type === 'save_withdraw' && copy.value > getSavingsBalanceUntil(copy.date, copy.id, copy.boxId)) {
       txs = txs.filter(function (item) { return item.id !== copy.id; });
-      toast('Não é possível duplicar essa retirada: o valor supera a poupança disponível na data escolhida.', 'err');
+      toast('Não é possível duplicar essa retirada: o valor supera o saldo da caixinha na data escolhida.', 'err');
       return false;
     }
     finCalClearSelection();
@@ -1446,11 +1561,11 @@
 
     // Mantém a regra já existente: uma retirada nunca pode exceder a poupança disponível.
     var invalidWithdrawal = moving.some(function (tx) {
-      return tx.type === 'save_withdraw' && Number(tx.value || 0) > getSavingsBalanceUntil(tx.date, tx.id);
+      return tx.type === 'save_withdraw' && Number(tx.value || 0) > getSavingsBalanceUntil(tx.date, tx.id, getTxBoxId(tx));
     });
     if (invalidWithdrawal) {
       previousDates.forEach(function (entry) { entry.tx.date = entry.date; });
-      toast('Não é possível mover: uma retirada ficaria acima da poupança disponível nessa data.', 'err');
+      toast('Não é possível mover: uma retirada ficaria acima do saldo da caixinha nessa data.', 'err');
       return false;
     }
 
@@ -1852,12 +1967,19 @@
       var div = document.createElement("div");
       var catClr = CAT_COLORS[tx.category] || "#858099";
       var catIco = CAT_ICONS[tx.category] || "\uD83D\uDCCC";
+      var catName = tx.category;
+      var txBox = isSavingsType(tx.type) ? getBoxById(getTxBoxId(tx)) : null;
+      if (txBox) {
+        catClr = txBox.color;
+        catIco = txBox.emoji;
+        catName = txBox.name;
+      }
       var txClass = getTxClass(tx.type);
       div.className = "fin-tx-item" + (fut ? " fin-tx-future" : "");
       div.innerHTML =
         '<div class="fin-tx-dot ' + txClass + '" style="background:rgba(' + hexToRgb(catClr) + ',.15)">' + catIco + "</div>" +
         '<div class="fin-tx-body">' +
-          '<div class="fin-tx-name">' + esc(tx.description) + '<span class="fin-tx-cat-badge" style="background:rgba(' + hexToRgb(catClr) + ',.15);color:' + catClr + '">' + esc(tx.category) + "</span></div>" +
+          '<div class="fin-tx-name">' + esc(tx.description) + '<span class="fin-tx-cat-badge" style="background:rgba(' + hexToRgb(catClr) + ',.15);color:' + catClr + '">' + esc(catName) + "</span></div>" +
           '<div class="fin-tx-meta">' + fmtD(tx.date) + (tx.recurrence ? ' · <span style="color:var(--fin-amber)"><i class="ico ico-repeat" aria-hidden="true"></i> ' + (tx.recurrence === "monthly" ? "Mensal" : "Semanal") + "</span>" : "") + "</div>" +
         "</div>" +
         '<div class="fin-tx-amt ' + txClass + '">' + getTxSign(tx.type) + fmtR(tx.value) + "</div>";
@@ -2190,25 +2312,393 @@
     if (el) el.classList.remove("open");
   }
 
-  function finOpenSavingsEdit() {
-    var card = document.getElementById("fin-savings-card");
-    var input = document.getElementById("fin-savings-goal-input");
-    if (!card || !input) return;
-    card.classList.add("editing");
-    input.focus();
-    input.select();
+  // ===== Caixinhas =====
+  // O card lateral mostra só o total e até 3 caixinhas em destaque (fixadas primeiro,
+  // depois as movimentadas mais recentemente). A lista completa fica no modal, separada
+  // em abas (ativas / concluídas / arquivadas), com busca e ordenação.
+
+  function getBoxProgress(box, stat) {
+    var balance = stat ? stat.balance : 0;
+    var goal = Number(box.goal || 0);
+    var pct = goal > 0 ? Math.max(0, Math.min(100, Math.round((balance / goal) * 100))) : 0;
+    return { balance: balance, goal: goal, pct: pct, done: goal > 0 && cents(balance) >= cents(goal), missing: Math.max(0, cents(goal - balance)) };
   }
 
-  function finCommitSavingsGoal() {
-    var card = document.getElementById("fin-savings-card");
-    var input = document.getElementById("fin-savings-goal-input");
-    if (!card || !input) return;
-    var value = parseFloat(input.value);
-    savingsGoal = Number.isFinite(value) && value > 0 ? value : 0;
-    card.classList.remove("editing");
+  function getBoxStatus(box, stat) {
+    if (box.archived) return "archived";
+    return getBoxProgress(box, stat).done ? "done" : "active";
+  }
+
+  // Prazo opcional: quanto guardar por mês para chegar à meta na data escolhida.
+  function getBoxDeadlineInfo(box, progress) {
+    if (!box.deadline || progress.goal <= 0 || progress.done) return null;
+    var days = diffDays(today(), box.deadline);
+    if (days < 0) return { late: true, text: "Prazo venceu em " + fmtD(box.deadline) };
+    var months = Math.max(1, Math.ceil(days / 30.44));
+    return {
+      late: false,
+      days: days,
+      perMonth: cents(progress.missing / months),
+      text: (days === 0 ? "Prazo é hoje" : (days === 1 ? "Falta 1 dia" : "Faltam " + days + " dias")) + " · guarde " + fmtR(cents(progress.missing / months)) + "/mês"
+    };
+  }
+
+  function sortBoxes(list, stats, mode) {
+    var copy = list.slice();
+    copy.sort(function (a, b) {
+      var pa = getBoxProgress(a, stats[a.id]);
+      var pb = getBoxProgress(b, stats[b.id]);
+      if (mode === "balance") return pb.balance - pa.balance;
+      if (mode === "progress") return pb.pct - pa.pct || pa.missing - pb.missing;
+      if (mode === "deadline") return (a.deadline || "9999") .localeCompare(b.deadline || "9999");
+      if (mode === "name") return a.name.localeCompare(b.name, "pt-BR");
+      // destaques: fixadas, depois movimentadas recentemente, depois maior saldo
+      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+      var la = (stats[a.id] && stats[a.id].lastDate) || a.createdAt || "";
+      var lb = (stats[b.id] && stats[b.id].lastDate) || b.createdAt || "";
+      return lb.localeCompare(la) || pb.balance - pa.balance;
+    });
+    return copy;
+  }
+
+  function getFeaturedBoxes(stats) {
+    var visible = savingsBoxes.filter(function (box) { return !box.archived; });
+    return sortBoxes(visible, stats, "featured").slice(0, BOX_FEATURED_LIMIT);
+  }
+
+  function boxBarHtml(box, progress) {
+    return '<div class="fbx-bar"><div class="fbx-bar-fill" style="width:' + progress.pct + '%;background:' + box.color + '"></div></div>';
+  }
+
+  function boxGoalText(progress) {
+    if (progress.goal <= 0) return "Sem meta";
+    if (progress.done) return "Meta de " + fmtR(progress.goal) + " atingida";
+    return progress.pct + "% de " + fmtR(progress.goal);
+  }
+
+  function renderBoxesSummary(stats, total) {
+    var totalEl = document.getElementById("fin-boxes-total");
+    if (!totalEl) return;
+    var visible = savingsBoxes.filter(function (box) { return !box.archived; });
+    var goal = getActiveBoxesGoal();
+    totalEl.textContent = fmtR(total);
+    document.getElementById("fin-boxes-count").textContent = visible.length === 1 ? "1 caixinha" : visible.length + " caixinhas";
+    document.getElementById("fin-boxes-sub").textContent = goal > 0
+      ? "Guardado de " + fmtR(goal) + " em metas · fora do saldo disponível"
+      : "Guardado e fora do saldo disponível";
+
+    // barra empilhada: quanto cada caixinha representa do total guardado
+    var dist = document.getElementById("fin-boxes-dist");
+    var withMoney = savingsBoxes.filter(function (box) { return stats[box.id] && stats[box.id].balance > 0; });
+    dist.innerHTML = total > 0
+      ? withMoney.map(function (box) {
+        var share = (stats[box.id].balance / total) * 100;
+        return '<span style="width:' + share.toFixed(2) + '%;background:' + box.color + '" title="' + esc(box.name) + ": " + fmtR(stats[box.id].balance) + '"></span>';
+      }).join("")
+      : "";
+    dist.classList.toggle("empty", total <= 0);
+
+    var list = document.getElementById("fin-boxes-featured");
+    var featured = getFeaturedBoxes(stats);
+    list.innerHTML = featured.map(function (box) {
+      var progress = getBoxProgress(box, stats[box.id]);
+      return '<button type="button" class="fbx-row" data-box-open="' + esc(box.id) + '" style="--box-color:' + box.color + '">' +
+        '<span class="fbx-emoji">' + esc(box.emoji) + "</span>" +
+        '<span class="fbx-row-body">' +
+          '<span class="fbx-row-name">' + esc(box.name) + (box.pinned ? ' <i class="ico ico-pin" aria-hidden="true"></i>' : "") + "</span>" +
+          '<span class="fbx-row-top"><span class="fbx-row-val">' + fmtR(progress.balance) + '</span><span class="fbx-row-meta">' +
+            (progress.goal <= 0 ? "Sem meta" : progress.done ? '<i class="ico ico-circle-check" aria-hidden="true"></i> Concluída' : progress.pct + "% de " + fmtR(progress.goal)) + "</span></span>" +
+          (progress.goal > 0 ? boxBarHtml(box, progress) : "") +
+        "</span>" +
+      "</button>";
+    }).join("");
+
+    var hidden = savingsBoxes.length - featured.length;
+    var more = document.getElementById("fin-boxes-more");
+    more.innerHTML = '<i class="ico ico-layout-grid" aria-hidden="true"></i> ' + (hidden > 0 ? "Ver todas · +" + hidden : "Gerenciar caixinhas");
+
+    if (document.getElementById("modal-boxes").classList.contains("open")) renderBoxesModal(stats);
+  }
+
+  function openBoxesModal(screen, id) {
+    boxView.screen = screen || "list";
+    boxView.detailId = screen === "detail" ? id : boxView.detailId;
+    boxView.editId = screen === "form" ? (id || null) : null;
+    if (boxView.screen === "list") {
+      // nada na aba atual mas há caixinhas em outra: não abre numa aba vazia
+      var stats = getBoxStats();
+      var counts = { active: 0, done: 0, archived: 0 };
+      savingsBoxes.forEach(function (box) { counts[getBoxStatus(box, stats[box.id])] += 1; });
+      if (!counts[boxView.tab]) boxView.tab = counts.active ? "active" : counts.done ? "done" : "archived";
+      document.getElementById("fbx-search").value = boxView.query;
+      document.getElementById("fbx-sort").value = boxView.sort;
+    }
+    if (boxView.screen === "form") fillBoxForm(boxView.editId);
+    renderBoxesModal();
+    openModal("modal-boxes");
+  }
+
+  function renderBoxesModal(stats) {
+    stats = stats || getBoxStats();
+    var screen = boxView.screen;
+    if (screen === "detail" && !getBoxById(boxView.detailId)) screen = boxView.screen = "list";
+    document.getElementById("fbx-list-view").hidden = screen !== "list";
+    document.getElementById("fbx-detail-view").hidden = screen !== "detail";
+    document.getElementById("fbx-form-view").hidden = screen !== "form";
+    document.getElementById("fbx-title").textContent = screen === "form" ? (boxView.editId ? "Editar caixinha" : "Nova caixinha") : "Caixinhas";
+    if (screen === "list") renderBoxesList(stats);
+    if (screen === "detail") renderBoxDetail(stats);
+  }
+
+  function renderBoxesList(stats) {
+    var counts = { active: 0, done: 0, archived: 0 };
+    savingsBoxes.forEach(function (box) { counts[getBoxStatus(box, stats[box.id])] += 1; });
+    document.querySelectorAll("#fbx-tabs .fin-seg-btn").forEach(function (btn) {
+      btn.classList.toggle("active", btn.dataset.tab === boxView.tab);
+      var count = btn.querySelector(".fbx-tab-count");
+      if (count) count.textContent = counts[btn.dataset.tab];
+    });
+
+    var total = 0;
+    savingsBoxes.forEach(function (box) { total += stats[box.id] ? stats[box.id].balance : 0; });
+    var month = 0;
+    savingsBoxes.forEach(function (box) { month += stats[box.id] ? stats[box.id].month : 0; });
+    document.getElementById("fbx-overview").innerHTML =
+      '<div class="fbx-ov-item"><span>Total guardado</span><strong>' + fmtR(total) + "</strong></div>" +
+      '<div class="fbx-ov-item"><span>Metas ativas</span><strong>' + fmtR(getActiveBoxesGoal()) + "</strong></div>" +
+      '<div class="fbx-ov-item"><span>Movimento no mês</span><strong class="' + (month < 0 ? "fbx-neg" : "fbx-pos") + '">' + (month < 0 ? "-" : "+") + fmtR(Math.abs(month)) + "</strong></div>";
+
+    var query = boxView.query.trim().toLowerCase();
+    var list = savingsBoxes.filter(function (box) {
+      if (getBoxStatus(box, stats[box.id]) !== boxView.tab) return false;
+      return !query || box.name.toLowerCase().indexOf(query) >= 0 || box.note.toLowerCase().indexOf(query) >= 0;
+    });
+    list = sortBoxes(list, stats, boxView.sort);
+
+    var grid = document.getElementById("fbx-grid");
+    if (!list.length) {
+      grid.innerHTML = '<div class="fbx-empty"><i class="ico ico-piggy-bank" aria-hidden="true"></i><p>' +
+        (query ? "Nenhuma caixinha encontrada para essa busca." : boxView.tab === "archived" ? "Nenhuma caixinha arquivada." : boxView.tab === "done" ? "Nenhuma meta concluída ainda." : "Crie uma caixinha para cada objetivo.") +
+        "</p></div>";
+      return;
+    }
+    grid.innerHTML = list.map(function (box) {
+      var progress = getBoxProgress(box, stats[box.id]);
+      var deadline = getBoxDeadlineInfo(box, progress);
+      return '<button type="button" class="fbx-card" data-box-open="' + esc(box.id) + '" style="--box-color:' + box.color + '">' +
+        '<span class="fbx-card-hd"><span class="fbx-emoji">' + esc(box.emoji) + '</span>' +
+          (box.pinned ? '<i class="ico ico-pin fbx-card-pin" aria-label="Fixada"></i>' : "") + "</span>" +
+        '<span class="fbx-card-name">' + esc(box.name) + "</span>" +
+        '<span class="fbx-card-val">' + fmtR(progress.balance) + "</span>" +
+        (progress.goal > 0 ? boxBarHtml(box, progress) : '<span class="fbx-bar fbx-bar-none"></span>') +
+        '<span class="fbx-card-meta">' + esc(boxGoalText(progress)) + "</span>" +
+        (deadline ? '<span class="fbx-card-deadline' + (deadline.late ? " late" : "") + '"><i class="ico ico-calendar" aria-hidden="true"></i> ' + deadline.text + "</span>" : "") +
+      "</button>";
+    }).join("");
+  }
+
+  function renderBoxDetail(stats) {
+    var box = getBoxById(boxView.detailId);
+    var view = document.getElementById("fbx-detail-view");
+    if (!box) return;
+    var stat = stats[box.id];
+    var progress = getBoxProgress(box, stat);
+    var deadline = getBoxDeadlineInfo(box, progress);
+    var estimate = getSavingsPaceEstimate(progress.balance, progress.goal, box.id);
+    var movements = getBoxMovements(box.id, 8);
+    var canDelete = savingsBoxes.length > 1;
+
+    view.innerHTML =
+      '<button type="button" class="fbx-back" data-box-action="back"><i class="ico ico-arrow-left" aria-hidden="true"></i> Todas as caixinhas</button>' +
+      '<div class="fbx-hero" style="--box-color:' + box.color + '">' +
+        '<div class="fbx-hero-top">' +
+          '<span class="fbx-emoji fbx-emoji-lg">' + esc(box.emoji) + "</span>" +
+          '<div class="fbx-hero-info">' +
+            '<div class="fbx-hero-name">' + esc(box.name) + (box.archived ? ' <span class="fbx-chip">Arquivada</span>' : progress.done ? ' <span class="fbx-chip done">Concluída</span>' : "") + "</div>" +
+            (box.note ? '<div class="fbx-hero-note">' + esc(box.note) + "</div>" : "") +
+          "</div>" +
+          '<div class="fbx-hero-pct">' + (progress.goal > 0 ? progress.pct + "%" : "—") + "</div>" +
+        "</div>" +
+        '<div class="fbx-hero-val">' + fmtR(progress.balance) + "</div>" +
+        (progress.goal > 0 ? boxBarHtml(box, progress) : "") +
+        '<div class="fbx-hero-meta"><span>' + (progress.goal > 0 ? "Meta " + fmtR(progress.goal) : "Sem meta definida") + "</span><span>" + (progress.goal > 0 && !progress.done ? "Faltam " + fmtR(progress.missing) : "") + "</span></div>" +
+      "</div>" +
+      '<div class="fbx-actions">' +
+        '<button type="button" class="fin-btn fin-btn-gold fin-btn-sm" data-box-action="save"><i class="ico ico-piggy-bank" aria-hidden="true"></i> Guardar</button>' +
+        '<button type="button" class="fin-btn fin-btn-ghost fin-btn-sm" data-box-action="withdraw"' + (progress.balance > 0 ? "" : " disabled") + '><i class="ico ico-coins" aria-hidden="true"></i> Retirar</button>' +
+        '<button type="button" class="fin-btn fin-btn-ghost fin-btn-sm" data-box-action="edit"><i class="ico ico-pencil" aria-hidden="true"></i> Editar</button>' +
+        '<button type="button" class="fin-btn fin-btn-ghost fin-btn-sm" data-box-action="pin" aria-pressed="' + (box.pinned ? "true" : "false") + '"><i class="ico ico-pin" aria-hidden="true"></i> ' + (box.pinned ? "Desafixar" : "Fixar no resumo") + "</button>" +
+        '<button type="button" class="fin-btn fin-btn-ghost fin-btn-sm" data-box-action="archive"><i class="ico ico-archive" aria-hidden="true"></i> ' + (box.archived ? "Desarquivar" : "Arquivar") + "</button>" +
+        (canDelete ? '<button type="button" class="fin-btn fin-btn-rose fin-btn-sm" data-box-action="delete"><i class="ico ico-trash-2" aria-hidden="true"></i> Excluir</button>' : "") +
+      "</div>" +
+      '<div class="fbx-info-grid">' +
+        '<div class="fbx-info"><span>Previsão</span><p>' + estimate.summary + "</p></div>" +
+        '<div class="fbx-info"><span>Prazo</span><p>' + (box.deadline ? (deadline ? deadline.text : "Até " + fmtD(box.deadline)) : "Sem prazo. Defina um em Editar para saber quanto guardar por mês.") + "</p></div>" +
+      "</div>" +
+      '<div class="fbx-mov-title">Últimas movimentações</div>' +
+      (movements.length
+        ? '<div class="fbx-mov-list">' + movements.map(function (item) {
+          return '<button type="button" class="fbx-mov" data-box-tx="' + esc(item.tx._source === "rule" ? "rule:" + item.tx._ruleId : item.tx.id) + '">' +
+            '<span class="fbx-mov-desc">' + esc(item.tx.description) + '<small>' + fmtD(item.date) + (item.tx.recurrence ? " · recorrente" : "") + "</small></span>" +
+            '<span class="fbx-mov-val ' + (item.delta < 0 ? "fbx-neg" : "fbx-pos") + '">' + (item.delta < 0 ? "-" : "+") + fmtR(Math.abs(item.delta)) + "</span>" +
+          "</button>";
+        }).join("") + "</div>"
+        : '<div class="fbx-empty fbx-empty-sm"><p>Nenhuma movimentação ainda. Use Guardar para fazer o primeiro aporte.</p></div>');
+  }
+
+  function renderBoxPickers(emoji, color) {
+    document.getElementById("fbx-emojis").innerHTML = BOX_EMOJIS.map(function (item) {
+      return '<button type="button" class="fbx-pick' + (item === emoji ? " active" : "") + '" data-emoji="' + item + '" aria-pressed="' + (item === emoji) + '">' + item + "</button>";
+    }).join("");
+    document.getElementById("fbx-colors").innerHTML = BOX_COLORS.map(function (item) {
+      return '<button type="button" class="fbx-swatch' + (item === color ? " active" : "") + '" data-color="' + item + '" style="background:' + item + '" aria-label="Cor ' + item + '" aria-pressed="' + (item === color) + '"></button>';
+    }).join("");
+  }
+
+  function fillBoxForm(id) {
+    var box = getBoxById(id);
+    document.getElementById("fbx-name").value = box ? box.name : "";
+    document.getElementById("fbx-goal").value = box && box.goal ? box.goal : "";
+    document.getElementById("fbx-deadline").value = box ? box.deadline : "";
+    document.getElementById("fbx-note").value = box ? box.note : "";
+    renderBoxPickers(box ? box.emoji : BOX_EMOJIS[savingsBoxes.length % BOX_EMOJIS.length], box ? box.color : BOX_COLORS[savingsBoxes.length % BOX_COLORS.length]);
+  }
+
+  function saveBoxForm() {
+    var name = document.getElementById("fbx-name").value.trim();
+    if (!name) {
+      toast("Dê um nome para a caixinha.", "err");
+      return;
+    }
+    var goal = parseFloat(document.getElementById("fbx-goal").value);
+    var emojiBtn = document.querySelector("#fbx-emojis .fbx-pick.active");
+    var colorBtn = document.querySelector("#fbx-colors .fbx-swatch.active");
+    var existing = getBoxById(boxView.editId);
+    var next = normalizeSavingsBoxes([{
+      id: existing ? existing.id : uid(),
+      name: name,
+      emoji: emojiBtn ? emojiBtn.dataset.emoji : BOX_EMOJIS[0],
+      color: colorBtn ? colorBtn.dataset.color : BOX_COLORS[0],
+      goal: Number.isFinite(goal) && goal > 0 ? goal : 0,
+      deadline: document.getElementById("fbx-deadline").value,
+      note: document.getElementById("fbx-note").value,
+      pinned: existing ? existing.pinned : false,
+      archived: existing ? existing.archived : false,
+      createdAt: existing ? existing.createdAt : today()
+    }])[0];
+    if (existing) savingsBoxes[savingsBoxes.indexOf(existing)] = next;
+    else savingsBoxes.push(next);
     persist();
+    boxView.screen = "detail";
+    boxView.detailId = next.id;
     renderAll();
-    toast("Meta de poupança atualizada!", "ok");
+    renderBoxesModal();
+    toast(existing ? "Caixinha atualizada!" : "Caixinha criada!", "ok");
+  }
+
+  function deleteBox(box) {
+    var used = txs.some(function (tx) { return isSavingsType(tx.type) && getTxBoxId(tx) === box.id; }) ||
+      recurrenceRules.some(function (rule) { return isSavingsType(rule.type) && getTxBoxId(rule) === box.id; });
+    if (used) {
+      toast("Essa caixinha tem movimentações. Arquive-a para tirá-la da lista sem perder o histórico.", "err");
+      return;
+    }
+    if (!window.confirm('Excluir a caixinha "' + box.name + '"?')) return;
+    savingsBoxes = savingsBoxes.filter(function (item) { return item.id !== box.id; });
+    persist();
+    boxView.screen = "list";
+    renderAll();
+    renderBoxesModal();
+    toast("Caixinha excluída.", "info");
+  }
+
+  function openBoxTx(box, type) {
+    resetModal();
+    setTxType(type, box.id);
+    document.getElementById("mtx-desc").value = (type === "save" ? "Guardar em " : "Retirar de ") + box.name;
+    openModal("modal-tx");
+    document.getElementById("mtx-val").focus();
+  }
+
+  function handleBoxAction(action) {
+    var box = getBoxById(boxView.detailId);
+    if (action === "new") { openBoxesModal("form"); return; }
+    if (action === "back") { boxView.screen = "list"; renderBoxesModal(); return; }
+    if (action === "cancel-form") {
+      boxView.screen = boxView.editId && getBoxById(boxView.editId) ? "detail" : "list";
+      renderBoxesModal();
+      return;
+    }
+    if (action === "save-form") { saveBoxForm(); return; }
+    if (!box) return;
+    if (action === "save") openBoxTx(box, "save");
+    else if (action === "withdraw") openBoxTx(box, "save_withdraw");
+    else if (action === "edit") openBoxesModal("form", box.id);
+    else if (action === "delete") deleteBox(box);
+    else if (action === "pin" || action === "archive") {
+      if (action === "pin") box.pinned = !box.pinned;
+      else {
+        if (!box.archived && savingsBoxes.filter(function (item) { return !item.archived; }).length <= 1) {
+          toast("Mantenha pelo menos uma caixinha ativa.", "err");
+          return;
+        }
+        box.archived = !box.archived;
+        if (box.archived) box.pinned = false;
+      }
+      persist();
+      renderAll();
+      renderBoxesModal();
+      toast(action === "pin" ? (box.pinned ? "Caixinha fixada no resumo." : "Caixinha desafixada.") : (box.archived ? "Caixinha arquivada." : "Caixinha reativada."), "ok");
+    }
+  }
+
+  function bindBoxEvents() {
+    document.getElementById("fin-savings-card").addEventListener("click", function (event) {
+      var row = event.target.closest("[data-box-open]");
+      if (row) { openBoxesModal("detail", row.dataset.boxOpen); return; }
+      if (event.target.closest("#fin-boxes-new")) { openBoxesModal("form"); return; }
+      if (event.target.closest("#fin-boxes-more")) openBoxesModal("list");
+    });
+    var modal = document.getElementById("modal-boxes");
+    modal.addEventListener("click", function (event) {
+      if (event.target === event.currentTarget) { closeModal("modal-boxes"); return; }
+      var open = event.target.closest("[data-box-open]");
+      if (open) { openBoxesModal("detail", open.dataset.boxOpen); return; }
+      var txBtn = event.target.closest("[data-box-tx]");
+      if (txBtn) {
+        var ref = txBtn.dataset.boxTx;
+        if (ref.indexOf("rule:") === 0) openRecurringManager(ref.slice(5));
+        else openEdit(ref);
+        return;
+      }
+      var tab = event.target.closest("#fbx-tabs [data-tab]");
+      if (tab) { boxView.tab = tab.dataset.tab; renderBoxesModal(); return; }
+      var emoji = event.target.closest("[data-emoji]");
+      var color = event.target.closest("[data-color]");
+      if (emoji || color) {
+        var current = document.querySelector("#fbx-emojis .fbx-pick.active");
+        var currentColor = document.querySelector("#fbx-colors .fbx-swatch.active");
+        renderBoxPickers(emoji ? emoji.dataset.emoji : (current && current.dataset.emoji), color ? color.dataset.color : (currentColor && currentColor.dataset.color));
+        return;
+      }
+      var action = event.target.closest("[data-box-action]");
+      if (action && !action.disabled) handleBoxAction(action.dataset.boxAction);
+    });
+    document.getElementById("fbx-close").addEventListener("click", function () { closeModal("modal-boxes"); });
+    document.getElementById("fbx-search").addEventListener("input", function () {
+      boxView.query = this.value;
+      renderBoxesModal();
+    });
+    document.getElementById("fbx-sort").addEventListener("change", function () {
+      boxView.sort = this.value;
+      renderBoxesModal();
+    });
+    document.getElementById("fbx-form-view").addEventListener("keydown", function (event) {
+      if (event.key === "Enter" && event.target.tagName === "INPUT") {
+        event.preventDefault();
+        saveBoxForm();
+      }
+    });
   }
 
   function addCategoryManagerRow(container, type, category) {
@@ -2296,9 +2786,15 @@
     toast("Categorias atualizadas!", "ok");
   }
 
-  function syncRuleCategoryOptions(type) {
+  function syncRuleCategoryOptions(type, boxId) {
     var catSel = document.getElementById("mr-category");
     if (!catSel) return;
+    var label = document.getElementById("mr-category-label");
+    if (label) label.textContent = isSavingsType(type) ? "Caixinha" : "Categoria";
+    if (isSavingsType(type)) {
+      fillBoxOptions(catSel, boxId);
+      return;
+    }
     var cats = getCategoriesForType(type);
     catSel.innerHTML = "";
     cats.forEach(function (cat) {
@@ -2358,8 +2854,8 @@
     document.getElementById("mr-fixed-avoid-holiday").checked = rule.fixedAvoidHoliday;
     document.getElementById("mr-holidays").value = (rule.holidays || []).join("\n");
     document.getElementById("mr-note").value = rule.note || "";
-    syncRuleCategoryOptions(rule.type);
-    document.getElementById("mr-category").value = rule.category || getCategoriesForType(rule.type)[0] || "";
+    syncRuleCategoryOptions(rule.type, rule.boxId);
+    if (!isSavingsType(rule.type)) document.getElementById("mr-category").value = rule.category || getCategoriesForType(rule.type)[0] || "";
     document.getElementById("mr-delete").style.display = "inline-flex";
     toggleRulePattern(rule.pattern);
   }
@@ -2367,14 +2863,17 @@
   function collectRuleForm() {
     var pattern = document.getElementById("mr-pattern").value;
     var holidays = document.getElementById("mr-holidays").value.split(/\r?\n/).map(function (item) { return item.trim(); }).filter(Boolean);
+    var type = document.getElementById("mr-type").value;
+    var picked = document.getElementById("mr-category").value;
     return {
       id: editRuleId || uid(),
       name: document.getElementById("mr-name").value.trim(),
       startDate: document.getElementById("mr-start-date").value,
       description: document.getElementById("mr-description").value.trim(),
-      type: document.getElementById("mr-type").value,
+      type: type,
       value: parseFloat(document.getElementById("mr-value").value),
-      category: document.getElementById("mr-category").value,
+      category: isSavingsType(type) ? "Poupan\u00e7a" : picked,
+      boxId: isSavingsType(type) ? picked : "",
       pattern: pattern,
       nth: parseInt(document.getElementById("mr-nth").value, 10),
       countSaturday: document.getElementById("mr-count-saturday").checked,
@@ -2402,7 +2901,7 @@
       card.className = "fin-recurring-card" + (rule.id === editRuleId ? " active" : "");
       card.innerHTML =
         '<div class="fin-recurring-card-title">' + esc(rule.name) + '</div>' +
-        '<div class="fin-recurring-card-meta">' + fmtR(rule.value) + ' · ' + esc(rule.category) + '</div>' +
+        '<div class="fin-recurring-card-meta">' + fmtR(rule.value) + ' · ' + esc(isSavingsType(rule.type) && getBoxById(rule.boxId) ? getBoxById(rule.boxId).name : rule.category) + '</div>' +
         '<div class="fin-recurring-card-sub">' + (rule.pattern === "fixed_day" ? ("Dia " + esc(rule.day) + " com ajuste") : (esc(rule.nth) + "º dia útil com sábado contando")) + '</div>';
       card.addEventListener("click", function () {
         fillRuleForm(rule.id);
@@ -2458,8 +2957,27 @@
     toast("Regra de recorrência excluída.", "info");
   }
 
-  function syncCategoryOptions(type) {
+  // Lista as caixinhas num <select>; arquivadas só aparecem se já forem a escolhida.
+  function fillBoxOptions(select, selectedId) {
+    select.innerHTML = "";
+    savingsBoxes.forEach(function (box) {
+      if (box.archived && box.id !== selectedId) return;
+      var option = document.createElement("option");
+      option.value = box.id;
+      option.textContent = box.emoji + " " + box.name + (box.archived ? " (arquivada)" : "");
+      select.appendChild(option);
+    });
+    if (selectedId && getBoxById(selectedId)) select.value = selectedId;
+  }
+
+  function syncCategoryOptions(type, boxId) {
     var catSel = document.getElementById("mtx-cat");
+    var label = document.getElementById("mtx-cat-label");
+    if (label) label.textContent = isSavingsType(type) ? "Caixinha" : "Categoria";
+    if (isSavingsType(type)) {
+      fillBoxOptions(catSel, boxId);
+      return;
+    }
     var cats = getCategoriesForType(type);
     catSel.innerHTML = "";
     cats.forEach(function (cat) {
@@ -2470,13 +2988,14 @@
     });
   }
 
-  function setTxType(type) {
+  function setTxType(type, boxId) {
+    var keepBox = isSavingsType(txType) ? document.getElementById("mtx-cat").value : "";
     txType = type;
     document.getElementById("tt-in").className = "fin-tt-btn" + (type === "in" ? " active-in" : "");
     document.getElementById("tt-out").className = "fin-tt-btn" + (type === "out" ? " active-out" : "");
     document.getElementById("tt-save").className = "fin-tt-btn" + (type === "save" ? " active-save" : "");
     document.getElementById("tt-save-withdraw").className = "fin-tt-btn" + (type === "save_withdraw" ? " active-save-withdraw" : "");
-    syncCategoryOptions(type);
+    syncCategoryOptions(type, boxId || keepBox);
   }
 
   function resetModal() {
@@ -2498,14 +3017,14 @@
     var tx = txs.find(function (item) { return item.id === id; });
     if (!tx) return;
     editId = id;
-    setTxType(tx.type);
+    setTxType(tx.type, isSavingsType(tx.type) ? getTxBoxId(tx) : "");
     document.getElementById("mtx-title").textContent = "Editar Transação";
     document.getElementById("mtx-save").innerHTML = '<i class="ico ico-save" aria-hidden="true"></i> Salvar';
     document.getElementById("mtx-del").style.display = "inline-flex";
     document.getElementById("mtx-desc").value = tx.description;
     document.getElementById("mtx-val").value = tx.value;
     document.getElementById("mtx-date").value = tx.date;
-    document.getElementById("mtx-cat").value = tx.category;
+    if (!isSavingsType(tx.type)) document.getElementById("mtx-cat").value = tx.category;
     document.getElementById("mtx-rec").value = tx.recurrence || "";
     document.getElementById("mtx-note").value = tx.note || "";
     openModal("modal-tx");
@@ -2590,32 +3109,7 @@
       if (!btn) return;
       btn.closest(".fin-cat-manager-row").remove();
     });
-    document.getElementById("fin-savings-card").addEventListener("click", function (event) {
-      if (event.target.id === "fin-savings-goal-input") return;
-      finOpenSavingsEdit();
-    });
-    document.getElementById("fin-savings-card").addEventListener("keydown", function (event) {
-      if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
-        finOpenSavingsEdit();
-      }
-    });
-    document.getElementById("fin-savings-goal-input").addEventListener("click", function (event) {
-      event.stopPropagation();
-    });
-    document.getElementById("fin-savings-goal-input").addEventListener("keydown", function (event) {
-      if (event.key === "Enter") {
-        event.preventDefault();
-        finCommitSavingsGoal();
-      }
-      if (event.key === "Escape") {
-        document.getElementById("fin-savings-card").classList.remove("editing");
-        renderAll();
-      }
-    });
-    document.getElementById("fin-savings-goal-input").addEventListener("blur", function () {
-      if (document.getElementById("fin-savings-card").classList.contains("editing")) finCommitSavingsGoal();
-    });
+    bindBoxEvents();
 
     document.getElementById("mtx-save").addEventListener("click", function () {
       var desc = document.getElementById("mtx-desc").value.trim();
@@ -2636,11 +3130,19 @@
         recurrence: document.getElementById("mtx-rec").value,
         note: document.getElementById("mtx-note").value.trim()
       };
+      if (isSavingsType(tx.type)) {
+        tx.boxId = tx.category;
+        tx.category = "Poupan\u00e7a";
+        if (!getBoxById(tx.boxId)) {
+          toast("Escolha uma caixinha.", "err");
+          return;
+        }
+      }
 
       if (tx.type === "save_withdraw") {
-        var savingsBalance = getSavingsBalanceUntil(tx.date, editId);
+        var savingsBalance = getSavingsBalanceUntil(tx.date, editId, tx.boxId);
         if (tx.value > savingsBalance) {
-          toast("Esse valor é maior do que a poupança disponível até essa data.", "err");
+          toast("Esse valor é maior do que o saldo da caixinha até essa data.", "err");
           return;
         }
       }
@@ -2725,9 +3227,11 @@
 
     document.addEventListener("keydown", function (event) {
       if (event.key === "Escape") {
-        if (document.getElementById("modal-tx").classList.contains("open")) closeModal("modal-tx");
+        // fecha só a camada de cima: a transação aberta a partir de uma caixinha volta para a caixinha
+        if (document.getElementById("modal-tx").classList.contains("open")) { closeModal("modal-tx"); return; }
+        if (document.getElementById("modal-recurring").classList.contains("open")) { closeModal("modal-recurring"); return; }
         if (document.getElementById("modal-categories").classList.contains("open")) closeModal("modal-categories");
-        if (document.getElementById("modal-recurring").classList.contains("open")) closeModal("modal-recurring");
+        if (document.getElementById("modal-boxes").classList.contains("open")) { closeModal("modal-boxes"); return; }
         if (document.getElementById("fin-analytics").classList.contains("open")) finCloseAnalytics();
       }
     });
