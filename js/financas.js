@@ -179,7 +179,10 @@
         avoidWeekend: rule.avoidWeekend !== false,
         fixedAvoidHoliday: !!rule.fixedAvoidHoliday,
         holidays: Array.isArray(rule.holidays) ? rule.holidays.filter(Boolean) : [],
-        boxId: String(rule.boxId || "")
+        boxId: String(rule.boxId || ""),
+        boxHistory: Array.isArray(rule.boxHistory) ? rule.boxHistory.filter(function (entry) {
+          return entry && entry.until && entry.boxId;
+        }).map(function (entry) { return { until: String(entry.until), boxId: String(entry.boxId) }; }) : []
       };
     });
   }
@@ -249,6 +252,38 @@
 
   function matchesBox(tx, boxId) {
     return !boxId || getTxBoxId(tx) === boxId;
+  }
+
+  function getDefaultBoxId() {
+    return getBoxById(DEFAULT_BOX_ID) ? DEFAULT_BOX_ID : (savingsBoxes[0] ? savingsBoxes[0].id : "");
+  }
+
+  // Caixinha de uma ocorrência de lançamento recorrente (regra ou tx mensal/semanal) numa data.
+  // Trocar a caixinha só vale para os próximos depósitos: boxHistory guarda para onde iam as
+  // ocorrências até cada troca ({ until, boxId }). E uma caixinha nunca recebe ocorrências de
+  // antes de ter sido criada; essas ficam na caixinha padrão (onde de fato caíram).
+  function resolveBoxForDate(source, date) {
+    var boxId = source.boxId;
+    var history = Array.isArray(source.boxHistory) ? source.boxHistory : [];
+    for (var i = 0; i < history.length; i += 1) {
+      if (history[i] && date <= history[i].until) { boxId = history[i].boxId; break; }
+    }
+    var box = getBoxById(boxId);
+    var fallback = getDefaultBoxId();
+    if (!box) return fallback;
+    if (box.id !== fallback && box.createdAt && date < box.createdAt) return fallback;
+    return box.id;
+  }
+
+  // Ao trocar a caixinha de um lançamento recorrente, as ocorrências até hoje ficam na anterior.
+  function keepPastOccurrencesInBox(previous, next) {
+    var history = Array.isArray(previous && previous.boxHistory) ? previous.boxHistory.slice() : [];
+    if (previous && isSavingsType(previous.type) && isSavingsType(next.type) && previous.boxId && previous.boxId !== next.boxId) {
+      history.push({ until: today(), boxId: previous.boxId });
+    }
+    if (history.length && isSavingsType(next.type)) next.boxHistory = history;
+    else delete next.boxHistory;
+    return next;
   }
 
   function getActiveBoxesGoal() {
@@ -461,7 +496,7 @@
       recurrence: "rule",
       future: date > today(),
       note: rule.note || "",
-      boxId: rule.boxId || ""
+      boxId: isSavingsType(rule.type) ? resolveBoxForDate(rule, date) : ""
     };
   }
 
@@ -553,7 +588,8 @@
             date: monthlyDate,
             id: tx.id + "_" + year + "_" + month,
             _original: tx.id,
-            future: monthlyDate > today()
+            future: monthlyDate > today(),
+            boxId: isSavingsType(tx.type) ? resolveBoxForDate(tx, monthlyDate) : tx.boxId
           }));
         }
       } else if (tx.recurrence === "weekly") {
@@ -567,7 +603,8 @@
             date: weeklyDate,
             id: tx.id + "_w_" + weeklyDate,
             _original: tx.id,
-            future: weeklyDate > today()
+            future: weeklyDate > today(),
+            boxId: isSavingsType(tx.type) ? resolveBoxForDate(tx, weeklyDate) : tx.boxId
           }));
           cur.setDate(cur.getDate() + 7);
         }
@@ -585,29 +622,30 @@
       if (!isSavingsType(tx.type)) return;
       if (tx.recurrence === "monthly") {
         getMonthlyOccurrenceDates(tx.date, endStr).forEach(function (occurrenceDate) {
-          fn(tx, occurrenceDate);
+          fn(tx, occurrenceDate, resolveBoxForDate(tx, occurrenceDate));
         });
       } else if (tx.recurrence === "weekly") {
         var weeklyCur = new Date(tx.date + "T12:00:00");
         var endWeekly = new Date(endStr + "T12:00:00");
         while (weeklyCur <= endWeekly) {
-          fn(tx, getMonthDateStr(weeklyCur.getFullYear(), weeklyCur.getMonth(), weeklyCur.getDate()));
+          var weeklyDate = getMonthDateStr(weeklyCur.getFullYear(), weeklyCur.getMonth(), weeklyCur.getDate());
+          fn(tx, weeklyDate, resolveBoxForDate(tx, weeklyDate));
           weeklyCur.setDate(weeklyCur.getDate() + 7);
         }
       } else if (tx.date <= endStr) {
-        fn(tx, tx.date);
+        fn(tx, tx.date, getTxBoxId(tx));
       }
     });
     getRuleOccurrencesUntil(endStr).forEach(function (tx) {
-      if (isSavingsType(tx.type)) fn(tx, tx.date);
+      if (isSavingsType(tx.type)) fn(tx, tx.date, getTxBoxId(tx));
     });
   }
 
   function getSavingsBalanceUntil(dateStr, ignoreTxId, boxId) {
     var balance = 0;
-    forEachSavingsOccurrenceUntil(dateStr, function (tx) {
+    forEachSavingsOccurrenceUntil(dateStr, function (tx, date, occBoxId) {
       if (ignoreTxId && tx.id === ignoreTxId) return;
-      if (!matchesBox(tx, boxId)) return;
+      if (boxId && occBoxId !== boxId) return;
       balance += getSavingsDelta(tx);
     });
     return cents(balance);
@@ -621,8 +659,8 @@
     savingsBoxes.forEach(function (box) {
       stats[box.id] = { balance: 0, month: 0, count: 0, lastDate: "" };
     });
-    forEachSavingsOccurrenceUntil(todayStr, function (tx, date) {
-      var entry = stats[getTxBoxId(tx)];
+    forEachSavingsOccurrenceUntil(todayStr, function (tx, date, occBoxId) {
+      var entry = stats[occBoxId];
       if (!entry) return;
       var delta = getSavingsDelta(tx);
       entry.balance += delta;
@@ -631,7 +669,8 @@
       if (date > entry.lastDate) entry.lastDate = date;
     });
     Object.keys(stats).forEach(function (id) {
-      stats[id].balance = Math.max(0, cents(stats[id].balance));
+      // saldo real, mesmo negativo: assim a soma das caixinhas sempre bate com o total guardado
+      stats[id].balance = cents(stats[id].balance);
       stats[id].month = cents(stats[id].month);
     });
     return stats;
@@ -639,8 +678,8 @@
 
   function getBoxMovements(boxId, limit) {
     var items = [];
-    forEachSavingsOccurrenceUntil(today(), function (tx, date) {
-      if (!matchesBox(tx, boxId)) return;
+    forEachSavingsOccurrenceUntil(today(), function (tx, date, occBoxId) {
+      if (occBoxId !== boxId) return;
       items.push({ tx: tx, date: date, delta: getSavingsDelta(tx) });
     });
     items.sort(function (a, b) { return b.date.localeCompare(a.date); });
@@ -659,31 +698,33 @@
 
   function getSavingsScheduledEvents(startExclusive, endStr, boxId) {
     var events = [];
-    function add(date, delta) {
+    function add(date, delta, occBoxId) {
       if (!delta) return;
       if (date <= startExclusive || date > endStr) return;
+      if (boxId && occBoxId !== boxId) return;
       events.push({ date: date, delta: delta });
     }
     txs.forEach(function (tx) {
-      if (!isSavingsType(tx.type) || !matchesBox(tx, boxId)) return;
+      if (!isSavingsType(tx.type)) return;
       var delta = getSavingsDelta(tx);
       if (tx.recurrence === "monthly") {
         getMonthlyOccurrenceDates(tx.date, endStr).forEach(function (occurrenceDate) {
-          add(occurrenceDate, delta);
+          add(occurrenceDate, delta, resolveBoxForDate(tx, occurrenceDate));
         });
       } else if (tx.recurrence === "weekly") {
         var weeklyCur = new Date(tx.date + "T12:00:00");
         var endWeekly = new Date(endStr + "T12:00:00");
         while (weeklyCur <= endWeekly) {
-          add(getMonthDateStr(weeklyCur.getFullYear(), weeklyCur.getMonth(), weeklyCur.getDate()), delta);
+          var weeklyDate = getMonthDateStr(weeklyCur.getFullYear(), weeklyCur.getMonth(), weeklyCur.getDate());
+          add(weeklyDate, delta, resolveBoxForDate(tx, weeklyDate));
           weeklyCur.setDate(weeklyCur.getDate() + 7);
         }
       } else {
-        add(tx.date, delta);
+        add(tx.date, delta, getTxBoxId(tx));
       }
     });
     getRuleOccurrencesUntil(endStr).forEach(function (tx) {
-      if (isSavingsType(tx.type) && matchesBox(tx, boxId)) add(tx.date, getSavingsDelta(tx));
+      if (isSavingsType(tx.type)) add(tx.date, getSavingsDelta(tx), getTxBoxId(tx));
     });
     events.sort(function (a, b) { return a.date.localeCompare(b.date); });
     return events;
@@ -2321,7 +2362,7 @@
     var balance = stat ? stat.balance : 0;
     var goal = Number(box.goal || 0);
     var pct = goal > 0 ? Math.max(0, Math.min(100, Math.round((balance / goal) * 100))) : 0;
-    return { balance: balance, goal: goal, pct: pct, done: goal > 0 && cents(balance) >= cents(goal), missing: Math.max(0, cents(goal - balance)) };
+    return { balance: balance, goal: goal, pct: pct, done: goal > 0 && cents(balance) >= cents(goal), missing: Math.max(0, cents(goal - Math.max(0, balance))), negative: balance < 0 };
   }
 
   function getBoxStatus(box, stat) {
@@ -2406,8 +2447,8 @@
         '<span class="fbx-emoji">' + esc(box.emoji) + "</span>" +
         '<span class="fbx-row-body">' +
           '<span class="fbx-row-name">' + esc(box.name) + (box.pinned ? ' <i class="ico ico-pin" aria-hidden="true"></i>' : "") + "</span>" +
-          '<span class="fbx-row-top"><span class="fbx-row-val">' + fmtR(progress.balance) + '</span><span class="fbx-row-meta">' +
-            (progress.goal <= 0 ? "Sem meta" : progress.done ? '<i class="ico ico-circle-check" aria-hidden="true"></i> Concluída' : progress.pct + "% de " + fmtR(progress.goal)) + "</span></span>" +
+          '<span class="fbx-row-top"><span class="fbx-row-val' + (progress.negative ? " fbx-neg" : "") + '">' + fmtR(progress.balance) + '</span><span class="fbx-row-meta">' +
+            (progress.negative ? '<i class="ico ico-triangle-alert" aria-hidden="true"></i> Retiradas maiores que aportes' : progress.goal <= 0 ? "Sem meta" : progress.done ? '<i class="ico ico-circle-check" aria-hidden="true"></i> Concluída' : progress.pct + "% de " + fmtR(progress.goal)) + "</span></span>" +
           (progress.goal > 0 ? boxBarHtml(box, progress) : "") +
         "</span>" +
       "</button>";
@@ -2489,9 +2530,10 @@
         '<span class="fbx-card-hd"><span class="fbx-emoji">' + esc(box.emoji) + '</span>' +
           (box.pinned ? '<i class="ico ico-pin fbx-card-pin" aria-label="Fixada"></i>' : "") + "</span>" +
         '<span class="fbx-card-name">' + esc(box.name) + "</span>" +
-        '<span class="fbx-card-val">' + fmtR(progress.balance) + "</span>" +
+        '<span class="fbx-card-val' + (progress.negative ? " fbx-neg" : "") + '">' + fmtR(progress.balance) + "</span>" +
         (progress.goal > 0 ? boxBarHtml(box, progress) : '<span class="fbx-bar fbx-bar-none"></span>') +
         '<span class="fbx-card-meta">' + esc(boxGoalText(progress)) + "</span>" +
+        (progress.negative ? '<span class="fbx-card-deadline late"><i class="ico ico-triangle-alert" aria-hidden="true"></i> Retiradas maiores que aportes</span>' : "") +
         (deadline ? '<span class="fbx-card-deadline' + (deadline.late ? " late" : "") + '"><i class="ico ico-calendar" aria-hidden="true"></i> ' + deadline.text + "</span>" : "") +
       "</button>";
     }).join("");
@@ -2519,10 +2561,14 @@
           "</div>" +
           '<div class="fbx-hero-pct">' + (progress.goal > 0 ? progress.pct + "%" : "—") + "</div>" +
         "</div>" +
-        '<div class="fbx-hero-val">' + fmtR(progress.balance) + "</div>" +
+        '<div class="fbx-hero-val' + (progress.negative ? " fbx-neg" : "") + '">' + fmtR(progress.balance) + "</div>" +
         (progress.goal > 0 ? boxBarHtml(box, progress) : "") +
         '<div class="fbx-hero-meta"><span>' + (progress.goal > 0 ? "Meta " + fmtR(progress.goal) : "Sem meta definida") + "</span><span>" + (progress.goal > 0 && !progress.done ? "Faltam " + fmtR(progress.missing) : "") + "</span></div>" +
       "</div>" +
+      (progress.negative
+        ? '<div class="fbx-warn"><i class="ico ico-triangle-alert" aria-hidden="true"></i><span>As retiradas desta caixinha somam ' + fmtR(Math.abs(progress.balance)) +
+          ' a mais que os aportes. Provavelmente algum aporte (ou regra recorrente) foi para outra caixinha, ou a retirada era de outra. Abra a movimentação abaixo e escolha a caixinha certa.</span></div>'
+        : "") +
       '<div class="fbx-actions">' +
         '<button type="button" class="fin-btn fin-btn-gold fin-btn-sm" data-box-action="save"><i class="ico ico-piggy-bank" aria-hidden="true"></i> Guardar</button>' +
         '<button type="button" class="fin-btn fin-btn-ghost fin-btn-sm" data-box-action="withdraw"' + (progress.balance > 0 ? "" : " disabled") + '><i class="ico ico-coins" aria-hidden="true"></i> Retirar</button>' +
@@ -2597,8 +2643,10 @@
   }
 
   function deleteBox(box) {
-    var used = txs.some(function (tx) { return isSavingsType(tx.type) && getTxBoxId(tx) === box.id; }) ||
-      recurrenceRules.some(function (rule) { return isSavingsType(rule.type) && getTxBoxId(rule) === box.id; });
+    function refersToBox(item) {
+      return isSavingsType(item.type) && (getTxBoxId(item) === box.id || (item.boxHistory || []).some(function (entry) { return entry.boxId === box.id; }));
+    }
+    var used = txs.some(refersToBox) || recurrenceRules.some(refersToBox);
     if (used) {
       toast("Essa caixinha tem movimentações. Arquive-a para tirá-la da lista sem perder o histórico.", "err");
       return;
@@ -2791,6 +2839,8 @@
     if (!catSel) return;
     var label = document.getElementById("mr-category-label");
     if (label) label.textContent = isSavingsType(type) ? "Caixinha" : "Categoria";
+    var hint = document.getElementById("mr-box-hint");
+    if (hint) hint.hidden = !isSavingsType(type);
     if (isSavingsType(type)) {
       fillBoxOptions(catSel, boxId);
       return;
@@ -2933,8 +2983,8 @@
       toast("Defina um dia fixo válido do mês.", "err");
       return;
     }
-    rule = normalizeRecurrenceRules([rule])[0];
     var idx = recurrenceRules.findIndex(function (item) { return item.id === rule.id; });
+    rule = normalizeRecurrenceRules([keepPastOccurrencesInBox(idx >= 0 ? recurrenceRules[idx] : null, rule)])[0];
     if (idx >= 0) recurrenceRules[idx] = rule;
     else recurrenceRules.push(rule);
     editRuleId = rule.id;
@@ -3149,7 +3199,7 @@
 
       if (editId) {
         var idx = txs.findIndex(function (item) { return item.id === editId; });
-        if (idx >= 0) txs[idx] = tx;
+        if (idx >= 0) txs[idx] = tx.recurrence ? keepPastOccurrencesInBox(txs[idx], tx) : tx;
         toast("Transação atualizada!", "ok");
       } else {
         txs.push(tx);

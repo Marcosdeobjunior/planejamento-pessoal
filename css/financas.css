@@ -716,6 +716,32 @@ body[data-page="financas"] .app-content {
 
 .fbx-chip.done { background: rgba(94, 196, 168, 0.14); color: var(--fin-teal); }
 
+.fbx-warn {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(224, 107, 139, 0.08);
+  border: 1px solid rgba(224, 107, 139, 0.25);
+  color: var(--fin-rose);
+  font-family: var(--fin-font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.fbx-field-hint {
+  margin-top: 6px;
+  font-family: var(--fin-font-mono);
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: var(--fin-muted);
+}
+
+.fbx-warn .ico { flex: 0 0 auto; margin-top: 2px; }
+.fbx-row-meta .ico-triangle-alert { color: var(--fin-rose); }
+
 .fbx-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
 .fbx-actions .fin-btn[disabled] { opacity: 0.4; cursor: not-allowed; }
 .fbx-actions .fin-btn[data-box-action="delete"] { margin-left: auto; }
