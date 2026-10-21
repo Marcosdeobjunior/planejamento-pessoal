@@ -484,11 +484,31 @@ body {
 }
 
 .integrated-home .nota-input::placeholder {
-  color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.45);
 }
 
 .integrated-home .nota-input:focus {
   border-color: rgba(201, 169, 110, 0.4);
+}
+
+.integrated-home .nota-status {
+  min-height: 1.2em;
+  margin-top: 0.5rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: var(--home-muted);
+}
+
+.integrated-home .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .integrated-home .ind-grid {
@@ -620,6 +640,36 @@ body {
 .integrated-home .reveal-up.is-visible {
   opacity: 1;
   transform: translateY(0);
+}
+
+.integrated-home .btn-primary:focus-visible,
+.integrated-home .btn-ghost:focus-visible,
+.integrated-home .const-card:focus-visible,
+.integrated-home .mod-card:focus-visible,
+.integrated-home .ind-item:focus-visible,
+.integrated-home .humor-btn:focus-visible,
+.integrated-home .nota-input:focus-visible {
+  outline: 2px solid var(--home-gold);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .integrated-home .reveal-up {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .integrated-home .btn-primary:hover,
+  .integrated-home .btn-ghost:hover,
+  .integrated-home .const-card:hover,
+  .integrated-home .mod-card:hover,
+  .integrated-home .mod-card:hover .mod-thumb,
+  .integrated-home .humor-btn:hover,
+  .integrated-home .humor-btn.is-active,
+  .integrated-home .ind-item:hover {
+    transform: none;
+  }
 }
 
 @keyframes integratedPulse {

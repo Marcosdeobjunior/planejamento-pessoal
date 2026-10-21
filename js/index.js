@@ -763,9 +763,12 @@
     var note = String(data.homeQuickNote || "");
     var noteInput = document.getElementById("quickNote");
     setText("moodDisplay", mood || "—");
-    if (noteInput && noteInput.value !== note) noteInput.value = note;
+    // não sobrescreve o que está sendo digitado antes de salvar
+    if (noteInput && !noteSaveTimer && noteInput.value !== note) noteInput.value = note;
     document.querySelectorAll(".humor-btn").forEach(function (btn) {
-      btn.classList.toggle("is-active", btn.textContent === mood);
+      var active = btn.textContent === mood;
+      btn.classList.toggle("is-active", active);
+      btn.setAttribute("aria-pressed", active ? "true" : "false");
     });
   }
 
@@ -791,7 +794,15 @@
     hydrateMoodNote(state);
   }
 
-  function saveNote() {
+  var NOTE_SAVE_DELAY = 600;
+  var noteSaveTimer = 0;
+
+  function setNoteStatus(text) {
+    setText("quickNoteStatus", text);
+  }
+
+  function flushNote() {
+    noteSaveTimer = 0;
     var state = getState();
     var input = document.getElementById("quickNote");
     if (!state || !input) return;
@@ -800,6 +811,14 @@
     if (window.SoterStorage && typeof window.SoterStorage.save === "function") {
       window.SoterStorage.save(state);
     }
+    setNoteStatus("Salvo \u2713");
+  }
+
+  // salva só depois de uma pausa na digitação, em vez de a cada tecla
+  function saveNote() {
+    if (noteSaveTimer) clearTimeout(noteSaveTimer);
+    setNoteStatus("Salvando\u2026");
+    noteSaveTimer = setTimeout(flushNote, NOTE_SAVE_DELAY);
   }
 
   function hydrateSummary() {
@@ -843,7 +862,7 @@
     setStat("modules", "10");
     setStat("records", String(records));
     setStat("notifications", String(notifications));
-    setStat("library-detail", formatCount(library, "midia", "midias"));
+    setStat("library-detail", formatCount(library, "m\u00eddia", "m\u00eddias"));
     setStat("personal-detail", formatCount(personal, "meta", "metas"));
     setStat("planning-detail", formatCount(tasks + review, "frente", "frentes"));
     setStat("evolution-detail", formatCount(countObjectKeys(data.rpg || {}) ? 2 : 1, "sistema", "sistemas"));
@@ -866,7 +885,7 @@
     setText("hs-wishlist", String(wishlist));
     setText("hs-level-2", String(rpgLevel));
     setText("hs-rpg-title-2", getRpgTitle(rpgLevel));
-    setText("xp-progress-label", Math.round(rpgXp) + " XP - " + xpRemaining + " XP para o proximo nivel");
+    setText("xp-progress-label", Math.round(rpgXp) + " XP \u00b7 " + xpRemaining + " XP para o pr\u00f3ximo n\u00edvel");
 
     setBar("hs-xp-bar-2", xpPct);
     attrs.forEach(function (attr) {
@@ -941,6 +960,12 @@
   window.addEventListener("soter:notifications-changed", hydrateSummary);
   window.addEventListener("soter:remote-state-applied", hydrateSummary);
   window.addEventListener("storage", hydrateSummary);
+  window.addEventListener("pagehide", function () {
+    if (noteSaveTimer) {
+      clearTimeout(noteSaveTimer);
+      flushNote();
+    }
+  });
   window.setMood = setMood;
   window.saveNote = saveNote;
 
