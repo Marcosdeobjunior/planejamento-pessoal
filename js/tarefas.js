@@ -247,7 +247,8 @@ function tkTravelDateLabel(travel) {
   var today = tkToday();
   var diff;
   if (travel.data <= today && travel.dataFim >= today && travel.dataFim > travel.data) return "Em viagem";
-  diff = tkDaysFromNow(travel.data);
+  // viagem que já acabou conta a partir da volta
+  diff = tkDaysFromNow(travel.dataFim < today ? travel.dataFim : travel.data);
   return diff === 0 ? "Hoje" : diff === 1 ? "Amanhã" : diff === -1 ? "Ontem" : diff < 0 ? Math.abs(diff) + "d atrás" : "em " + diff + "d";
 }
 
