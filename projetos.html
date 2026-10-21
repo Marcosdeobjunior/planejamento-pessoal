@@ -262,7 +262,24 @@ body.side-collapsed .side{width:0;min-width:0;flex:0 0 0;opacity:0;pointer-event
 /* ---------------- blocos ---------------- */
 .blocks{padding-top:14px;padding-bottom:26vh}
 .blk{position:relative;display:flex;align-items:flex-start;padding:var(--blk-gap,2px) 0}
-.blk .gut{position:absolute;left:-48px;top:2px;display:flex;gap:2px;opacity:0;transition:opacity .15s}
+.blk .gut{position:absolute;left:-48px;top:calc(var(--gy) - 12px);display:flex;gap:2px;opacity:0;transition:opacity .15s}
+/* --gy = altura do meio da 1ª linha do bloco (a alça de 24px fica centrada nela) */
+.blk{--gy:calc(var(--blk-gap,2px) + 3px + var(--ct-size,20px) * var(--ct-lh,1.68) / 2)}
+.blk[data-t="h1"],.blk[data-t="th1"]{--gy:calc(var(--blk-gap,2px) + 26px + 20px)}
+.blk[data-t="h2"],.blk[data-t="th2"]{--gy:calc(var(--blk-gap,2px) + 20px + 15.6px)}
+.blk[data-t="h3"],.blk[data-t="th3"]{--gy:calc(var(--blk-gap,2px) + 14px + 12.5px)}
+.blk[data-t="h4"]{--gy:calc(var(--blk-gap,2px) + 10px + 17px * var(--ct-lh,1.68) / 2)}
+.blk[data-t="code"]{--gy:calc(17px + 13px * 1.7 / 2)}
+.blk[data-t="callout"]{--gy:calc(19px + 18px * var(--ct-lh,1.68) / 2)}
+.blk[data-t="equation"]{--gy:calc(var(--blk-gap,2px) + 3px + 16px * var(--ct-lh,1.68) / 2)}
+.blk[data-t="divider"]{--gy:15px}
+.blk[data-t="page"],.blk[data-t="pagelink"]{--gy:calc(var(--blk-gap,2px) + 19px)}
+.blk[data-t="button"]{--gy:calc(var(--blk-gap,2px) + 4px + 19px)}
+.blk[data-t="image"],.blk[data-t="video"],.blk[data-t="audio"],.blk[data-t="file"],.blk[data-t="bookmark"],
+.blk[data-t="toc"],.blk[data-t="breadcrumb"],.blk[data-t="grid"],.blk[data-t="table"],.blk[data-t="board"],
+.blk[data-t="gallery"],.blk[data-t="list"]{--gy:calc(var(--blk-gap,2px) + 16px)}
+.colitem .blk[data-t="h1"],.colitem .blk[data-t="th1"]{--gy:calc(var(--blk-gap,2px) + 12px + 15.6px)}
+.colitem .blk[data-t="h2"],.colitem .blk[data-t="th2"]{--gy:calc(var(--blk-gap,2px) + 10px + 13.1px)}
 .blk:hover .gut{opacity:1}
 .gut button{width:21px;height:24px;border-radius:6px;color:var(--muted);display:grid;place-items:center;font-size:13px}
 .gut button:hover{background:rgba(255,255,255,.06);color:var(--accent1)}
@@ -781,6 +798,9 @@ body.arrastando-algo,body.arrastando-algo *{cursor:grabbing!important;user-selec
 .icoimg{display:inline-block;background-size:cover;background-position:center;border-radius:5px;vertical-align:-.16em}
 .icocol{display:inline-block;border-radius:5px;vertical-align:-.16em}
 .pico .icoimg,.pico .icocol{border-radius:16px;width:100%!important;height:100%!important}
+/* ícone de imagem ocupa a caixa inteira, sem borda nem espaço interno */
+:is(.pico,.gico,.wsico,.qi,.mapin-ic):has(> .icoimg){border:none;background:none;padding:0;overflow:hidden}
+:is(.pico,.gico,.wsico,.qi,.mapin-ic) > .icoimg{width:100%!important;height:100%!important;border-radius:inherit;vertical-align:top}
 
 /* seletor de ícone e capa */
 .picker{
@@ -2660,11 +2680,13 @@ document.addEventListener('keydown',e=>{
     if(i>0){
       e.preventDefault();
       const prev=p.blocks[i-1];
-      if(prev.t==='divider'||prev.t==='page'){
+      /* divisor antes de uma linha com texto: Backspace tira o divisor */
+      if(prev.t==='divider'&&b.text){
         p.blocks.splice(i-1,1);limpaColunas(p);refresh(host,'blocks');focusBlock(host,b.id,0);save();return;
       }
-      /* imagem, vista, tabela etc. não recebem texto: antes o texto ia parar
-         dentro do endereço da imagem. Linha vazia some e o cursor sobe. */
+      /* página, link, imagem, vista, tabela etc. não recebem texto e não são apagados
+         por Backspace (antes apagar a linha vazia sob uma subpágina apagava o link dela).
+         Linha vazia some e o cursor sobe; com texto, nada acontece. */
       if(semTexto(prev.t)||prev.t==='pagelink'||ocultos(p.blocks).has(prev.id)){
         if(b.text)return;
         const acima=ctVizinho(host,ct,-1);
