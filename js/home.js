@@ -6,7 +6,6 @@
   var NOTE_SAVE_DELAY = 600;
   var AGENDA_LIMIT = 7;
   var PROGRESS_LIMIT = 6;
-  var MOOD_LOG_DAYS = 60;
   var MISSION_PAGES = {
     m_leitura: "livros.html",
     m_treino: "academia.html",
@@ -516,59 +515,7 @@
     });
   }
 
-  // ---------- humor e nota ----------
-
-  function moodLabel(mood) {
-    var button = document.querySelector('.home-mood-btn[data-mood="' + mood + '"]');
-    return button ? button.getAttribute("data-label") : "";
-  }
-
-  function renderMood(data, todayIso) {
-    var log = data.homeMoodLog && typeof data.homeMoodLog === "object" ? data.homeMoodLog : {};
-    var current = String(log[todayIso] || "");
-
-    document.querySelectorAll(".home-mood-btn").forEach(function (btn) {
-      var active = btn.getAttribute("data-mood") === current;
-      btn.classList.toggle("is-active", active);
-      btn.setAttribute("aria-pressed", active ? "true" : "false");
-    });
-    setText("moodDisplay", current ? current + " " + moodLabel(current) : "Sem registro hoje");
-
-    var week = $("moodWeek");
-    if (!week) return;
-    week.textContent = "";
-    for (var offset = 6; offset >= 0; offset--) {
-      var date = new Date();
-      date.setDate(date.getDate() - offset);
-      var iso = isoDate(date);
-      var mood = String(log[iso] || "");
-      var weekday = offset === 0 ? "hoje" : date.toLocaleDateString("pt-BR", { weekday: "short" }).replace(".", "");
-      var li = el("li", "home-mood-day" + (mood ? "" : " is-empty") + (offset === 0 ? " is-today" : ""));
-      li.title = date.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" }) + (mood ? ": " + moodLabel(mood) : ": sem registro");
-      var face = el("span", "home-mood-face", mood || "·");
-      face.setAttribute("aria-hidden", "true");
-      li.appendChild(face);
-      li.appendChild(el("span", "home-mood-weekday", weekday));
-      var sr = el("span", "sr-only", mood ? moodLabel(mood) : "sem registro");
-      li.appendChild(sr);
-      week.appendChild(li);
-    }
-  }
-
-  function setMood(mood) {
-    var state = getState();
-    if (!state) return;
-    if (!state.data || typeof state.data !== "object") state.data = {};
-    var todayIso = isoDate(new Date());
-    var log = state.data.homeMoodLog && typeof state.data.homeMoodLog === "object" ? state.data.homeMoodLog : {};
-    log[todayIso] = mood;
-    // guarda só os últimos dias para o registro não crescer sem limite
-    Object.keys(log).sort().slice(0, -MOOD_LOG_DAYS).forEach(function (key) { delete log[key]; });
-    state.data.homeMoodLog = log;
-    state.data.homeMood = mood;
-    saveState(state);
-    renderMood(state.data, todayIso);
-  }
+  // ---------- nota rápida ----------
 
   function renderNote(data) {
     var input = $("quickNote");
@@ -721,7 +668,6 @@
     renderAgenda(today);
     renderMissions(missions);
     renderProgress(data, today);
-    renderMood(data, todayIso);
     renderNote(data);
     renderEvolution(state, data, today);
     renderModuleMeta(state, data, today);
@@ -745,9 +691,6 @@
   }
 
   function bind() {
-    document.querySelectorAll(".home-mood-btn").forEach(function (btn) {
-      btn.addEventListener("click", function () { setMood(btn.getAttribute("data-mood")); });
-    });
     var note = $("quickNote");
     if (note) note.addEventListener("input", scheduleNoteSave);
     window.addEventListener("pagehide", function () {

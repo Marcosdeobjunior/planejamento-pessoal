@@ -119,46 +119,22 @@
       <div class="home-progress-grid" id="homeProgress"></div>
     </section>
 
-    <!-- Ritmo do dia -->
-    <section class="home-section" id="ritmo" aria-labelledby="ritmoTitle">
+    <!-- Nota rápida -->
+    <section class="home-section" id="nota" aria-labelledby="notaTitle">
       <header class="home-section-head">
-        <p class="home-kicker">Ritmo do dia</p>
-        <h2 id="ritmoTitle">Como voc&ecirc; <em>est&aacute;</em></h2>
+        <p class="home-kicker">Nota r&aacute;pida</p>
+        <h2 id="notaTitle">Guarde o que <em>importa</em></h2>
       </header>
 
-      <div class="home-ritmo-grid">
-        <section class="ds-card home-mood" aria-labelledby="moodTitle">
-          <div class="ds-card-head">
-            <h3 class="ds-card-label" id="moodTitle">Humor</h3>
-            <span class="home-chip" id="moodDisplay" aria-live="polite">Sem registro hoje</span>
-          </div>
-          <div class="ds-card-body">
-            <div class="home-mood-options" role="group" aria-label="Escolha seu humor agora">
-              <button class="home-mood-btn" type="button" data-mood="&#128564;" data-label="Cansado" aria-pressed="false"><span aria-hidden="true">&#128564;</span><small>Cansado</small></button>
-              <button class="home-mood-btn" type="button" data-mood="&#128543;" data-label="Preocupado" aria-pressed="false"><span aria-hidden="true">&#128543;</span><small>Preocupado</small></button>
-              <button class="home-mood-btn" type="button" data-mood="&#128548;" data-label="Irritado" aria-pressed="false"><span aria-hidden="true">&#128548;</span><small>Irritado</small></button>
-              <button class="home-mood-btn" type="button" data-mood="&#128528;" data-label="Neutro" aria-pressed="false"><span aria-hidden="true">&#128528;</span><small>Neutro</small></button>
-              <button class="home-mood-btn" type="button" data-mood="&#128578;" data-label="Bem" aria-pressed="false"><span aria-hidden="true">&#128578;</span><small>Bem</small></button>
-              <button class="home-mood-btn" type="button" data-mood="&#128516;" data-label="Feliz" aria-pressed="false"><span aria-hidden="true">&#128516;</span><small>Feliz</small></button>
-              <button class="home-mood-btn" type="button" data-mood="&#129321;" data-label="Empolgado" aria-pressed="false"><span aria-hidden="true">&#129321;</span><small>Empolgado</small></button>
-            </div>
-            <div class="home-mood-week">
-              <p class="home-mini-label">&Uacute;ltimos 7 dias</p>
-              <ol class="home-mood-days" id="moodWeek"></ol>
-            </div>
-          </div>
-        </section>
-
-        <section class="ds-card home-note" aria-labelledby="noteTitle">
-          <div class="ds-card-head">
-            <h3 class="ds-card-label" id="noteTitle"><label for="quickNote">Nota r&aacute;pida</label></h3>
-            <span class="home-note-status" id="quickNoteStatus" aria-live="polite"></span>
-          </div>
-          <div class="ds-card-body">
-            <textarea class="ds-field home-note-input" id="quickNote" rows="6" placeholder="Uma lembran&ccedil;a, um foco, uma inten&ccedil;&atilde;o para hoje&hellip;"></textarea>
-          </div>
-        </section>
-      </div>
+      <section class="ds-card home-note" aria-label="Nota r&aacute;pida">
+        <div class="ds-card-head">
+          <label class="ds-card-label" for="quickNote">Uma lembran&ccedil;a, um foco ou uma inten&ccedil;&atilde;o</label>
+          <span class="home-note-status" id="quickNoteStatus" aria-live="polite"></span>
+        </div>
+        <div class="ds-card-body">
+          <textarea class="ds-field home-note-input" id="quickNote" rows="5" placeholder="Escreva aqui&hellip;"></textarea>
+        </div>
+      </section>
     </section>
 
     <!-- Evolução -->

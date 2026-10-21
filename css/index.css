@@ -528,101 +528,7 @@ body {
   border-radius: var(--ds-radius);
 }
 
-/* ---------- Ritmo do dia ---------- */
-.home-ritmo-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
-  gap: var(--ds-sp-4);
-}
-
-.home-mood-options {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.home-mood-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 12px 4px 10px;
-  border: 1px solid var(--ds-border);
-  border-radius: var(--ds-radius-btn-lg);
-  background: rgba(255, 255, 255, 0.015);
-  color: var(--ds-muted);
-  cursor: pointer;
-  transition: border-color 0.2s, background 0.2s, color 0.2s, transform 0.15s;
-}
-
-.home-mood-btn span {
-  font-size: 24px;
-  line-height: 1;
-}
-
-.home-mood-btn small {
-  font-family: var(--ds-font-mono);
-  font-size: var(--ds-fs-label);
-  letter-spacing: 0.3px;
-}
-
-.home-mood-btn:hover {
-  border-color: var(--ds-border-hover);
-  color: var(--ds-text);
-  transform: translateY(-2px);
-}
-
-.home-mood-btn.is-active {
-  border-color: var(--ds-gold);
-  background: rgba(200, 169, 110, 0.12);
-  color: var(--ds-gold-2);
-}
-
-.home-mood-week {
-  margin-top: 22px;
-  padding-top: 16px;
-  border-top: 1px solid var(--ds-border);
-}
-
-.home-mood-days {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.home-mood-day {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-}
-
-.home-mood-face {
-  width: 38px;
-  height: 38px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.04);
-  font-size: 20px;
-}
-
-.home-mood-day.is-empty .home-mood-face {
-  color: var(--ds-muted);
-  font-size: 14px;
-}
-
-.home-mood-day.is-today .home-mood-face {
-  box-shadow: 0 0 0 1px var(--ds-gold);
-}
-
-.home-mood-weekday {
-  font-family: var(--ds-font-mono);
-  font-size: var(--ds-fs-label);
-  color: var(--ds-muted);
-}
-
+/* ---------- Nota rápida ---------- */
 .home-note {
   display: flex;
   flex-direction: column;
@@ -864,7 +770,6 @@ body {
   }
 
   .home-today-grid,
-  .home-ritmo-grid,
   .home-evolution {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -906,15 +811,6 @@ body {
     display: none;
   }
 
-  .home-mood-options {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
-  .home-mood-face {
-    width: 32px;
-    height: 32px;
-    font-size: 17px;
-  }
 
   .home-level,
   .home-attrs {
@@ -948,14 +844,12 @@ body {
   .home-agenda-link,
   .home-mission-link,
   .home-progress-card,
-  .home-mood-btn,
   .home-module,
   .home-attr-track > span {
     transition: none;
   }
 
   .home-progress-card:hover,
-  .home-mood-btn:hover,
   .home-module:hover {
     transform: none;
   }
