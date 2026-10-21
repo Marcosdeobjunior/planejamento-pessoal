@@ -755,6 +755,21 @@
     syncFilterUi();
     render();
     scheduleListViewportUpdate();
+    openRequestedTravel();
+  }
+
+  // vindo de Tarefas (lista ou calendário): abre a viagem clicada
+  function openRequestedTravel() {
+    var id = null;
+    var i;
+    try {
+      id = sessionStorage.getItem("soter_open_travel_id");
+      sessionStorage.removeItem("soter_open_travel_id");
+    } catch (err) { }
+    if (!id) return;
+    for (i = 0; i < T.length; i += 1) {
+      if (T[i].id === id) { openEdit(i); return; }
+    }
   }
 
   (function loadLeaflet() {

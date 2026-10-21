@@ -196,6 +196,69 @@ function tkOpenReviewPlanner() {
   window.location.href = "revisao.html";
 }
 
+// Viagens com data (viagens.html) entram na lista e no calendário; a de vários dias vira barra contínua.
+function getTravels() {
+  ensureState();
+  var list = appState.data && appState.data.viagens;
+  if (!Array.isArray(list)) return [];
+  return list.filter(function (travel) {
+    return travel && /^\d{4}-\d{2}-\d{2}/.test(String(travel.startDate || ""));
+  }).map(function (travel) {
+    var start = String(travel.startDate).slice(0, 10);
+    var end = String(travel.endDate || "").slice(0, 10);
+    return {
+      id: String(travel.id || ""),
+      nome: travel.destination || travel.destino || "Viagem",
+      nota: travel.localDescription || travel.descricao || "",
+      cat: travel.category || "Viagem",
+      data: start,
+      dataFim: /^\d{4}-\d{2}-\d{2}$/.test(end) && end > start ? end : start,
+      done: String(travel.status || "").toLowerCase() === "concluida",
+      isTravel: true
+    };
+  });
+}
+
+// viagens que tocam o intervalo [from, to]
+function getTravelCalendarEntries(from, to) {
+  return getTravels().filter(function (travel) {
+    return travel.data <= to && travel.dataFim >= from;
+  });
+}
+
+function getTravelListEntries(tab) {
+  var today = tkToday();
+  return getTravels().filter(function (travel) {
+    switch (tab) {
+      case "pendentes": return !travel.done && travel.dataFim >= today;
+      case "hoje": return travel.data <= today && travel.dataFim >= today;
+      case "vencidas": return !travel.done && travel.dataFim < today;
+      case "sem-data": return false;
+      case "concluidas": return travel.done;
+      default: return true;
+    }
+  }).map(function (travel) {
+    travel.kind = "travel";
+    return travel;
+  });
+}
+
+function tkTravelDateLabel(travel) {
+  var today = tkToday();
+  var diff;
+  if (travel.data <= today && travel.dataFim >= today && travel.dataFim > travel.data) return "Em viagem";
+  // viagem que já acabou conta a partir da volta
+  diff = tkDaysFromNow(travel.dataFim < today ? travel.dataFim : travel.data);
+  return diff === 0 ? "Hoje" : diff === 1 ? "Amanhã" : diff === -1 ? "Ontem" : diff < 0 ? Math.abs(diff) + "d atrás" : "em " + diff + "d";
+}
+
+function tkOpenTravel(id) {
+  try {
+    sessionStorage.setItem("soter_open_travel_id", String(id));
+  } catch (err) { }
+  window.location.href = "viagens.html";
+}
+
 function load() {
   appState = null;
   ensureState();
@@ -777,6 +840,11 @@ function renderTasks() {
   const reviewHoje = getReviewListEntries('hoje').length;
   const reviewVenc = getReviewListEntries('vencidas').length;
   const reviewTodas = getReviewListEntries('todas').length;
+  const travelPend = getTravelListEntries('pendentes').length;
+  const travelHoje = getTravelListEntries('hoje').length;
+  const travelVenc = getTravelListEntries('vencidas').length;
+  const travelDone = getTravelListEntries('concluidas').length;
+  const travelTodas = getTravelListEntries('todas').length;
   const done  = tk.filter(x => x.done).length;
   const pct   = tk.length ? Math.round(done / tk.length * 100) : 0;
   const g = id => document.getElementById(id);
@@ -786,12 +854,12 @@ function renderTasks() {
   if (g('tk-pct'))   g('tk-pct').textContent   = pct + '%';
   // Contadores das abas
   const counts = {
-    pendentes:  tk.filter(t => !t.done && t.data && tkDaysFromNow(t.data) >= 0).length + dreamPend + reviewPend + gymPend,
-    hoje:       tk.filter(t => t.data === today).length + dreamHoje + reviewHoje + gymHoje,
-    vencidas:   tk.filter(t => !t.done && t.data && tkDaysFromNow(t.data) < 0).length + dreamVenc + reviewVenc + gymVenc,
+    pendentes:  tk.filter(t => !t.done && t.data && tkDaysFromNow(t.data) >= 0).length + dreamPend + reviewPend + gymPend + travelPend,
+    hoje:       tk.filter(t => t.data === today).length + dreamHoje + reviewHoje + gymHoje + travelHoje,
+    vencidas:   tk.filter(t => !t.done && t.data && tkDaysFromNow(t.data) < 0).length + dreamVenc + reviewVenc + gymVenc + travelVenc,
     'sem-data': tk.filter(t => !t.data || t.data === '').length,
-    concluidas: tk.filter(t => t.done).length + gymDone,
-    todas:      tk.length + dreamTodas + reviewTodas + gymTodas,
+    concluidas: tk.filter(t => t.done).length + gymDone + travelDone,
+    todas:      tk.length + dreamTodas + reviewTodas + gymTodas + travelTodas,
   };
   Object.entries(counts).forEach(([tab, n]) => {
     const el = g('tktc-' + tab);
@@ -810,6 +878,7 @@ function tkRenderFocus() {
   const gymToday = tkGetGymTaskEntryForDate(today);
   const tasks   = S.tasks.filter(t => t.data === today)
                          .concat(gymToday ? [gymToday] : [])
+                         .concat(getTravelListEntries('hoje'))
                          .sort((a,b) => {
                            if (a.done !== b.done) return a.done ? 1 : -1;
                            return (a.hora||'99:99').localeCompare(b.hora||'99:99');
@@ -835,6 +904,19 @@ function tkRenderFocus() {
     const subs  = t.subtarefas || [];
     const sDone = subs.filter(s=>s.done).length;
     const sPct  = subs.length ? Math.round(sDone/subs.length*100) : (t.done ? 100 : 0);
+    if (t.kind === 'travel') {
+      return `<div class="tk-focus-card ${t.done?'done-card':''}" style="--tk-color:#4ab0e8"
+          onclick="tkOpenTravel(${tkJs(t.id)})">
+        <div class="tk-focus-card-top">
+          <div class="tk-focus-card-check" style="color:var(--tk-color);border-color:transparent;font-size:13px"><i class="ico ico-plane" aria-hidden="true"></i></div>
+          <div class="tk-focus-card-nome">${esc(t.nome)}</div>
+        </div>
+        <div class="tk-focus-card-meta">
+          <span class="tk-focus-card-pill">Viagem</span>
+          <span class="tk-focus-card-pill" style="background:rgba(255,255,255,.06);color:var(--muted);border-color:rgba(255,255,255,.1)">${esc(tkTravelDateLabel(t))}</span>
+        </div>
+      </div>`;
+    }
     if (t.kind === 'gym') {
       return `<div class="tk-focus-card ${t.done?'done-card':''}" style="--tk-color:${color}"
           onclick="tkOpenGymDay(${tkJs(t.data)})">
@@ -936,14 +1018,15 @@ function tkRenderList() {
   const gymItems = tkGetGymListEntries(tkListTab);
   const dreamItems = getDreamListEntries(tkListTab);
   const reviewItems = getReviewListEntries(tkListTab);
+  const travelItems = getTravelListEntries(tkListTab);
   let items;
   switch (tkListTab) {
-    case 'pendentes':  items = all.filter(t => !t.done && t.data && tkDaysFromNow(t.data) >= 0).concat(dreamItems, reviewItems, gymItems); break;
-    case 'hoje':       items = all.filter(t => t.data === today).concat(dreamItems, reviewItems, gymItems); break;
-    case 'vencidas':   items = all.filter(t => !t.done && t.data && tkDaysFromNow(t.data) < 0).concat(dreamItems, reviewItems, gymItems); break;
+    case 'pendentes':  items = all.filter(t => !t.done && t.data && tkDaysFromNow(t.data) >= 0).concat(dreamItems, reviewItems, travelItems, gymItems); break;
+    case 'hoje':       items = all.filter(t => t.data === today).concat(dreamItems, reviewItems, travelItems, gymItems); break;
+    case 'vencidas':   items = all.filter(t => !t.done && t.data && tkDaysFromNow(t.data) < 0).concat(dreamItems, reviewItems, travelItems, gymItems); break;
     case 'sem-data':   items = all.filter(t => !t.data || t.data === ''); break;
-    case 'concluidas': items = all.filter(t => t.done).concat(gymItems); break;
-    default:           items = [...all].concat(dreamItems, reviewItems, gymItems);
+    case 'concluidas': items = all.filter(t => t.done).concat(travelItems, gymItems); break;
+    default:           items = [...all].concat(dreamItems, reviewItems, travelItems, gymItems);
   }
   // sort: vencidas por data asc, resto por data asc depois done
   items.sort((a,b) => {
@@ -1022,6 +1105,23 @@ function tkRenderList() {
           <span class="tk-task-card-pill tk-review-pill">Revisão</span>
           ${t.cat ? `<span class="tk-task-card-pill" style="background:rgba(124,111,205,.12);color:#d8d1ff;border:1px solid rgba(124,111,205,.22)">${esc(t.cat)}</span>` : ''}
           <span class="tk-task-card-date ${dateCls}">${dateLbl}</span>
+        </div>
+      </div>`;
+    }
+    if (t.kind === 'travel') {
+      const late = !t.done && t.dataFim < today;
+      const dateCls = late ? 'late' : (t.data <= today && t.dataFim >= today) ? 'today-date' : '';
+      const range = tkFmtDate(t.data) + (t.dataFim > t.data ? ' – ' + tkFmtDate(t.dataFim) : '');
+      return `<div class="tk-task-card tk-travel-card ${t.done?'done-card':''}" onclick="tkOpenTravel(${tkJs(t.id)})" title="${esc(range)}">
+        <div class="tk-task-card-top">
+          <div class="tk-task-card-travel-icon"><i class="ico ico-plane" aria-hidden="true"></i></div>
+          <div class="tk-task-card-nome">${esc(t.nome)}</div>
+        </div>
+        ${t.nota ? `<div class="tk-task-card-nota">${esc(t.nota)}</div>` : ''}
+        <div class="tk-task-card-footer">
+          <span class="tk-task-card-pill tk-travel-pill">Viagem</span>
+          <span class="tk-task-card-pill" style="background:rgba(255,255,255,.05);color:var(--muted);border:1px solid rgba(255,255,255,.08)">${esc(range)}</span>
+          <span class="tk-task-card-date ${dateCls}">${t.done ? 'Concluída' : tkTravelDateLabel(t)}</span>
         </div>
       </div>`;
     }
@@ -2550,6 +2650,7 @@ function tkCalItemColor(item) {
   if (item.isHoliday) return '#e06b8b';
   if (item.isDream) return '#7c6fcd';
   if (item.isReview) return '#6fa8dc';
+  if (item.isTravel) return '#4ab0e8';
   if (item.isGym) return item.cor || '#5ec4a8';
   return item.cor || TK_PRIOR_COLOR[item.prior] || '#c8a96e';
 }
@@ -2564,6 +2665,7 @@ function tkCalItemsForDate(ds) {
     if (!task.data) return false;
     return tkTaskHasDateRange(task) ? task.data <= ds && task.dataFim >= ds : task.data === ds;
   });
+  items = items.concat(getTravelCalendarEntries(ds, ds));
   items = tkGetNationalHolidayEntries(year, month).filter(sameDay)
     .concat(getDreamCalendarEntries(year, month).filter(sameDay))
     .concat(getReviewCalendarEntries(year, month).filter(sameDay))
@@ -2580,6 +2682,7 @@ function tkCalAgendaAction(item) {
   if (item.isHoliday) return '';
   if (item.isDream) return 'tkOpenDreamDeadline(' + tkJs(String(item.id)) + ')';
   if (item.isReview) return 'tkOpenReviewPlanner()';
+  if (item.isTravel) return 'tkOpenTravel(' + tkJs(item.id) + ')';
   if (item.isGym) return 'tkOpenGymDay(' + tkJs(item.data) + ')';
   return 'taskHubOpen(' + tkJs(item.id) + ')';
 }
@@ -2592,7 +2695,7 @@ function tkCalRenderAgenda() {
   var label = date.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
   var items = tkCalItemsForDate(ds);
   var rows = items.map(function (item) {
-    var kind = item.isHoliday ? (item.holidayType || 'Feriado') : item.isDream ? 'Prazo do sonho' : item.isReview ? 'Revisão' : item.isGym ? 'Treino' : (item.cat || ({ alta: 'Prioridade alta', media: 'Prioridade média', baixa: 'Prioridade baixa' })[item.prior] || 'Tarefa');
+    var kind = item.isHoliday ? (item.holidayType || 'Feriado') : item.isDream ? 'Prazo do sonho' : item.isReview ? 'Revisão' : item.isTravel ? 'Viagem' : item.isGym ? 'Treino' : (item.cat || ({ alta: 'Prioridade alta', media: 'Prioridade média', baixa: 'Prioridade baixa' })[item.prior] || 'Tarefa');
     var when = item.hora ? esc(item.hora) : (tkTaskHasDateRange(item) ? item.data.slice(8, 10) + '/' + item.data.slice(5, 7) + '–' + item.dataFim.slice(8, 10) + '/' + item.dataFim.slice(5, 7) : 'Dia todo');
     var action = tkCalAgendaAction(item);
     var tag = action ? 'button type="button" onclick="' + action + '"' : 'div';
@@ -2765,7 +2868,7 @@ tkCalRender = function () {
   // Tarefas que terminam depois da data de início viram barras contínuas por semana.
   const rangedTasks = S.tasks.filter(function (task) {
     return tkTaskHasDateRange(task) && task.data <= lastVisibleDate && task.dataFim >= firstVisibleDate;
-  }).sort(function (a, b) {
+  }).concat(getTravelCalendarEntries(firstVisibleDate, lastVisibleDate).filter(tkTaskHasDateRange)).sort(function (a, b) {
     return a.data.localeCompare(b.data) || a.dataFim.localeCompare(b.dataFim) || String(a.nome || '').localeCompare(String(b.nome || ''));
   });
 
@@ -2794,6 +2897,14 @@ tkCalRender = function () {
     const day = Number(review.data.slice(-2));
     if (!byDay[day]) byDay[day] = [];
     byDay[day].push(review);
+  });
+  // viagem de um dia só fica na célula, como as tarefas
+  getTravelCalendarEntries(firstVisibleDate, lastVisibleDate).forEach(function (travel) {
+    if (tkTaskHasDateRange(travel)) return;
+    const parts = travel.data.split('-').map(Number);
+    if (parts[0] !== year || parts[1] !== month + 1) return;
+    if (!byDay[parts[2]]) byDay[parts[2]] = [];
+    byDay[parts[2]].push(travel);
   });
   tkGetGymCalendarEntries(year, month).forEach(function (task) {
     const day = Number(task.data.slice(-2));
@@ -2869,6 +2980,9 @@ tkCalRender = function () {
         if (task.isReview) {
           return `<div class="tk-cal-task-card tk-cal-review-card" onclick="event.stopPropagation();tkOpenReviewPlanner()" title="Revisão agendada: ${esc(task.nome)}"><span class="tk-cal-review-icon">${esc(task.icon)}</span>${esc(task.nome)}</div>`;
         }
+        if (task.isTravel) {
+          return `<div class="tk-cal-task-card tk-cal-travel-card ${task.done ? 'done-mini' : ''}" onclick="event.stopPropagation();tkOpenTravel(${tkJs(task.id)})" title="Viagem: ${esc(task.nome)}"><i class="ico ico-plane" aria-hidden="true"></i> ${esc(task.nome)}</div>`;
+        }
         const col = task.cor || TK_PRIOR_COLOR[task.prior] || '#c8a96e';
         if (task.isGym) {
           return `<div class="tk-cal-task-card ${task.done ? 'done-mini' : ''}" style="--tk-color:${col}" onclick="event.stopPropagation();tkOpenGymDay(${tkJs(task.data)})" title="Treino programado"><i class="ico ico-dumbbell" aria-hidden="true"></i> ${esc(task.nome)}</div>`;
@@ -2896,6 +3010,18 @@ tkCalRender = function () {
 
     const spanMarkup = weekSpans[weekIndex].slice().sort(function (a, b) { return a.lane - b.lane || a.startCol - b.startCol; }).map(function (segment) {
       const task = segment.task;
+      if (task.isTravel) {
+        const travelClasses = [
+          'tk-cal-task-card', 'tk-cal-span-task', 'tk-cal-travel-card',
+          task.done ? 'done-mini' : '',
+          segment.isStart ? 'span-start' : 'span-continuation-left',
+          segment.isEnd ? 'span-end' : 'span-continuation-right'
+        ].filter(Boolean).join(' ');
+        return `<div class="${travelClasses}"
+            style="grid-column:${segment.startCol + 1}/span ${segment.endCol - segment.startCol + 1};grid-row:${segment.lane + 1}"
+            onclick="event.stopPropagation();tkOpenTravel(${tkJs(task.id)})"
+            title="Viagem: ${esc(task.nome)} · ${tkFmtDate(task.data)} – ${tkFmtDate(task.dataFim)}"><i class="ico ico-plane" aria-hidden="true"></i> ${esc(task.nome)}</div>`;
+      }
       const col = task.cor || TK_PRIOR_COLOR[task.prior] || '#c8a96e';
       const classes = [
         'tk-cal-task-card', 'tk-cal-span-task',
