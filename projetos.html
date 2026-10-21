@@ -262,7 +262,24 @@ body.side-collapsed .side{width:0;min-width:0;flex:0 0 0;opacity:0;pointer-event
 /* ---------------- blocos ---------------- */
 .blocks{padding-top:14px;padding-bottom:26vh}
 .blk{position:relative;display:flex;align-items:flex-start;padding:var(--blk-gap,2px) 0}
-.blk .gut{position:absolute;left:-48px;top:2px;display:flex;gap:2px;opacity:0;transition:opacity .15s}
+.blk .gut{position:absolute;left:-48px;top:calc(var(--gy) - 12px);display:flex;gap:2px;opacity:0;transition:opacity .15s}
+/* --gy = altura do meio da 1ª linha do bloco (a alça de 24px fica centrada nela) */
+.blk{--gy:calc(var(--blk-gap,2px) + 3px + var(--ct-size,20px) * var(--ct-lh,1.68) / 2)}
+.blk[data-t="h1"],.blk[data-t="th1"]{--gy:calc(var(--blk-gap,2px) + 26px + 20px)}
+.blk[data-t="h2"],.blk[data-t="th2"]{--gy:calc(var(--blk-gap,2px) + 20px + 15.6px)}
+.blk[data-t="h3"],.blk[data-t="th3"]{--gy:calc(var(--blk-gap,2px) + 14px + 12.5px)}
+.blk[data-t="h4"]{--gy:calc(var(--blk-gap,2px) + 10px + 17px * var(--ct-lh,1.68) / 2)}
+.blk[data-t="code"]{--gy:calc(17px + 13px * 1.7 / 2)}
+.blk[data-t="callout"]{--gy:calc(19px + 18px * var(--ct-lh,1.68) / 2)}
+.blk[data-t="equation"]{--gy:calc(var(--blk-gap,2px) + 3px + 16px * var(--ct-lh,1.68) / 2)}
+.blk[data-t="divider"]{--gy:15px}
+.blk[data-t="page"],.blk[data-t="pagelink"]{--gy:calc(var(--blk-gap,2px) + 19px)}
+.blk[data-t="button"]{--gy:calc(var(--blk-gap,2px) + 4px + 19px)}
+.blk[data-t="image"],.blk[data-t="video"],.blk[data-t="audio"],.blk[data-t="file"],.blk[data-t="bookmark"],
+.blk[data-t="toc"],.blk[data-t="breadcrumb"],.blk[data-t="grid"],.blk[data-t="table"],.blk[data-t="board"],
+.blk[data-t="gallery"],.blk[data-t="list"]{--gy:calc(var(--blk-gap,2px) + 16px)}
+.colitem .blk[data-t="h1"],.colitem .blk[data-t="th1"]{--gy:calc(var(--blk-gap,2px) + 12px + 15.6px)}
+.colitem .blk[data-t="h2"],.colitem .blk[data-t="th2"]{--gy:calc(var(--blk-gap,2px) + 10px + 13.1px)}
 .blk:hover .gut{opacity:1}
 .gut button{width:21px;height:24px;border-radius:6px;color:var(--muted);display:grid;place-items:center;font-size:13px}
 .gut button:hover{background:rgba(255,255,255,.06);color:var(--accent1)}
@@ -307,12 +324,12 @@ body.side-collapsed .side{width:0;min-width:0;flex:0 0 0;opacity:0;pointer-event
 .blk[data-t="num"] .marker{font-family:var(--font-mono);font-size:12px}
 .blk[data-t="todo"] .marker{cursor:pointer;font-size:15px}
 .blk[data-t="todo"].done .ct{color:var(--muted);text-decoration:line-through}
-.blk[data-t="page"] .pagelink{
+.blk[data-t="page"] .pagelink,.blk[data-t="pagelink"] .pagelink{
   display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:10px;flex:1;cursor:pointer;
   border:1px solid var(--border);background:rgba(255,255,255,.02);font-size:14px;font-weight:600;
   transition:border-color .2s,background .2s;
 }
-.blk[data-t="page"] .pagelink:hover{border-color:rgba(200,169,110,.4);background:rgba(200,169,110,.06)}
+.blk[data-t="page"] .pagelink:hover,.blk[data-t="pagelink"] .pagelink:hover{border-color:rgba(200,169,110,.4);background:rgba(200,169,110,.06)}
 
 .md-b{font-weight:600;color:#f2edff}
 .md-i{font-style:italic}
@@ -579,6 +596,9 @@ td.nm:hover{color:var(--accent1)}
 .blk[data-t="th1"] .ct,.blk[data-t="th2"] .ct,.blk[data-t="th3"] .ct{
   font-family:var(--font-display);font-weight:700;line-height:1.25;color:#f0eaff}
 .pagelink.vazio{border-style:dashed}
+/* link para outra página (não é subpágina): seta e cor de link */
+.blk[data-t="pagelink"] .pagelink.link{color:var(--accent1);border-color:rgba(200,169,110,.22)}
+.pagelink .lk{margin-left:auto;opacity:.55;font-size:13px}
 /* vista em lista */
 .vlista{display:flex;flex-direction:column}
 .vlin{
@@ -778,6 +798,9 @@ body.arrastando-algo,body.arrastando-algo *{cursor:grabbing!important;user-selec
 .icoimg{display:inline-block;background-size:cover;background-position:center;border-radius:5px;vertical-align:-.16em}
 .icocol{display:inline-block;border-radius:5px;vertical-align:-.16em}
 .pico .icoimg,.pico .icocol{border-radius:16px;width:100%!important;height:100%!important}
+/* ícone de imagem ocupa a caixa inteira, sem borda nem espaço interno */
+:is(.pico,.gico,.wsico,.qi,.mapin-ic):has(> .icoimg){border:none;background:none;padding:0;overflow:hidden}
+:is(.pico,.gico,.wsico,.qi,.mapin-ic) > .icoimg{width:100%!important;height:100%!important;border-radius:inherit;vertical-align:top}
 
 /* seletor de ícone e capa */
 .picker{
@@ -1175,7 +1198,7 @@ const ID_OK=/^[\w-]{1,64}$/;
 const slug=s=>String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
 const wc=t=>(String(t).match(/[\p{L}\p{N}'’-]+/gu)||[]).length;
 const pageText=p=>p.blocks.map(b=>b.text||'').join('\n');
-const pageWords=p=>wc(pageText(p));
+const pageWords=p=>wc(limpaLinks(pageText(p)));
 /* ---------------- espaços de trabalho ----------------
    cada página pertence a um espaço (p.ws). Tudo que varre as páginas
    passa por daArea(), então um espaço nunca enxerga o outro. */
@@ -1916,8 +1939,8 @@ function inline(t){
   let h=esc(t);
   h=h.replace(/\[\[([^\[\]\n]+)\]\]/g,(m,n)=>{
     n=unesc(n);  /* h já está escapado; o título é comparado e escapado de novo como texto puro */
-    const hit=findPage(n);
-    return `<span class="wl${hit?'':' miss'}" data-wl="${esc(n)}">${esc(n)}</span>`;
+    const hit=alvoLink(n);
+    return `<span class="wl${hit?'':' miss'}" data-wl="${esc(n)}">${esc(rotuloLink(n))}</span>`;
   });
   h=h.replace(/\*\*([^*\n]+)\*\*/g,'<span class="md-b">$1</span>');
   h=h.replace(/(^|[\s(])_([^_\n]+)_/g,'$1<span class="md-i">$2</span>');
@@ -1928,12 +1951,26 @@ function inline(t){
   return h;
 }
 function findPage(name){const s=slug(name);return daArea().filter(p=>!p.trashed&&slug(p.title)===s)[0]||null}
+/* link pelo id: [[Nome|@id]] — usado quando a página não tem título ou o título se repete
+   (arrastar da árvore para o texto); mostra sempre o título atual da página */
+const LINK_ID=/^(.*)\|@([\w-]{1,64})$/;
+function alvoLink(n){
+  const m=String(n).match(LINK_ID);
+  if(!m)return findPage(n);
+  const pg=S.pages[m[2]];return pg&&!pg.trashed?pg:null;
+}
+function rotuloLink(n){
+  const m=String(n).match(LINK_ID);if(!m)return n;
+  const pg=S.pages[m[2]];return pg?(pg.title||'Sem título'):(m[1]||'página removida');
+}
+const limpaLinks=t=>String(t||'').replace(/\[\[([^\[\]\n]*?\|@[\w-]{1,64})\]\]/g,(x,n)=>'[['+rotuloLink(n)+']]');
 function outLinks(p){
   const o=[];
   (pageText(p).match(/\[\[([^\[\]\n]+)\]\]/g)||[]).forEach(m=>{const n=m.slice(2,-2).trim();if(n&&!o.includes(n))o.push(n)});
   return o;
 }
-function backlinks(p){return daArea().filter(q=>q.id!==p.id&&!q.trashed&&outLinks(q).some(l=>slug(l)===slug(p.title)))}
+const apontaPara=(l,p)=>{const m=String(l).match(LINK_ID);return m?m[2]===p.id:!!p.title&&slug(l)===slug(p.title)};
+function backlinks(p){return daArea().filter(q=>q.id!==p.id&&!q.trashed&&outLinks(q).some(l=>apontaPara(l,p)))}
 
 /* ---------------- área de trabalho ---------------- */
 function treeHTML(parentId,depth){
@@ -2073,7 +2110,7 @@ function blockHTML(p,b,i,list){
   if(b.t==='pagelink'){
     const alvo=S.pages[b.text];
     return `<div class="blk" data-t="pagelink" data-id="${b.id}">${gut(b.id)}
-      ${alvo?`<span class="pagelink" data-page="${esc(b.text)}">${ico(alvo.icon,'15px')} ${esc(alvo.title||'Sem título')}</span>`
+      ${alvo?`<span class="pagelink link" data-page="${esc(b.text)}" title="Link para a página">${ico(alvo.icon,'15px')} ${esc(alvo.title||'Sem título')}<i class="ico ico-arrow-up-right lk" aria-hidden="true"></i></span>`
             :`<span class="pagelink vazio" data-escolhepg="${b.id}"><i class="ico ico-arrow-up-right" aria-hidden="true"></i> escolher uma página</span>`}</div>`;
   }
   if(b.t==='page'){
@@ -2140,7 +2177,7 @@ function galHash(s){let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|
 function resumo(p,n){
   const t=p.blocks.filter(b=>['p','quote','callout','h2','h3'].indexOf(b.t)>=0)
     .map(b=>b.text).filter(x=>x&&x.trim()).join(' ')
-    .replace(/\[\[([^\[\]]+)\]\]/g,'$1').replace(/[*`~_#]/g,'').trim();
+    .replace(/\|@[\w-]{1,64}\]\]/g,']]').replace(/\[\[([^\[\]]+)\]\]/g,'$1').replace(/[*`~_#]/g,'').trim();
   return t.length>n?t.slice(0,n).replace(/\s+\S*$/,'')+'…':t;
 }
 /* um bloco guarda várias vistas nomeadas; b.t espelha a ativa para que as
@@ -2265,13 +2302,18 @@ function backHTML(p){
   return `<div class="backl" data-back>
     <h4>${icn('ico-arrow-down-left')} Retrolinks · ${bl.length}</h4>
     ${bl.map(q=>{
-      const line=q.blocks.map(b=>b.text).filter(t=>t&&rx.test(t))[0]||'';
-      const hl=esc(line).replace(rxE,'<mark>'+esc(p.title)+'</mark>');
+      const doId='|@'+p.id+']]';
+      const line=q.blocks.map(b=>b.text).filter(t=>t&&((p.title&&rx.test(t))||t.indexOf(doId)>=0))[0]||'';
+      const marca='<mark>'+esc(p.title||'Sem título')+'</mark>';
+      let hl=esc(line).replace(new RegExp('\\[\\[[^\\[\\]]*\\|@'+p.id+'\\]\\]','g'),marca);
+      if(p.title)hl=hl.replace(rxE,marca);
+      hl=hl.replace(/\[\[([^\[\]]*?)\|@([\w-]{1,64})\]\]/g,(x,a,id)=>'[['+esc(rotuloLink(unesc(a)+'|@'+id))+']]');
       return `<div class="blitem" data-page="${q.id}"><b>${ico(q.icon,'15px')} ${esc(q.title||'Sem título')}</b><span>${hl}</span></div>`;
     }).join('')||'<div class="nada">nenhuma página aponta para esta ainda</div>'}
     <h4 style="margin-top:24px">${icn('ico-arrow-up-right')} Ligações desta página · ${out.length}</h4>
-    ${out.map(l=>{const t=findPage(l);
-      return `<div class="blitem" ${t?`data-page="${t.id}"`:`data-create="${esc(l)}"`}><b>${t?ico(t.icon,'15px')+' '+esc(l):icn('ico-plus')+' criar “'+esc(l)+'”'}</b></div>`}).join('')
+    ${out.map(l=>{const t=alvoLink(l),rot=rotuloLink(l);
+      if(!t&&LINK_ID.test(l))return `<div class="blitem" style="cursor:default"><b>${icn('ico-file-x')} ${esc(rot)}</b></div>`;
+      return `<div class="blitem" ${t?`data-page="${t.id}"`:`data-create="${esc(l)}"`}><b>${t?ico(t.icon,'15px')+' '+esc(rot):icn('ico-plus')+' criar “'+esc(l)+'”'}</b></div>`}).join('')
       ||'<div class="nada">use [[ no texto para ligar páginas</div>'}</div>`;
 }
 
@@ -2638,11 +2680,13 @@ document.addEventListener('keydown',e=>{
     if(i>0){
       e.preventDefault();
       const prev=p.blocks[i-1];
-      if(prev.t==='divider'||prev.t==='page'){
+      /* divisor antes de uma linha com texto: Backspace tira o divisor */
+      if(prev.t==='divider'&&b.text){
         p.blocks.splice(i-1,1);limpaColunas(p);refresh(host,'blocks');focusBlock(host,b.id,0);save();return;
       }
-      /* imagem, vista, tabela etc. não recebem texto: antes o texto ia parar
-         dentro do endereço da imagem. Linha vazia some e o cursor sobe. */
+      /* página, link, imagem, vista, tabela etc. não recebem texto e não são apagados
+         por Backspace (antes apagar a linha vazia sob uma subpágina apagava o link dela).
+         Linha vazia some e o cursor sobe; com texto, nada acontece. */
       if(semTexto(prev.t)||prev.t==='pagelink'||ocultos(p.blocks).has(prev.id)){
         if(b.text)return;
         const acima=ctVizinho(host,ct,-1);
@@ -3450,8 +3494,9 @@ document.addEventListener('mousedown',e=>{
   const wl=e.target.closest&&e.target.closest('.wl');
   if(wl){
     e.preventDefault();
-    const t=findPage(wl.dataset.wl);
+    const t=alvoLink(wl.dataset.wl);
     if(t)openPage(t.id,true);
+    else if(LINK_ID.test(wl.dataset.wl))toast('a página ligada não existe mais (ou está na lixeira)');
     else{const p=pageOf(wl);const id=mkPage(wl.dataset.wl,p?p.id:null,'📄');if(p)p.expanded=true;openPage(id,true)}
   }
 });
@@ -3837,6 +3882,15 @@ const MARCAS=['**','~~','[[',']]'];
 function rawOffset(raw,vis){
   let i=0,v=0;
   while(i<raw.length&&v<vis){
+    /* link: na tela aparece só o rótulo (o título atual, no link por id) */
+    if(raw.substr(i,2)==='[['){
+      const j=raw.indexOf(']]',i+2);
+      if(j>0){
+        const rot=rotuloLink(raw.slice(i+2,j));
+        if(v+rot.length>=vis)return LINK_ID.test(raw.slice(i+2,j))?(v+rot.length===vis?j+2:i):i+2+(vis-v);
+        v+=rot.length;i=j+2;continue;
+      }
+    }
     let pulou=false;
     for(let k=0;k<MARCAS.length;k++){
       if(raw.substr(i,2)===MARCAS[k]){i+=2;pulou=true;break}
@@ -3848,14 +3902,29 @@ function rawOffset(raw,vis){
   }
   return i;
 }
+let ultimoClique=null;
+document.addEventListener('mousedown',e=>{
+  const ct=e.target.closest&&e.target.closest('.ct');
+  ultimoClique=ct&&ct!==document.activeElement?{ct,x:e.clientX,y:e.clientY,t:Date.now()}:null;
+},true);
 document.addEventListener('focusin',e=>{
   const ct=e.target.closest&&e.target.closest('.ct');
   if(ct){
     const p=pageOf(ct),b=p&&p.blocks.find(x=>x.id===ct.dataset.b);
     if(b&&ct.textContent!==b.text){
-      const vis=getCaret(ct);
+      /* no clique, o foco chega antes de o navegador pôr o cursor: a posição vem do
+         ponto clicado (no texto ainda formatado) e é reaplicada quando o botão solta,
+         porque o navegador recoloca o cursor sobre o texto cru */
+      const cl=ultimoClique&&ultimoClique.ct===ct&&Date.now()-ultimoClique.t<600?ultimoClique:null;
+      const pt=cl&&posNoTexto(ct,cl.x,cl.y);
+      const vis=pt?pt.vis:getCaret(ct);
+      const pos=Math.min(rawOffset(b.text,vis),b.text.length);
       ct.textContent=b.text;
-      setCaret(ct,Math.min(rawOffset(b.text,vis),b.text.length));
+      setCaret(ct,pos);
+      if(cl)document.addEventListener('mouseup',()=>{
+        const sel=window.getSelection();
+        if(document.activeElement===ct&&sel.isCollapsed&&ct.textContent===b.text)setCaret(ct,pos);
+      },{once:true});
     }
   }
 });
@@ -4560,8 +4629,8 @@ function soltaLink(a){
   const hp=host&&S.pages[host.dataset.pid];
   if(!pg||!hp||!host.isConnected)return;
   const titulo=(pg.title||'').trim();
-  /* link no meio do texto: [[Título]] — só se o título levar mesmo a esta página */
-  if(a.alvo.tipo==='texto'&&titulo&&findPage(titulo)===pg){
+  /* link no meio do texto: [[Título]]; sem título ou com título repetido, [[Título|@id]] */
+  if(a.alvo.tipo==='texto'){
     const b=hp.blocks.find(x=>x.id===a.alvo.bid);if(!b)return;
     const raw=b.text||'';
     let i=Math.min(raw.length,a.alvo.cru?a.alvo.vis:rawOffset(raw,a.alvo.vis));
@@ -4574,19 +4643,20 @@ function soltaLink(a){
       i=i-ini<=fim-i?ini:fim;
     }
     const pre=raw.slice(0,i),pos=raw.slice(i);
-    const ins=(pre&&!/\s$/.test(pre)?' ':'')+'[['+titulo+']]'+(pos&&!/^[\s.,;:!?)]/.test(pos)?' ':'');
+    const alvoTxt=titulo&&findPage(titulo)===pg&&!/[\[\]|\n]/.test(titulo)?titulo:(titulo.replace(/[\[\]|\n]/g,' ')||'Sem título')+'|@'+pg.id;
+    const ins=(pre&&!/\s$/.test(pre)?' ':'')+'[['+alvoTxt+']]'+(pos&&!/^[\s.,;:!?)]/.test(pos)?' ':'');
     b.text=pre+ins+pos;hp.updated=Date.now();
     const ct=host.querySelector('.ct[data-b="'+b.id+'"]');
     if(ct&&ct===document.activeElement)rerenderBlock(host,b.id,pre.length+ins.length);
     else refresh(host,'blocks');
   }else{
-    /* entre blocos (ou título ambíguo): bloco "Link para a página" */
-    const alvoId=a.alvo.tipo==='texto'?a.alvo.bid:a.alvo.id;
+    /* entre blocos: bloco "Link para a página" */
+    const alvoId=a.alvo.id;
     const alvoB=hp.blocks.find(x=>x.id===alvoId);if(!alvoB)return;
     const nb=mkBlock('pagelink',pg.id);
     if(alvoB.colg){nb.colg=alvoB.colg;nb.coli=alvoB.coli||0}
     let k=hp.blocks.indexOf(alvoB);
-    if(!(a.alvo.tipo==='bloco'&&a.alvo.antes)){
+    if(!a.alvo.antes){
       const esc2=ocultos(hp.blocks);k++;
       if(alvoB.dobrado)while(k<hp.blocks.length&&esc2.has(hp.blocks[k].id))k++;
     }
@@ -4669,7 +4739,7 @@ function renderGraph(sc){
   const rebuild=()=>{
     E=[];N.forEach(n=>n.deg=0);
     list.forEach(p=>{
-      if(S.graphLinks)outLinks(p).forEach(l=>{const t=findPage(l);
+      if(S.graphLinks)outLinks(p).forEach(l=>{const t=alvoLink(l);
         if(t&&ix[t.id]!=null){E.push([ix[p.id],ix[t.id],1]);N[ix[p.id]].deg++;N[ix[t.id]].deg++}});
       if(S.graphHier&&p.parentId&&ix[p.parentId]!=null){
         E.push([ix[p.parentId],ix[p.id],0]);N[ix[p.id]].deg++;N[ix[p.parentId]].deg++}
@@ -4889,6 +4959,7 @@ function toMD(p,depth){
 }
 /* um bloco em markdown (n = posição na lista numerada) */
 function linhaMD(b,n){
+    b=Object.assign({},b,{text:limpaLinks(b.text)});
     const map={p:b.text,h1:'# '+b.text,h2:'## '+b.text,h3:'### '+b.text,
       bullet:'- '+b.text,num:n+'. '+b.text,todo:'- ['+(b.checked?'x':' ')+'] '+b.text,
       quote:'> '+b.text,code:'```\n'+b.text+'\n```',callout:'> '+(b.icon||'✦')+' '+b.text,
