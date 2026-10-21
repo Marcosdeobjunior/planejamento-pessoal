@@ -1,5 +1,6 @@
-// Envia os lembretes do Sól de Sóter. Rodado pelo GitHub Actions (.github/workflows/lembretes.yml)
-// a cada ~10 minutos.
+// Envia os lembretes do Sól de Sóter. Rodado pelo GitHub Actions (.github/workflows/lembretes.yml).
+// O agendamento do GitHub atrasa horas, então cada execução fica ativa por LOOP_MINUTES conferindo a
+// agenda a cada minuto, e o workflow emenda a próxima execução quando esta termina.
 //
 // O site calcula a agenda de cada conta e grava em pushSchedules/{uid}:
 //   reminders: [{ id, at (ms), title, body, url, tag }]  próximos lembretes (até 14 dias)
@@ -18,6 +19,9 @@ const STALE_MS = 3 * 60 * 60 * 1000;      // atrasado mais que isso: não envia 
 const SENT_KEEP_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_PER_ACCOUNT = 5;                // por rodada; o resto vira um resumo
 const TTL_SECONDS = 4 * 60 * 60;
+const TICK_MS = 60 * 1000;
+// 0 = uma rodada só (rodar à mão ou em teste)
+const LOOP_MINUTES = Math.max(0, Number(process.env.LOOP_MINUTES || 0) || 0);
 
 const { VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, FIREBASE_SERVICE_ACCOUNT } = process.env;
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || "https://marcosdeobjunior.github.io/planejamento-pessoal/";
@@ -159,9 +163,32 @@ async function main() {
   }
   webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
   const db = admin.firestore();
-  const now = Date.now();
+  const deadline = Date.now() + LOOP_MINUTES * 60 * 1000;
+  let rounds = 0;
+  let quiet = 0;
+  do {
+    const started = Date.now();
+    try {
+      quiet = (await runRound(db, started, LOOP_MINUTES > 0)) ? 0 : quiet + 1;
+    } catch (err) {
+      // falha de rede ou do Firestore numa rodada: tenta de novo na próxima
+      process.exitCode = 1;
+      console.error("rodada: erro", err && err.message ? err.message : err);
+    }
+    rounds += 1;
+    // a cada hora sem nada para enviar, uma linha só para mostrar que segue rodando
+    if (LOOP_MINUTES > 0 && quiet && quiet % 60 === 0) console.log(new Date().toISOString() + " ativo, nada na hora");
+    if (Date.now() + TICK_MS > deadline) break;
+    await new Promise((resolve) => setTimeout(resolve, Math.max(1000, TICK_MS - (Date.now() - started))));
+  } while (true);
+  if (LOOP_MINUTES > 0) console.log(rounds + " rodada(s)");
+}
+
+// devolve true se havia alguma conta com lembretes na hora
+async function runRound(db, now, quietWhenEmpty) {
   const snap = await db.collection(COLLECTION).where("nextAt", "<=", now).get();
-  console.log(snap.size + " conta(s) com lembretes na hora");
+  if (snap.empty && quietWhenEmpty) return false;
+  console.log(new Date(now).toISOString() + " " + snap.size + " conta(s) com lembretes na hora");
   for (const doc of snap.docs) {
     try {
       await processAccount(db, doc, now);
@@ -170,6 +197,7 @@ async function main() {
       console.error("conta " + shortId(doc.id) + ": erro", err && err.message ? err.message : err);
     }
   }
+  return !snap.empty;
 }
 
 main().catch((err) => {
