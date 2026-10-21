@@ -20,21 +20,30 @@ Cada pessoa ativa os avisos em **menu do perfil → Lembretes no celular** (no c
 2. **Cada aparelho se inscreve.** Ao ativar, o navegador cria uma inscrição Web Push, e o site
    grava em `pushSchedules/{uid}/devices/{id}`.
 3. **O GitHub Actions envia.** O workflow [`lembretes.yml`](../.github/workflows/lembretes.yml)
-   roda a cada ~10 minutos e executa [`push/send.mjs`](../push/send.mjs), que:
+   executa [`push/send.mjs`](../push/send.mjs), que confere a agenda **a cada minuto** e:
    - lê só a agenda (nunca os dados da conta);
    - envia o que chegou na hora;
    - marca o que foi enviado;
    - apaga as inscrições que o navegador recusou.
 
-   O GitHub pode atrasar os agendamentos alguns minutos. Lembretes com mais de 3 h de atraso
-   são descartados.
+   O agendamento do GitHub atrasa muito (na prática roda de poucas em poucas horas). Por isso
+   cada execução fica ativa por ~5h40 e, ao terminar, inicia a próxima sozinha. O agendamento
+   (`*/30`) fica só como reserva para religar essa corrente se ela parar. Lembretes com mais de
+   3 h de atraso são descartados.
 
 A agenda tem um horizonte de 14 dias, então quem não abrir o site por mais de duas semanas para
 de receber avisos até voltar.
 
+**A opção fica salva no aparelho.** Fechar o site, o navegador ou o app não desliga os avisos:
+eles continuam chegando com tudo fechado, e ao abrir de novo o painel já mostra "Ativado". Isso
+vale também quando a sessão termina ao fechar o navegador (login sem "Lembrar de mim"). Se o
+navegador descartar a inscrição sozinho, o site faz uma nova na próxima visita, sem pedir nada.
+
 **Isolamento entre contas.** A inscrição de um aparelho pertence a uma conta.
 
-- Sair da conta, entrar com outra ou excluir a conta cancela a inscrição.
+- Sair da conta pelo menu, entrar com outra ou excluir a conta cancela a inscrição.
+- Depois de sair pelo menu, ao entrar de novo **com a mesma conta** no mesmo aparelho os avisos
+  são reativados sozinhos (`soter_push_resume_v1`). "Desativar neste aparelho" desliga de vez.
 - Cada aviso carrega o uid da conta, e o service worker (`sw.js`) só mostra o conteúdo se for a
   conta dona do aparelho. Se não for, cancela a inscrição e mostra um aviso genérico, sem nada da
   outra conta.
@@ -86,9 +95,9 @@ gravar a agenda nem os aparelhos.
 
 1. No site, abra **Lembretes no celular → Ativar neste aparelho**.
 2. Toque em **Enviar teste**. Chega um aviso na hora, enviado pelo próprio aparelho.
-3. Em até ~10 minutos chega outro aviso, enviado pelo servidor.
+3. Em 1 ou 2 minutos chega outro aviso, enviado pelo servidor.
 4. Para não esperar o horário agendado, rode o workflow à mão em
-   **Actions → Lembretes → Run workflow**.
+   **Actions → Lembretes → Run workflow** (com `minutos` = 0 ele confere uma vez e termina).
 
 ## Observações
 
@@ -97,7 +106,12 @@ gravar a agenda nem os aparelhos.
   mostra essa instrução quando é preciso.
 - **Android e computador:** funciona no Chrome, Edge e Firefox, com ou sem instalar.
 - **Agendamento sempre ativo:** o GitHub desliga agendamentos de repositórios públicos sem commits
-  há 60 dias. Uma vez por dia, o próprio workflow se reativa pela API, sem criar commits.
+  há 60 dias. A cada execução, o próprio workflow se reativa pela API, sem criar commits.
+- **Para parar o envio:** em **Actions → Lembretes**, use "Disable workflow" e cancele a execução
+  em andamento.
+- **Computador:** com o navegador totalmente fechado, o Chrome e o Edge só mostram os avisos se
+  puderem continuar em segundo plano (Configurações → Sistema → "Continuar executando apps em
+  segundo plano"). No celular Android chegam com tudo fechado.
 - **Avisos com o site aberto:** com os lembretes ativos no aparelho, o aviso local de "hora da
   tarefa" deixa de aparecer, para não chegar duplicado.
 - **Para conferir a agenda:** no console do navegador, `SoterPush.preview()` mostra o que seria

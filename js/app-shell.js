@@ -7187,7 +7187,7 @@ window.SoterUtils = window.SoterUtils || (function () {
   // - o site calcula a agenda dos próximos 14 dias a partir dos dados da conta e grava em
   //   pushSchedules/{uid} só o que a notificação precisa (hora, título, texto, página);
   // - cada aparelho que ativa grava a inscrição do navegador em pushSchedules/{uid}/devices/{id};
-  // - o envio é feito pelo GitHub Actions (push/send.mjs) a cada ~10 minutos.
+  // - o envio é feito pelo GitHub Actions (push/send.mjs), que confere a agenda a cada minuto.
   // Isolamento entre contas: a inscrição do aparelho pertence a uma conta (PUSH_OWNER_KEY). Sair,
   // trocar de conta ou excluir a conta cancela a inscrição, e o service worker confere de qual
   // conta é cada aviso antes de mostrar.
@@ -7195,6 +7195,8 @@ window.SoterUtils = window.SoterUtils || (function () {
   var PUSH_OWNER_KEY = "soter_push_owner_v1";
   var PUSH_SCHED_KEY_PREFIX = "soter_push_sched_v1_";
   var PUSH_TEST_KEY_PREFIX = "soter_push_test_v1_";
+  // conta que tinha os lembretes ativos neste aparelho ao sair: ao entrar de novo, reativa sozinho
+  var PUSH_RESUME_KEY = "soter_push_resume_v1";
   var PUSH_COLLECTION = "pushSchedules";
   var PUSH_HORIZON_DAYS = 14;
   var PUSH_MAX_REMINDERS = 150;
@@ -7356,7 +7358,7 @@ window.SoterUtils = window.SoterUtils || (function () {
   }
 
   // keepIds: lembretes já gravados que podem estar passando da hora agora (o envio roda a cada
-  // ~10 minutos); continuam na agenda até 3 h depois para não sumirem antes de serem enviados.
+  // ~1 minuto); continuam na agenda até 3 h depois para não sumirem antes de serem enviados.
   function buildPushReminders(state, prefs, nowMs, keepIds) {
     var list = [];
     var keep = keepIds || {};
@@ -7598,6 +7600,36 @@ window.SoterUtils = window.SoterUtils || (function () {
     });
   }
 
+  function readPushResume() {
+    try { return String(localStorage.getItem(PUSH_RESUME_KEY) || ""); } catch (err) { return ""; }
+  }
+
+  function writePushResume(uid) {
+    try {
+      if (uid) localStorage.setItem(PUSH_RESUME_KEY, String(uid));
+      else localStorage.removeItem(PUSH_RESUME_KEY);
+    } catch (err) { }
+  }
+
+  // pede ao navegador para não apagar os dados do site (dono da inscrição incluído) quando faltar espaço
+  function requestPersistentStorage() {
+    try {
+      if (navigator.storage && typeof navigator.storage.persist === "function") navigator.storage.persist().catch(function () { });
+    } catch (err) { }
+  }
+
+  // a conta entrou de novo num aparelho onde os lembretes estavam ativos antes de sair: reativa sem
+  // pedir nada (a permissão de notificação já foi dada)
+  function resumePushIfWanted() {
+    var uid = firebaseCurrentUser ? String(firebaseCurrentUser.uid || "") : "";
+    if (!uid || readPushResume() !== uid || isPushActiveHere()) return Promise.resolve(null);
+    if (getPushSupport() !== "ok" || window.Notification.permission !== "granted") return Promise.resolve(null);
+    return enablePushOnThisDevice().catch(function (err) {
+      console.warn("[Lembretes] Não foi possível reativar neste aparelho:", err && err.message ? err.message : err);
+      return null;
+    });
+  }
+
   function isPushActiveHere() {
     var uid = firebaseCurrentUser ? String(firebaseCurrentUser.uid || "") : "";
     return !!uid && readPushOwner().uid === uid;
@@ -7626,6 +7658,8 @@ window.SoterUtils = window.SoterUtils || (function () {
     }).then(function (subscription) {
       return savePushDevice(uid, subscription);
     }).then(function (deviceId) {
+      requestPersistentStorage();
+      writePushResume("");
       return writePushOwner(uid, deviceId);
     }).then(function () {
       var prefs = getPushPrefs(ensureStateShape(loadState()));
@@ -7642,6 +7676,8 @@ window.SoterUtils = window.SoterUtils || (function () {
     var opts = options || {};
     var owner = readPushOwner();
     var uid = firebaseCurrentUser ? String(firebaseCurrentUser.uid || "") : "";
+    // desativado pelo botão: não reativa sozinho no próximo login
+    if (!opts.keepSchedule) writePushResume("");
     var removeDoc = owner.device && owner.uid && owner.uid === uid && firebaseDbInstance
       ? pushDevicesRef(uid).doc(owner.device).delete().catch(function () { return null; })
       : Promise.resolve(null);
@@ -7671,6 +7707,9 @@ window.SoterUtils = window.SoterUtils || (function () {
   // saída da conta (logout ou exclusão): chamado antes do signOut, com a conta ainda logada
   function pushCleanupBeforeSignOut(uid, deleteAccount) {
     if (!uid) return Promise.resolve();
+    // lembra que este aparelho recebia os avisos desta conta: ao entrar de novo, reativa sozinho
+    if (deleteAccount) writePushResume("");
+    else if (readPushOwner().uid === uid) writePushResume(uid);
     var work = pushWithTimeout(disablePushOnThisDevice({ keepSchedule: true }), 5000).then(function () {
       // a inscrição e o dono saem mesmo se a rede não respondeu
       return getPushSubscription().then(function (subscription) {
@@ -7721,14 +7760,22 @@ window.SoterUtils = window.SoterUtils || (function () {
         return writePushOwner("", "");
       });
     }
+    // ninguém logado nesta página (sessão expirou ao fechar o navegador, login ainda não restaurado):
+    // a inscrição continua, para os avisos chegarem com o site fechado. Ela só é cancelada ao sair
+    // da conta pelo menu, ao excluir a conta ou quando outra conta entra neste aparelho.
+    if (!uid) return Promise.resolve(null);
     if (owner.uid !== uid) {
-      // saiu ou outra conta entrou: os avisos da conta anterior param aqui
+      // outra conta entrou: os avisos da conta anterior param aqui
       return getPushSubscription().then(function (subscription) {
         return subscription ? subscription.unsubscribe().catch(function () { return false; }) : false;
       }).then(function () { return writePushOwner("", ""); });
     }
     return getPushSubscription().then(function (subscription) {
       if (!subscription) {
+        // o navegador descartou a inscrição, mas a permissão continua: faz uma nova sozinho
+        if (window.Notification && window.Notification.permission === "granted" && getPushSupport() === "ok") {
+          return pushResubscribe(uid);
+        }
         // permissão retirada nas configurações do navegador: o registro do aparelho sai também
         if (owner.device && firebaseDbInstance) pushDevicesRef(uid).doc(owner.device).delete().catch(function () { });
         return writePushOwner("", "");
@@ -7807,7 +7854,7 @@ window.SoterUtils = window.SoterUtils || (function () {
     return getPushRegistration().then(function (reg) {
       if (reg && reg.showNotification && window.Notification && window.Notification.permission === "granted") {
         return reg.showNotification("Sól de Sóter", {
-          body: "Notificações funcionando neste aparelho. O teste pelo servidor chega em até ~10 minutos.",
+          body: "Notificações funcionando neste aparelho. O teste pelo servidor chega em 1 ou 2 minutos.",
           icon: "img/icon-192.png",
           tag: "soter-test-local"
         });
@@ -7887,7 +7934,7 @@ window.SoterUtils = window.SoterUtils || (function () {
       '<p class="push-msg" id="push-msg" role="status"></p>' +
       '<h3 class="push-sub">O que avisar</h3>' + rows +
       '<label class="push-check push-privacy"><input type="checkbox" id="push-hide"' + (prefs.hideDetails ? " checked" : "") + '><span><strong>Esconder detalhes na tela bloqueada</strong><em>Mostra só “Lembrete: tarefa”, sem nome nem valores.</em></span></label>' +
-      '<p class="push-note">Os avisos saem a cada ~10 minutos, então podem chegar alguns minutos depois do horário. As escolhas valem para todos os aparelhos ativados nesta conta.</p>';
+      '<p class="push-note">Os avisos chegam mesmo com o site fechado, até 1 ou 2 minutos depois do horário. As escolhas valem para todos os aparelhos ativados nesta conta.</p>';
     if (signedIn && firebaseDbInstance) {
       var showDevices = function () {
         return pushDevicesRef(firebaseCurrentUser.uid).get().then(function (snap) {
@@ -7976,7 +8023,7 @@ window.SoterUtils = window.SoterUtils || (function () {
         button.disabled = true;
         sendPushTest().then(function () {
           button.disabled = false;
-          pushMessage("Teste enviado: um aviso agora, deste aparelho, e outro pelo servidor em até ~10 minutos.");
+          pushMessage("Teste enviado: um aviso agora, deste aparelho, e outro pelo servidor em 1 ou 2 minutos.");
         }, function (err) {
           button.disabled = false;
           pushMessage(pushErrorText(err));
@@ -8028,7 +8075,7 @@ window.SoterUtils = window.SoterUtils || (function () {
       });
     });
     window.addEventListener("soter:firebase-auth-changed", function () {
-      checkPushOwner().then(function () { schedulePushRefresh(2500); });
+      checkPushOwner().then(resumePushIfWanted).then(function () { schedulePushRefresh(2500); });
     });
     window.addEventListener("soter:storage-hydrated", function () { schedulePushRefresh(2500); });
     window.addEventListener("soter:remote-state-applied", function () { schedulePushRefresh(); });
