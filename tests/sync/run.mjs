@@ -16,13 +16,18 @@ const SITE_PORT = 5181;
 const SITE = "http://127.0.0.1:" + SITE_PORT + "/";
 const CHROME = process.env.CHROME_PATH || (fs.existsSync("/opt/pw-browsers/chromium") ? "/opt/pw-browsers/chromium" : undefined);
 const ONLY = process.argv.slice(2);
+// formatos de sincronização testados: SCHEMA=1 ou SCHEMA=2 restringe a um só
+const SCHEMAS = process.env.SCHEMA ? [Number(process.env.SCHEMA)] : [1, 2];
 
-const TEST_CONFIG = `window.SOTER_FIREBASE_CONFIG = {
+// configuração de emulador; schema 2 liga a sincronização por módulos (sync: { schema: 2 })
+function testConfig(schema) {
+  return `window.SOTER_FIREBASE_CONFIG = {
   apiKey: "fake-api-key", authDomain: "${PROJECT}.firebaseapp.com", projectId: "${PROJECT}",
   appId: "1:1:web:1", appName: "soter-app", userCollection: "users",
   auth: { enabled: true, emailPassword: true, google: false, allowGuest: false },
-  emulators: { firestore: "${FS_HOST}", auth: "http://${AUTH_HOST}" }
+  emulators: { firestore: "${FS_HOST}", auth: "http://${AUTH_HOST}" }${schema === 2 ? ",\n  sync: { schema: 2 }" : ""}
 };`;
+}
 
 // ---------- servidor estático do site ----------
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/javascript", ".css": "text/css",
@@ -33,7 +38,7 @@ function startSite() {
     const url = decodeURIComponent(new URL(req.url, SITE).pathname);
     if (url === "/js/firebase-config.js") {
       res.writeHead(200, { "content-type": "text/javascript" });
-      return res.end(TEST_CONFIG);
+      return res.end(testConfig(1));
     }
     if (url === "/sw.js") { res.writeHead(404); return res.end(); }
     const file = path.join(ROOT, url === "/" ? "index.html" : url);
@@ -87,7 +92,27 @@ async function readDoc(docPath) {
   return fromFirestore({ mapValue: { fields: body.fields || {} } });
 }
 
+async function listDocs(collectionPath) {
+  const res = await fetch(`http://${FS_HOST}/v1/projects/${PROJECT}/databases/(default)/documents/${collectionPath}?pageSize=300`, {
+    headers: { authorization: "Bearer owner" }
+  });
+  const body = await res.json();
+  return (body.documents || []).map((d) => ({ id: d.name.split("/").pop(), data: fromFirestore({ mapValue: { fields: d.fields || {} } }) }));
+}
+
+// estado da conta na nuvem, no formato que a conta usa: módulos (schema 2, quando meta/sync
+// existe) ou private/siteState (schema 1)
 async function cloudState(uid) {
+  const meta = await readDoc(`users/${uid}/meta/sync`);
+  if (meta && Number(meta.schema) >= 2) {
+    const state = { profile: {}, data: {} };
+    for (const mod of await listDocs(`users/${uid}/modules`)) {
+      const data = mod.data.data || {};
+      if (mod.id === "perfil") state.profile = data.profile || {};
+      else Object.assign(state.data, data);
+    }
+    return state;
+  }
   const doc = await readDoc(`users/${uid}/private/siteState`);
   return doc && doc.state ? doc.state : null;
 }
@@ -129,10 +154,17 @@ async function waitHydrated(page) {
 const EMAIL = "teste@soter.dev";
 const PASSWORD = "senha-de-teste-123";
 
+let currentSchema = 1;
+// aparelhos do cenário em curso: em caso de falha, o fim do console de cada um vai para o relatório
+let liveDevices = [];
+
 class Device {
-  constructor(browser, name) { this.browser = browser; this.name = name; this.logs = []; }
+  // schema: formato configurado neste aparelho (padrão: o da rodada atual)
+  constructor(browser, name, schema) { this.browser = browser; this.name = name; this.logs = []; this.schema = schema || currentSchema; }
   async start() {
+    liveDevices.push(this);
     this.context = await this.browser.newContext({ bypassCSP: true, serviceWorkers: "block" });
+    await this.context.route("**/js/firebase-config.js", (route) => route.fulfill({ contentType: "text/javascript", body: testConfig(this.schema) }));
     return this;
   }
   async open(file) {
@@ -140,11 +172,18 @@ class Device {
     this.page = await this.context.newPage();
     this.page.on("console", (msg) => this.logs.push(msg.type() + ": " + msg.text()));
     this.page.on("pageerror", (err) => this.logs.push("pageerror: " + err.message));
+    this.loads = 0;
+    this.page.on("load", () => { this.loads += 1; });
     await this.page.goto(SITE + file);
     return this.page;
   }
-  async login() {
-    await evalSafe(this.page, ({ email, password }) => window.SoterStorage.loginWithEmail(email, password, { remember: true }).then(() => true), { email: EMAIL, password: PASSWORD });
+  // login com a página já aberta: o app-shell lê a nuvem da conta e recarrega a página (ver
+  // reloadAfterOwnerChange); só depois dessa recarga a página está pronta para editar
+  async login(email) {
+    await waitFor(() => this.loads >= 1, { message: "página carregada" });
+    const loadsBefore = this.loads;
+    await evalSafe(this.page, ({ email, password }) => window.SoterStorage.loginWithEmail(email, password, { remember: true }).then(() => true), { email: email || EMAIL, password: PASSWORD });
+    await waitFor(() => this.loads > loadsBefore, { timeout: 20000, message: "recarga depois do login" });
     await waitHydrated(this.page);
   }
   // mexe na lista da página de Livros/Cinema/Mangás (variável S da página) e salva como o botão
@@ -159,10 +198,13 @@ class Device {
 }
 
 // ---------- cenários ----------
+// nos dados de teste, livros/mangás usam status "quero" (sem páginas lidas): é o que a própria página
+// calcula ao abrir; com outro status, ela normaliza e grava, o que vira uma edição concorrente
 const tests = [];
-function test(id, name, fn) { tests.push({ id, name, fn }); }
+// schemas: formatos em que o cenário roda (padrão: todos)
+function test(id, name, fn, schemas) { tests.push({ id, name, fn, schemas: schemas || [1, 2] }); }
 
-function book(id, titulo) { return { id, titulo, autor: "", status: "lendo", updatedAt: Date.now(), createdAt: Date.now() }; }
+function book(id, titulo) { return { id, titulo, autor: "", status: "quero", updatedAt: Date.now(), createdAt: Date.now() }; }
 
 test("T1", "aparelho com cópia antiga abre Livros e não apaga a alteração do outro aparelho", async ({ browser, uid }) => {
   const A = await new Device(browser, "A").start();
@@ -170,7 +212,7 @@ test("T1", "aparelho com cópia antiga abre Livros e não apaga a alteração do
   try {
     await A.open("livros.html");
     await A.login();
-    await A.editLibrary((S) => { S.livros.push({ id: 101, titulo: "Duna", status: "lendo", updatedAt: Date.now(), createdAt: Date.now() }); });
+    await A.editLibrary((S) => { S.livros.push({ id: 101, titulo: "Duna", status: "quero", updatedAt: Date.now(), createdAt: Date.now() }); });
     await waitFor(async () => ((await cloudState(uid)) || {}).data?.trackerLivraria?.[0]?.titulo === "Duna", { message: "Duna na nuvem" });
     await A.page.close(); A.page = null;
 
@@ -198,7 +240,7 @@ test("T2", "Livros aberto recebe a alteração do outro aparelho e não a desfaz
   try {
     await A.open("livros.html");
     await A.login();
-    await A.editLibrary((S) => { S.livros.push({ id: 201, titulo: "Fundação", status: "lendo", updatedAt: Date.now(), createdAt: Date.now() }); });
+    await A.editLibrary((S) => { S.livros.push({ id: 201, titulo: "Fundação", status: "quero", updatedAt: Date.now(), createdAt: Date.now() }); });
     await B.open("livros.html");
     await B.login();
     await waitFor(() => evalSafe(B.page, () => S.livros.some((x) => x.id === 201)), { message: "B recebe Fundação" });
@@ -222,7 +264,7 @@ test("T3", "edições simultâneas em módulos diferentes (A offline) ficam as d
     await B.login();
     await A.context.setOffline(true);
     await A.saveData("tasks", [{ id: "t-301", title: "Tarefa feita offline em A", done: false }]);
-    await B.editLibrary((S) => { S.mangas.push({ id: 302, titulo: "Berserk", status: "lendo", updatedAt: Date.now(), createdAt: Date.now() }); });
+    await B.editLibrary((S) => { S.mangas.push({ id: 302, titulo: "Berserk", status: "quero", updatedAt: Date.now(), createdAt: Date.now() }); });
     await waitFor(async () => (((await cloudState(uid)) || {}).data?.trackerMangas || []).some((x) => x.id === 302), { message: "mangá de B na nuvem" });
     await A.context.setOffline(false);
     await A.page.evaluate(() => window.dispatchEvent(new Event("online")));
@@ -240,7 +282,7 @@ test("T4", "Salvar em Livros chega à nuvem em menos de 1,5 s", async ({ browser
     await A.login();
     await sleep(1500);
     const t0 = Date.now();
-    await A.editLibrary((S) => { S.livros.push({ id: 401, titulo: "O Hobbit", status: "lendo", updatedAt: Date.now(), createdAt: Date.now() }); });
+    await A.editLibrary((S) => { S.livros.push({ id: 401, titulo: "O Hobbit", status: "quero", updatedAt: Date.now(), createdAt: Date.now() }); });
     await waitFor(async () => (((await cloudState(uid)) || {}).data?.trackerLivraria || []).some((x) => x.id === 401), { timeout: 5000, interval: 50, message: "livro na nuvem" });
     const ms = Date.now() - t0;
     if (ms > 1500) throw new Error("demorou " + ms + " ms");
@@ -261,7 +303,7 @@ test("T5", "estado acima de 1 MB: não grava, avisa uma vez e não repete", asyn
     const toast = await A.page.evaluate(() => (document.getElementById("soter-sync-toast") || {}).textContent || "");
     const cloudTitle = (((await cloudState(uid)) || {}).data?.tasks || [])[0]?.title;
     if (cloudTitle !== "antes do excesso") throw new Error("a nuvem mudou: " + String(cloudTitle).slice(0, 40));
-    if (!/grande/i.test(toast)) throw new Error("sem aviso de tamanho (toast: " + JSON.stringify(toast) + ")");
+    if (!/grande|limite/i.test(toast)) throw new Error("sem aviso de tamanho (toast: " + JSON.stringify(toast) + ")");
     if (failures > 1) throw new Error(failures + " tentativas de envio com falha (esperado no máximo 1)");
   } finally { await A.close(); }
 });
@@ -273,15 +315,15 @@ test("T6", "exclusão feita num aparelho chega ao outro e não volta", async ({ 
     await A.open("livros.html");
     await A.login();
     await A.editLibrary((S) => {
-      S.livros.push({ id: 601, titulo: "Fica", status: "lendo", updatedAt: Date.now(), createdAt: Date.now() });
-      S.livros.push({ id: 602, titulo: "Sai", status: "lendo", updatedAt: Date.now(), createdAt: Date.now() });
+      S.livros.push({ id: 601, titulo: "Fica", status: "quero", updatedAt: Date.now(), createdAt: Date.now() });
+      S.livros.push({ id: 602, titulo: "Sai", status: "quero", updatedAt: Date.now(), createdAt: Date.now() });
     });
     await B.open("livros.html");
     await B.login();
     await waitFor(() => evalSafe(B.page, () => S.livros.length === 2), { message: "B recebe os dois livros" });
     await A.editLibrary((S) => { S.livros = S.livros.filter((x) => x.id !== 602); });
     await waitFor(() => evalSafe(B.page, () => S.livros.length === 1), { timeout: 8000, message: "B vê a exclusão" });
-    await B.editLibrary((S) => { S.cinema.push({ id: 603, titulo: "Alien", status: "lendo", updatedAt: Date.now(), createdAt: Date.now() }); });
+    await B.editLibrary((S) => { S.cinema.push({ id: 603, titulo: "Alien", status: "quero", updatedAt: Date.now(), createdAt: Date.now() }); });
     await sleep(2000);
     const d = ((await cloudState(uid)) || {}).data || {};
     const ids = (d.trackerLivraria || []).map((x) => x.id);
@@ -295,14 +337,13 @@ test("T7", "outra conta no mesmo navegador não recebe nem grava os dados da pri
   try {
     await A.open("livros.html");
     await A.login();
-    await A.editLibrary((S) => { S.livros.push({ id: 701, titulo: "Só da conta 1", status: "lendo", updatedAt: Date.now(), createdAt: Date.now() }); });
+    await A.editLibrary((S) => { S.livros.push({ id: 701, titulo: "Só da conta 1", status: "quero", updatedAt: Date.now(), createdAt: Date.now() }); });
     await waitFor(async () => (((await cloudState(uid)) || {}).data?.trackerLivraria || []).length === 1, { message: "livro na nuvem da conta 1" });
     const uid2 = await createUser("outra@soter.dev", PASSWORD);
     await evalSafe(A.page, () => window.SoterStorage.logoutFirebase().catch(() => true));
     await sleep(1500);
     await A.open("livros.html");
-    await evalSafe(A.page, (p) => window.SoterStorage.loginWithEmail("outra@soter.dev", p, { remember: true }).then(() => true), PASSWORD);
-    await waitHydrated(A.page);
+    await A.login("outra@soter.dev");
     await sleep(2500);
     const titles = await evalSafe(A.page, () => S.livros.map((x) => x.titulo));
     if (titles.length) throw new Error("a conta 2 mostra livros da conta 1: " + JSON.stringify(titles));
@@ -313,21 +354,211 @@ test("T7", "outra conta no mesmo navegador não recebe nem grava os dados da pri
   } finally { await A.close(); }
 });
 
+const PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+
+test("T8", "exclusão e edição simultâneas na mesma lista: o excluído não volta e a edição fica", async ({ browser, uid }) => {
+  const A = await new Device(browser, "A").start();
+  const B = await new Device(browser, "B").start();
+  try {
+    await A.open("livros.html");
+    await A.login();
+    await A.editLibrary((S) => {
+      S.livros.push({ id: 801, titulo: "Excluir", status: "quero", updatedAt: Date.now(), createdAt: Date.now() });
+      S.livros.push({ id: 802, titulo: "Editar", status: "quero", updatedAt: Date.now(), createdAt: Date.now() });
+    });
+    await B.open("livros.html");
+    await B.login();
+    await waitFor(() => evalSafe(B.page, () => S.livros.length === 2), { message: "B recebe os dois livros" });
+    await sleep(800);
+    await B.context.setOffline(true);
+    await A.editLibrary((S) => { S.livros = S.livros.filter((x) => x.id !== 801); });
+    await waitFor(async () => (((await cloudState(uid)) || {}).data?.trackerLivraria || []).length === 1, { message: "exclusão na nuvem" });
+    await B.editLibrary((S) => { const it = S.livros.find((x) => x.id === 802); it.titulo = "Editado em B"; it.updatedAt = Date.now(); });
+    await B.context.setOffline(false);
+    await B.page.evaluate(() => window.dispatchEvent(new Event("online")));
+    await waitFor(async () => {
+      const list = ((await cloudState(uid)) || {}).data?.trackerLivraria || [];
+      return list.length === 1 && list[0].id === 802 && list[0].titulo === "Editado em B";
+    }, { timeout: 15000, message: "nuvem só com o livro editado" });
+    await waitFor(() => evalSafe(A.page, () => S.livros.length === 1 && S.livros[0].titulo === "Editado em B"), { timeout: 8000, message: "A com o resultado" });
+  } finally { await A.close(); await B.close(); }
+}, [2]);
+
+test("T9", "migração do formato antigo para módulos preserva dados e imagens", async ({ browser, uid }) => {
+  const A = await new Device(browser, "A", 1).start();
+  const B = await new Device(browser, "B", 2).start();
+  try {
+    await A.open("livros.html");
+    await A.login();
+    await A.editLibrary((S, png) => { S.livros.push({ id: 901, titulo: "Com capa", img: png, status: "quero", updatedAt: Date.now(), createdAt: Date.now() }); }, PNG);
+    await A.saveData("tasks", [{ id: "t-901", title: "Tarefa antiga", done: false }]);
+    await waitFor(async () => (((await cloudState(uid)) || {}).data?.tasks || []).length === 1, { message: "siteState com a tarefa" });
+    await B.open("livros.html");
+    await B.login();
+    const meta = await waitFor(() => readDoc(`users/${uid}/meta/sync`), { message: "meta/sync criado" });
+    if (Number(meta.schema) !== 2) throw new Error("meta/sync sem schema 2");
+    const d = ((await cloudState(uid)) || {}).data || {};
+    const bookCloud = (d.trackerLivraria || [])[0] || {};
+    if (!String(bookCloud.img || "").startsWith("soterimg:")) throw new Error("capa não virou referência: " + String(bookCloud.img).slice(0, 30));
+    const image = await readDoc(`users/${uid}/images/${bookCloud.img.slice(9)}`);
+    if (!image || image.data !== PNG) throw new Error("imagem não está em images/");
+    if (!(d.tasks || []).some((x) => x.id === "t-901")) throw new Error("tarefa não migrou");
+    await waitFor(() => evalSafe(B.page, (png) => (S.livros[0] || {}).img === png, PNG), { message: "B mostra a capa original" });
+  } finally { await A.close(); await B.close(); }
+}, [2]);
+
+test("T10", "o formato é decidido pela conta: aparelho sem schema 2 configurado sincroniza com a conta migrada", async ({ browser, uid }) => {
+  const A = await new Device(browser, "A", 2).start();
+  const B = await new Device(browser, "B", 1).start();
+  try {
+    await A.open("livros.html");
+    await A.login();
+    await waitFor(() => readDoc(`users/${uid}/meta/sync`), { message: "conta migrada" });
+    await B.open("livros.html");
+    await B.login();
+    await B.editLibrary((S) => { S.livros.push({ id: 1001, titulo: "Gravado por B", status: "quero", updatedAt: Date.now(), createdAt: Date.now() }); });
+    await waitFor(async () => (((await cloudState(uid)) || {}).data?.trackerLivraria || []).some((x) => x.id === 1001), { message: "livro de B nos módulos" });
+    await waitFor(() => evalSafe(A.page, () => S.livros.some((x) => x.id === 1001)), { timeout: 8000, message: "A recebe o livro de B" });
+    await A.editLibrary((S) => { S.livros[0].titulo = "Editado por A"; S.livros[0].updatedAt = Date.now(); });
+    await waitFor(() => evalSafe(B.page, () => (S.livros[0] || {}).titulo === "Editado por A"), { timeout: 8000, message: "B recebe a edição de A" });
+  } finally { await A.close(); await B.close(); }
+}, [2]);
+
+test("T11", "itens alterados sem updatedAt ganham a data da alteração", async ({ browser, uid }) => {
+  const A = await new Device(browser, "A").start();
+  try {
+    await A.open("tarefas.html");
+    await A.login();
+    await A.saveData("tasks", [{ id: "t-1101", title: "sem data", done: false }, { id: "t-1102", title: "fica igual", done: false }]);
+    await waitFor(async () => (((await cloudState(uid)) || {}).data?.tasks || []).length === 2, { message: "tarefas na nuvem" });
+    const first = (((await cloudState(uid)) || {}).data.tasks || []).map((x) => x.updatedAt);
+    if (!first.every((v) => typeof v === "number" && v > 0)) throw new Error("tarefas novas sem updatedAt: " + JSON.stringify(first));
+    await sleep(50);
+    await evalSafe(A.page, () => { const s = window.SoterStorage.getState(); s.data.tasks = s.data.tasks.map((t) => t.id === "t-1101" ? Object.assign({}, t, { title: "mudou" }) : t); window.SoterStorage.save(s); return true; });
+    await waitFor(async () => (((await cloudState(uid)) || {}).data?.tasks || [])[0]?.title === "mudou", { message: "edição na nuvem" });
+    const tasks = ((await cloudState(uid)) || {}).data.tasks;
+    if (!(tasks[0].updatedAt > first[0])) throw new Error("updatedAt da tarefa editada não avançou");
+    if (tasks[1].updatedAt !== first[1]) throw new Error("updatedAt da tarefa não editada mudou");
+  } finally { await A.close(); }
+});
+
+// prepara A e B com o mesmo livro e deixa B offline; devolve os dois aparelhos
+async function twoDevicesOneBookBOffline(browser, uid, book) {
+  const A = await new Device(browser, "A").start();
+  const B = await new Device(browser, "B").start();
+  await A.open("livros.html");
+  await A.login();
+  await A.editLibrary((S, b) => { S.livros.push(Object.assign({ updatedAt: Date.now(), createdAt: Date.now() }, b)); }, book);
+  await B.open("livros.html");
+  await B.login();
+  await waitFor(() => evalSafe(B.page, (id) => S.livros.some((x) => x.id === id), book.id), { message: "B recebe o livro" });
+  await sleep(800);
+  await B.context.setOffline(true);
+  return { A, B };
+}
+
+async function bringOnline(device) {
+  await device.context.setOffline(false);
+  await device.page.evaluate(() => window.dispatchEvent(new Event("online")));
+}
+
+test("T12", "o mesmo item editado nos dois aparelhos em campos diferentes fica com as duas edições", async ({ browser, uid }) => {
+  const { A, B } = await twoDevicesOneBookBOffline(browser, uid, { id: 1201, titulo: "Título", autor: "Autor", status: "quero" });
+  try {
+    await A.editLibrary((S) => { const it = S.livros[0]; it.titulo = "Título novo (A)"; it.updatedAt = Date.now(); });
+    await waitFor(async () => (((await cloudState(uid)) || {}).data?.trackerLivraria || [])[0]?.titulo === "Título novo (A)", { message: "título de A na nuvem" });
+    await B.editLibrary((S) => { const it = S.livros[0]; it.autor = "Autor novo (B)"; it.updatedAt = Date.now(); });
+    await bringOnline(B);
+    await waitFor(async () => {
+      const it = (((await cloudState(uid)) || {}).data?.trackerLivraria || [])[0] || {};
+      return it.titulo === "Título novo (A)" && it.autor === "Autor novo (B)";
+    }, { timeout: 15000, message: "nuvem com o título de A e o autor de B" });
+    const conflicts = await evalSafe(B.page, () => window.SoterStorage.listSyncConflicts().then((l) => l.length));
+    if (conflicts !== 0) throw new Error("campos diferentes não deveriam gerar cópia de conflito (" + conflicts + ")");
+  } finally { await A.close(); await B.close(); }
+}, [2]);
+
+test("T13", "o mesmo campo editado nos dois: vence a edição mais recente e a outra vira cópia de conflito", async ({ browser, uid }) => {
+  const { A, B } = await twoDevicesOneBookBOffline(browser, uid, { id: 1301, titulo: "Original", status: "quero" });
+  try {
+    await A.editLibrary((S) => { const it = S.livros[0]; it.titulo = "Versão de A"; it.updatedAt = Date.now(); });
+    await waitFor(async () => (((await cloudState(uid)) || {}).data?.trackerLivraria || [])[0]?.titulo === "Versão de A", { message: "A na nuvem" });
+    await sleep(50);
+    await B.editLibrary((S) => { const it = S.livros[0]; it.titulo = "Versão de B (mais recente)"; it.updatedAt = Date.now(); });
+    await bringOnline(B);
+    await waitFor(async () => (((await cloudState(uid)) || {}).data?.trackerLivraria || [])[0]?.titulo === "Versão de B (mais recente)", { timeout: 15000, message: "versão mais recente na nuvem" });
+    const conflicts = await waitFor(() => evalSafe(B.page, () => window.SoterStorage.listSyncConflicts()).then((l) => l.length ? l : null), { message: "cópia de conflito" });
+    if (conflicts.length !== 1) throw new Error("esperada 1 cópia de conflito, há " + conflicts.length);
+    if ((conflicts[0].remote.trackerLivraria || [])[0]?.titulo !== "Versão de A") throw new Error("a cópia não guarda a versão de A");
+  } finally { await A.close(); await B.close(); }
+}, [2]);
+
+test("T14", "navegador com o banco local antigo (versão 1, sem a base) atualiza e sincroniza", async ({ browser, uid }) => {
+  const A = await new Device(browser, "A").start();
+  try {
+    await A.open("livros.html");
+    // banco do schema 2 como a versão anterior do site criava (só images e soter_conflicts)
+    await A.page.evaluate((uid) => new Promise((resolve, reject) => {
+      const req = indexedDB.open("soter_sync_v2_" + uid, 1);
+      req.onupgradeneeded = () => {
+        req.result.createObjectStore("images", { keyPath: "hash" });
+        req.result.createObjectStore("soter_conflicts", { keyPath: "id", autoIncrement: true });
+      };
+      req.onsuccess = () => { req.result.close(); resolve(true); };
+      req.onerror = () => reject(req.error);
+    }), uid);
+    await A.login();
+    await A.editLibrary((S) => { S.livros.push({ id: 1401, titulo: "Depois da atualização", status: "quero", updatedAt: Date.now(), createdAt: Date.now() }); });
+    await waitFor(async () => (((await cloudState(uid)) || {}).data?.trackerLivraria || []).some((x) => x.id === 1401), { message: "livro na nuvem" });
+    const stores = await A.page.evaluate((uid) => new Promise((resolve) => {
+      const req = indexedDB.open("soter_sync_v2_" + uid);
+      req.onsuccess = () => { const names = Array.from(req.result.objectStoreNames); const v = req.result.version; req.result.close(); resolve({ v, names }); };
+    }), uid);
+    if (stores.v !== 2 || !stores.names.includes("base")) throw new Error("banco não atualizou: " + JSON.stringify(stores));
+  } finally { await A.close(); }
+}, [2]);
+
+test("T15", "migração que não cabe (imagem acima de 900 KB) continua sincronizando no formato antigo", async ({ browser, uid }) => {
+  const A = await new Device(browser, "A", 1).start();
+  const B = await new Device(browser, "B", 2).start();
+  try {
+    await A.open("livros.html");
+    await A.login();
+    const bigImage = "data:image/png;base64," + "A".repeat(930 * 1024);
+    await A.editLibrary((S, img) => { S.livros.push({ id: 1501, titulo: "Capa enorme", img, status: "quero", updatedAt: Date.now(), createdAt: Date.now() }); }, bigImage);
+    await waitFor(async () => (((await cloudState(uid)) || {}).data?.trackerLivraria || []).length === 1, { message: "livro com a capa no siteState" });
+    await B.open("tarefas.html");
+    await B.login();
+    await B.saveData("tasks", [{ id: "t-1501", title: "depois da migração recusada", done: false }]);
+    await waitFor(async () => (((await cloudState(uid)) || {}).data?.tasks || []).some((x) => x.id === "t-1501"), { timeout: 10000, message: "tarefa de B no siteState" });
+    if (await readDoc(`users/${uid}/meta/sync`)) throw new Error("meta/sync não deveria existir");
+    const toast = await B.page.evaluate(() => (document.getElementById("soter-sync-toast") || {}).textContent || "");
+    if (!/formato antigo/.test(toast)) throw new Error("sem aviso da migração recusada (toast: " + JSON.stringify(toast) + ")");
+  } finally { await A.close(); await B.close(); }
+}, [2]);
+
 // ---------- execução ----------
 const site = await startSite();
 const browser = await chromium.launch({ executablePath: CHROME, headless: true });
 let failed = 0;
-for (const t of tests) {
-  if (ONLY.length && !ONLY.includes(t.id)) continue;
-  await resetEmulators();
-  const uid = await createUser(EMAIL, PASSWORD);
-  const started = Date.now();
-  try {
-    const extra = await t.fn({ browser, uid });
-    console.log(`✔ ${t.id} ${t.name} (${((Date.now() - started) / 1000).toFixed(1)} s${extra ? ", " + extra : ""})`);
-  } catch (err) {
-    failed += 1;
-    console.log(`✘ ${t.id} ${t.name}\n    ${err && err.message}`);
+for (const schema of SCHEMAS) {
+  currentSchema = schema;
+  console.log(`\n— schema ${schema} —`);
+  for (const t of tests) {
+    if (ONLY.length && !ONLY.includes(t.id)) continue;
+    if (!t.schemas.includes(schema) && !ONLY.includes(t.id)) continue;
+    await resetEmulators();
+    liveDevices = [];
+    const uid = await createUser(EMAIL, PASSWORD);
+    const started = Date.now();
+    try {
+      const extra = await t.fn({ browser, uid, schema });
+      console.log(`✔ ${t.id} ${t.name} (${((Date.now() - started) / 1000).toFixed(1)} s${extra ? ", " + extra : ""})`);
+    } catch (err) {
+      failed += 1;
+      console.log(`✘ ${t.id} ${t.name}\n    ${err && err.message}`);
+      if (process.env.VERBOSE) liveDevices.forEach((d) => console.log(`    [${d.name}] ` + d.logs.slice(-12).join(`\n    [${d.name}] `)));
+    }
   }
 }
 await browser.close();

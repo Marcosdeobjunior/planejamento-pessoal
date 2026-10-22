@@ -33,14 +33,22 @@ passava no limite, com 998 ms). Depois: T1–T7 passam, em duas rodadas seguidas
 | [8] [16] | Tamanho medido em bytes; acima do limite não envia nem repete. Erros permanentes (`invalid-argument`, `permission-denied`) param as tentativas até o conteúdo mudar. Avisa uma vez. | T5: estado acima de 1 MB → nenhuma gravação, um aviso, sem novas tentativas. |
 | Regressão | — | T6: exclusão feita em A chega a B e não volta quando B salva outra coisa. T7: outra conta no mesmo navegador não vê nem grava os dados da primeira. |
 
-## Fase 2 — corrigir o schema 2 e ligá-lo para todos
+## Fase 2 — corrigir o schema 2 e ligá-lo para todos — ✅ feita
 
-- [4] Formato decidido pela conta (`meta/sync`), não por flag no navegador.
-- [5] Base com conteúdo (IndexedDB) e merge de 3 vias (`syncV2Merge3`) no envio: exclusões respeitadas.
-- [7] Cópia de conflito gravada fora da transação, com limite de quantidade.
-- [6] `updatedAt` em todos os itens; `serverTimestamp()` nos documentos.
-- Testes: os da Fase 1 repetidos com o schema 2, mais exclusão concorrente e migração.
-- Ligar `sync: { schema: 2 }` em `js/firebase-config.js`.
+Antes da correção, com o schema 2 ligado nos testes: T6 (exclusão voltava), T8 (exclusão +
+edição simultâneas), T10 (navegador sem a configuração ficava sem sincronizar) e T11 (itens sem
+data) falhavam. Depois: os 23 cenários passam (8 no schema 1, 15 no schema 2), em duas rodadas
+seguidas.
+
+| Item | Mudança | Teste |
+|---|---|---|
+| [5] | Base com conteúdo de cada módulo no IndexedDB (store `base`, banco versão 2) e merge de 3 vias (`syncV2Merge3`) no envio: exclusão de um lado é respeitada. A referência do rebase dos salvamentos da página é renovada quando a nuvem atualiza a página. | T6, T8; T14 (banco local antigo, versão 1, atualiza sozinho) |
+| [5] | O mesmo item mudado nos dois aparelhos é combinado campo a campo; só o mesmo campo dos dois lados vira conflito (vence o `updatedAt` mais recente). | T1 (status normalizado em A + título em B), T12, T13 |
+| [7] | Cópia de conflito gravada depois da transação (a função da transação não tem efeitos fora dela), só quando há conflito de verdade, e limitada às 50 mais recentes. | T12 (sem cópia), T13 (uma cópia) |
+| [6] | `updatedAt` carimbado pelo app-shell nos itens criados ou alterados sem data; `serverTimestamp()` nos documentos de módulo (`clientUpdatedAt` guarda a hora do aparelho). | T11 |
+| [4] | O formato é da conta: com `meta/sync`, todo navegador ativa o schema 2 (antes, ficava só local). Sem conseguir ler `meta/sync`, não grava em formato nenhum e tenta de novo. | T10 |
+| novo | Migração que não cabe (imagem ou módulo acima de 900 KB) volta ao formato antigo na sessão, com aviso, em vez de ficar sem sincronizar. | T15 |
+| — | `sync: { schema: 2 }` ligado em `js/firebase-config.js`. | T9 (migração com imagem) |
 
 ## Fase 3 — segurança e operação
 

@@ -17,10 +17,10 @@ window.SOTER_FIREBASE_CONFIG = {
   // nos Secrets do GitHub (VAPID_PRIVATE_KEY). Vazio = recurso escondido. Ver docs/LEMBRETES.md.
   push: {
     publicKey: "BOcnVsjs2bpfQ0fRJv7Vg25y3dH7Si0O6pZORJA8v9yagOzNees1TyEBS9sRZnmG3wdAcAHGvHdgzP-7W9FzYb8"
-  }
-  // Sincronização por módulos (schema 2). Desligada por padrão. Para ligar para todos,
-  // descomente a linha abaixo (lembre de colocar a vírgula depois de "auth: {...}").
-  // Para testar num navegador só: localStorage.setItem("soter_sync_schema", "2").
+  },
+  // Sincronização por módulos (schema 2): um documento por módulo, imagens à parte e merge de
+  // 3 vias entre aparelhos. No primeiro login, a conta é migrada do private/siteState (que fica
+  // como backup). Depois da migração, o formato é da conta: todo navegador usa o schema 2.
   // Ver FIREBASE_SETUP.md.
-  // sync: { schema: 2 }
+  sync: { schema: 2 }
 };

@@ -1125,6 +1125,9 @@ window.SoterUtils = window.SoterUtils || (function () {
   // Avisa as páginas que os dados da nuvem foram aplicados (para recarregar e redesenhar).
   // Livraria/Cinema/Mangás/RPG escutam "soter:storage-hydrated"; as demais, "soter:remote-state-applied".
   function dispatchRemoteStateApplied() {
+    // as páginas relêem o estado ao receber estes eventos: o que elas "viram" passa a ser o atual
+    // (referência do rebase dos próximos salvamentos, ver syncV2RebasePageSave)
+    if (syncV2PageSeen) syncV2PageSeen = ensureStateShape(loadState());
     try {
       window.dispatchEvent(new CustomEvent('soter:remote-state-applied'));
     } catch (err) { }
@@ -1909,9 +1912,26 @@ window.SoterUtils = window.SoterUtils || (function () {
   function activateFirebaseForCurrentUser() {
     if (!firebaseDbInstance || !firebaseCurrentUser) return Promise.resolve(false);
     if (isSyncV2Enabled()) {
+      var uidV2 = String(firebaseCurrentUser.uid || '');
       firebaseDocRef = null;
-      return syncV2Activate(firebaseCurrentUser.uid);
+      return syncV2Activate(uidV2).catch(function (err) {
+        // a migração não cabe (imagem ou módulo acima do limite): continua no formato antigo nesta
+        // sessão, em vez de ficar sem sincronizar; a próxima abertura do site tenta migrar de novo
+        if (!(err && err.migrationBlocked) || !firebaseCurrentUser || String(firebaseCurrentUser.uid || '') !== uidV2) throw err;
+        syncV2Reset();
+        syncV2BlockedUids[uidV2] = true;
+        showSyncProblem('N\u00e3o foi poss\u00edvel passar para a sincroniza\u00e7\u00e3o por m\u00f3dulos: ' +
+          (err.code === 'image_too_large' ? 'uma imagem tem ' : 'o m\u00f3dulo "' + err.module + '" tem ') + Math.round(err.bytes / 1024) +
+          ' KB (limite de 900 KB). Seus dados continuam sincronizando no formato antigo.');
+        return activateLegacyFirebaseSync();
+      });
     }
+    return activateLegacyFirebaseSync();
+  }
+
+  // schema 1: o estado inteiro em users/{uid}/private/siteState
+  function activateLegacyFirebaseSync() {
+    if (!firebaseDbInstance || !firebaseCurrentUser) return Promise.resolve(false);
     var config = getFirebaseRuntimeConfig() || {};
     var userRoot = getFirebaseUserRoot();
     firebaseDocRef = getFirebaseUserStateRef();
@@ -1929,11 +1949,28 @@ window.SoterUtils = window.SoterUtils || (function () {
     });
     if (firebaseDirty) setFirebaseDirty(true);
     else firebaseDirty = readPersistedDirty();
-    // se a conta já migrou para o schema 2, este navegador (formato antigo) não grava no siteState
-    return checkLegacyLockForCurrentUser().then(function (locked) {
-      if (locked) return false;
+    // o formato é da conta: se ela já migrou para o schema 2, este navegador passa a usá-lo também
+    // (antes, ficava com as alterações só locais) e não grava mais no siteState
+    var uidAtCheck = String(firebaseCurrentUser.uid || '');
+    return checkLegacyLockForCurrentUser().then(function (migrated) {
+      if (!firebaseCurrentUser || String(firebaseCurrentUser.uid || '') !== uidAtCheck) return false;
+      if (migrated) {
+        markAccountOnSyncV2(uidAtCheck);
+        firebaseDocRef = null;
+        firebaseLegacyLocked = false;
+        console.info('[SoterStorage] Esta conta usa a sincroniza\u00e7\u00e3o por m\u00f3dulos (schema 2): ativando neste navegador.');
+        return syncV2Activate(uidAtCheck);
+      }
       connectFirebaseRealtime();
       return hydrateFirebaseDocument();
+    }, function (err) {
+      // sem saber o formato da conta, não grava em nenhum: tenta de novo em instantes
+      setTimeout(function () {
+        if (firebaseCurrentUser && String(firebaseCurrentUser.uid || '') === uidAtCheck && !firebaseIsHydrated) {
+          activateFirebaseForCurrentUser().catch(function () { });
+        }
+      }, 4000);
+      throw err;
     });
   }
 
@@ -2039,6 +2076,7 @@ window.SoterUtils = window.SoterUtils || (function () {
         keys.push(RUBRICA_STORAGE_PREFIX + uid);
         keys.push(SYNC_V2_BASE_PREFIX + uid);
         keys.push(SYNC_V2_DIRTY_PREFIX + uid);
+        keys.push(SYNC_V2_ACCOUNT_PREFIX + uid);
         removeScopedStateForUser(uid);
       }
     }
@@ -2204,6 +2242,10 @@ window.SoterUtils = window.SoterUtils || (function () {
   var SYNC_V2_BASE_PREFIX = "soter_sync_v2_base_";
   var SYNC_V2_DIRTY_PREFIX = "soter_sync_v2_dirty_";
   var SYNC_V2_DEVICE_STORAGE_KEY = "soter_device_id_v1";
+  // conta que já usa o schema 2 (meta/sync), vista por este navegador
+  var SYNC_V2_ACCOUNT_PREFIX = "soter_sync_v2_account_";
+  // cópias de conflito guardadas por conta no IndexedDB (as mais antigas são apagadas)
+  var SYNC_V2_MAX_CONFLICTS = 50;
   var SYNC_V2_IDB_PREFIX = "soter_sync_v2_";
   var SYNC_V2_MAX_MODULE_BYTES = 900 * 1024;
   var SYNC_V2_MAX_IMAGE_BYTES = 900 * 1024;
@@ -2239,18 +2281,30 @@ window.SoterUtils = window.SoterUtils || (function () {
   var syncV2DomObserver = null;
   var syncV2DbPromises = {};
   var firebaseLegacyLocked = false;
+  // contas cuja migração para o schema 2 não coube nesta sessão (ver activateFirebaseForCurrentUser)
+  var syncV2BlockedUids = {};
 
   function syncV2DispatchApplied() {
     dispatchRemoteStateApplied();
   }
 
+  // o formato é da conta: depois que ela migrou (meta/sync), todo navegador usa o schema 2, mesmo
+  // sem a configuração ligada. A marca local só antecipa isso antes da primeira leitura da nuvem.
   function isSyncV2Enabled() {
     var config;
+    var uid = firebaseCurrentUser && firebaseCurrentUser.uid ? String(firebaseCurrentUser.uid) : "";
+    if (uid && syncV2BlockedUids[uid]) return false;
     try {
       if (String(localStorage.getItem(SYNC_V2_FLAG_STORAGE_KEY) || "") === "2") return true;
+      if (!uid) uid = String(localStorage.getItem(LAST_AUTH_UID_STORAGE_KEY) || "");
+      if (uid && localStorage.getItem(SYNC_V2_ACCOUNT_PREFIX + uid) === "1") return true;
     } catch (err) { }
     config = getFirebaseRuntimeConfig();
     return !!(config && config.sync && Number(config.sync.schema) === 2);
+  }
+
+  function markAccountOnSyncV2(uid) {
+    try { if (uid) localStorage.setItem(SYNC_V2_ACCOUNT_PREFIX + uid, "1"); } catch (err) { }
   }
 
   function getSyncDeviceId() {
@@ -2387,17 +2441,19 @@ window.SoterUtils = window.SoterUtils || (function () {
     syncV2HashByImage[dataUrl] = hash;
   }
 
-  // ---------- IndexedDB (imagens e conflitos), um banco por conta ----------
+  // ---------- IndexedDB (imagens, conflitos e base dos módulos), um banco por conta ----------
+  // versão 2: store "base" = conteúdo de cada módulo na última sincronização (merge de 3 vias)
   function syncV2OpenDb(uid) {
     uid = String(uid || "");
     if (!uid || typeof indexedDB === "undefined") return Promise.reject(new Error("indexeddb_unavailable"));
     if (syncV2DbPromises[uid]) return syncV2DbPromises[uid];
     syncV2DbPromises[uid] = new Promise(function (resolve, reject) {
-      var request = indexedDB.open(SYNC_V2_IDB_PREFIX + uid, 1);
+      var request = indexedDB.open(SYNC_V2_IDB_PREFIX + uid, 2);
       request.onupgradeneeded = function () {
         var db = request.result;
         if (!db.objectStoreNames.contains("images")) db.createObjectStore("images", { keyPath: "hash" });
         if (!db.objectStoreNames.contains("soter_conflicts")) db.createObjectStore("soter_conflicts", { keyPath: "id", autoIncrement: true });
+        if (!db.objectStoreNames.contains("base")) db.createObjectStore("base", { keyPath: "name" });
       };
       request.onsuccess = function () {
         var db = request.result;
@@ -2643,54 +2699,6 @@ window.SoterUtils = window.SoterUtils || (function () {
     return tl >= tr ? localItem : remoteItem;
   }
 
-  // arrays de objetos com id: une por id (vence o updatedAt mais recente, ou o local se nenhum tiver);
-  // objetos: recursivo; demais valores: prevalece o remoto. Itens de um lado só são preservados.
-  function syncV2MergeValues(localValue, remoteValue) {
-    if (remoteValue === undefined) return localValue;
-    if (localValue === undefined) return remoteValue;
-    if (Array.isArray(localValue) && Array.isArray(remoteValue) &&
-        (localValue.length || remoteValue.length) &&
-        syncV2IsIdArray(localValue) && syncV2IsIdArray(remoteValue)) {
-      var localById = {};
-      var seen = {};
-      localValue.forEach(function (item) { localById[String(item.id)] = item; });
-      var merged = remoteValue.map(function (item) {
-        var key = String(item.id);
-        seen[key] = true;
-        return localById[key] ? syncV2PickItem(localById[key], item) : item;
-      });
-      localValue.forEach(function (item) {
-        if (!seen[String(item.id)]) merged.push(item);
-      });
-      return merged;
-    }
-    if (syncV2IsPlainObject(localValue) && syncV2IsPlainObject(remoteValue)) {
-      var out = {};
-      Object.keys(remoteValue).forEach(function (key) { out[key] = syncV2MergeValues(localValue[key], remoteValue[key]); });
-      Object.keys(localValue).forEach(function (key) {
-        if (!Object.prototype.hasOwnProperty.call(remoteValue, key)) out[key] = localValue[key];
-      });
-      return out;
-    }
-    return remoteValue;
-  }
-
-  // true se tudo o que existia no lado local continua igual no resultado do merge
-  function syncV2LocalSurvives(localValue, mergedValue) {
-    if (localValue === undefined) return true;
-    if (Array.isArray(localValue) && syncV2IsIdArray(localValue) && Array.isArray(mergedValue)) {
-      var byId = {};
-      mergedValue.forEach(function (item) { if (syncV2IsPlainObject(item)) byId[String(item.id)] = item; });
-      return localValue.every(function (item) {
-        return byId[String(item.id)] && stableStringify(byId[String(item.id)]) === stableStringify(item);
-      });
-    }
-    if (syncV2IsPlainObject(localValue) && syncV2IsPlainObject(mergedValue)) {
-      return Object.keys(localValue).every(function (key) { return syncV2LocalSurvives(localValue[key], mergedValue[key]); });
-    }
-    return stableStringify(localValue) === stableStringify(mergedValue);
-  }
-
   // merge de 3 vias para salvamentos das páginas: "base" é o que a página tinha (ao carregar ou no
   // último salvamento dela); "remote" é o estado atual, que pode ter recebido mudanças de outro
   // aparelho depois disso. Mudança de um lado só vence; exclusão feita na página é respeitada;
@@ -2719,8 +2727,7 @@ window.SoterUtils = window.SoterUtils || (function () {
           var ja = stableStringify(a);
           if (jl === ja) return r;
           if (jr === ja) return l;
-          info.conflict = true;
-          return syncV2PickItem(l, r);
+          return syncV2MergeItemFields(a, l, r, info);
         }
         if (l) return a && stableStringify(l) === stableStringify(a) ? null : l;
         if (r) return a && stableStringify(r) === stableStringify(a) ? null : r;
@@ -2757,6 +2764,24 @@ window.SoterUtils = window.SoterUtils || (function () {
     }
     info.conflict = true;
     return local;
+  }
+
+  // o mesmo item mudou nos dois lados: combina campo a campo (campo mudado de um lado só vence);
+  // o mesmo campo mudado nos dois decide pelo item com updatedAt mais recente. updatedAt fica o maior.
+  function syncV2MergeItemFields(base, local, remote, info) {
+    if (!syncV2IsPlainObject(base) || !syncV2IsPlainObject(local) || !syncV2IsPlainObject(remote)) {
+      info.conflict = true;
+      return syncV2PickItem(local, remote);
+    }
+    function strip(item) { var copy = Object.assign({}, item); delete copy.updatedAt; return copy; }
+    var newer = syncV2PickItem(local, remote);
+    var sub = {};
+    var merged = newer === remote
+      ? syncV2Merge3(strip(base), strip(remote), strip(local), sub)
+      : syncV2Merge3(strip(base), strip(local), strip(remote), sub);
+    if (sub.conflict) info.conflict = true;
+    if (newer.updatedAt !== undefined) merged.updatedAt = newer.updatedAt;
+    return merged;
   }
 
   // estado que a página tinha da última vez (carregamento ou último salvamento dela)
@@ -2806,7 +2831,38 @@ window.SoterUtils = window.SoterUtils || (function () {
         remote: remoteData,
         merged: mergedData
       });
+    }).then(function () {
+      // guarda só as SYNC_V2_MAX_CONFLICTS mais recentes
+      return syncV2IdbRequest(uid, "soter_conflicts", "readwrite", function (store) {
+        var request = store.getAllKeys();
+        request.onsuccess = function () {
+          var keys = request.result || [];
+          keys.slice(0, Math.max(0, keys.length - SYNC_V2_MAX_CONFLICTS)).forEach(function (key) { store.delete(key); });
+        };
+        return null;
+      });
     });
+  }
+
+  // conteúdo de cada módulo como estava na nuvem na última sincronização deste aparelho: é a
+  // referência do merge de 3 vias no envio (saber o que foi excluído aqui ou lá)
+  function syncV2SaveBaseData(uid, name, rev, hash, data) {
+    return syncV2IdbRequest(uid, "base", "readwrite", function (store) {
+      return store.put({ name: name, rev: rev, hash: hash, data: data });
+    }).catch(function (err) {
+      console.warn("[SoterStorage] Não foi possível guardar a base do módulo " + name + ":", err);
+    });
+  }
+
+  function syncV2LoadBaseData(uid, name) {
+    return syncV2IdbRequest(uid, "base", "readonly", function (store) { return store.get(name); }).catch(function () { return null; });
+  }
+
+  // registra a versão da nuvem que este aparelho conhece (hash no localStorage, conteúdo no IndexedDB)
+  function syncV2SetBase(uid, name, rev, data) {
+    var hash = moduleHash(data);
+    syncV2.base[name] = { rev: Number(rev) || 0, hash: hash };
+    syncV2SaveBaseData(uid, name, Number(rev) || 0, hash, data);
   }
 
   function showSyncNotice(message) {
@@ -2960,6 +3016,14 @@ window.SoterUtils = window.SoterUtils || (function () {
               return syncV2ModuleNames().reduce(function (chain, name) {
                 return chain.then(function () {
                   if (!syncV2ModuleHasContent(name, modules[name])) return null;
+                  var moduleBytes = utf8ByteLength(JSON.stringify(modules[name]));
+                  if (moduleBytes > SYNC_V2_MAX_MODULE_BYTES) {
+                    var tooBig = new Error("module_too_large");
+                    tooBig.code = "module_too_large";
+                    tooBig.module = name;
+                    tooBig.bytes = moduleBytes;
+                    throw tooBig;
+                  }
                   var ref = syncV2ModuleRef(uid, name);
                   return firebaseDbInstance.runTransaction(function (tx) {
                     return tx.get(ref).then(function (snap) {
@@ -2970,7 +3034,8 @@ window.SoterUtils = window.SoterUtils || (function () {
                         schema: 2,
                         data: modules[name],
                         rev: 1,
-                        updatedAt: new Date().toISOString(),
+                        updatedAt: syncV2ServerTime(),
+                        clientUpdatedAt: new Date().toISOString(),
                         deviceId: getSyncDeviceId(),
                         migratedFrom: "private/siteState"
                       });
@@ -3024,7 +3089,7 @@ window.SoterUtils = window.SoterUtils || (function () {
         }
         var rHash = moduleHash(r.data || {});
         if (lHash === rHash) {
-          syncV2.base[name] = { rev: Number(r.rev) || 0, hash: rHash };
+          syncV2SetBase(uid, name, r.rev, r.data || {});
           syncV2.dirty[name] = false;
           return;
         }
@@ -3041,7 +3106,7 @@ window.SoterUtils = window.SoterUtils || (function () {
           return;
         }
         nextState = syncV2ReplaceModuleInState(nextState, name, r.data || {});
-        syncV2.base[name] = { rev: Number(r.rev) || 0, hash: rHash };
+        syncV2SetBase(uid, name, r.rev, r.data || {});
         syncV2.dirty[name] = false;
         applied.push(name);
         refsToFetch = refsToFetch.concat(collectImageRefs(r.data || {}));
@@ -3078,7 +3143,7 @@ window.SoterUtils = window.SoterUtils || (function () {
         }
         var localRefs = toImageRefsSync(loadState());
         var next = syncV2ReplaceModuleInState(localRefs, name, r.data || {});
-        syncV2.base[name] = { rev: Number(r.rev) || 0, hash: moduleHash(r.data || {}) };
+        syncV2SetBase(uid, name, r.rev, r.data || {});
         syncV2SaveBookkeeping();
         firebaseIsApplyingRemote = true;
         try {
@@ -3189,10 +3254,18 @@ window.SoterUtils = window.SoterUtils || (function () {
     return syncV2.flushPromise;
   }
 
+  function syncV2ServerTime() {
+    var fs = window.firebase && window.firebase.firestore;
+    return fs && fs.FieldValue && typeof fs.FieldValue.serverTimestamp === "function"
+      ? fs.FieldValue.serverTimestamp()
+      : new Date().toISOString();
+  }
+
   function syncV2CommitModule(uid, name, data) {
     var base = syncV2.base[name] || { rev: 0, hash: "" };
     var ref = syncV2ModuleRef(uid, name);
     var outcome = null;
+    var baseData;
     function checkSize(payload) {
       var bytes = utf8ByteLength(JSON.stringify(payload));
       if (bytes > SYNC_V2_MAX_MODULE_BYTES) {
@@ -3203,43 +3276,53 @@ window.SoterUtils = window.SoterUtils || (function () {
         throw err;
       }
     }
-    var docBody = { schema: 2, data: data, rev: 0, updatedAt: new Date().toISOString(), deviceId: getSyncDeviceId() };
+    function body(moduleData, rev) {
+      return { schema: 2, data: moduleData, rev: rev, updatedAt: syncV2ServerTime(), clientUpdatedAt: new Date().toISOString(), deviceId: getSyncDeviceId() };
+    }
     try {
-      checkSize(docBody);
+      checkSize({ schema: 2, data: data, rev: 0, deviceId: getSyncDeviceId() });
     } catch (err) {
       syncV2.failed[name] = moduleHash(data);
       return Promise.reject(err);
     }
-    return firebaseDbInstance.runTransaction(function (tx) {
-      return tx.get(ref).then(function (snap) {
-        var remote = snap.exists ? snap.data() : null;
-        var remoteRev = remote && Number(remote.schema) >= 2 ? Number(remote.rev) || 0 : 0;
-        if (remoteRev <= Number(base.rev || 0)) {
-          var rev = Math.max(remoteRev, Number(base.rev || 0)) + 1;
-          tx.set(ref, Object.assign({}, docBody, { rev: rev }));
-          outcome = { rev: rev, data: data, merged: false };
-          return null;
-        }
-        // outro aparelho gravou: merge, guardando antes a versão local
-        var remoteData = remote.data || {};
-        var merged = syncV2MergeValues(data, remoteData);
-        var mergedBody = Object.assign({}, docBody, { data: merged, rev: remoteRev + 1 });
-        checkSize(mergedBody);
-        return syncV2SaveConflict(uid, name, data, remoteData, merged, remoteRev).then(function () {
-          tx.set(ref, mergedBody);
-          outcome = { rev: remoteRev + 1, data: merged, merged: true, localLost: !syncV2LocalSurvives(data, merged) };
+    // conteúdo da base (o que a nuvem tinha na última sincronização deste aparelho): com ele, o
+    // merge sabe o que foi excluído aqui ou lá. Sem ele (base antiga), o merge une os dois lados.
+    return syncV2LoadBaseData(uid, name).then(function (row) {
+      baseData = row && base.hash && row.hash === base.hash ? row.data : undefined;
+      // a função da transação pode rodar mais de uma vez: nada de efeitos fora dela aqui dentro
+      return firebaseDbInstance.runTransaction(function (tx) {
+        return tx.get(ref).then(function (snap) {
+          var remote = snap.exists ? snap.data() : null;
+          var remoteRev = remote && Number(remote.schema) >= 2 ? Number(remote.rev) || 0 : 0;
+          if (remoteRev <= Number(base.rev || 0)) {
+            var rev = Math.max(remoteRev, Number(base.rev || 0)) + 1;
+            tx.set(ref, body(data, rev));
+            outcome = { rev: rev, data: data, merged: false };
+            return null;
+          }
+          // outro aparelho gravou depois da base: merge de 3 vias
+          var remoteData = remote.data || {};
+          var info = {};
+          var merged = syncV2Merge3(baseData, data, remoteData, info);
+          checkSize({ schema: 2, data: merged, rev: remoteRev + 1, deviceId: getSyncDeviceId() });
+          tx.set(ref, body(merged, remoteRev + 1));
+          outcome = { rev: remoteRev + 1, data: merged, merged: true, conflict: !!info.conflict, remoteData: remoteData };
           return null;
         });
       });
     }).then(function () {
       delete syncV2.failed[name];
-      syncV2.base[name] = { rev: outcome.rev, hash: moduleHash(outcome.data) };
+      syncV2SetBase(uid, name, outcome.rev, outcome.data);
       var currentModules = syncV2SplitState(toImageRefsSync(loadState()));
       var localNow = currentModules[name];
       var localNowHash = moduleHash(localNow);
       if (outcome.merged) {
-        // aplica o resultado do merge; se houve edição local durante o envio, combina de novo
-        var finalData = localNowHash === moduleHash(data) ? outcome.data : syncV2MergeValues(localNow, outcome.data);
+        // os dois aparelhos mexeram no mesmo ponto: guarda a versão local antes de combinar
+        if (outcome.conflict) {
+          syncV2SaveConflict(uid, name, data, outcome.remoteData, outcome.data, outcome.rev - 1).catch(function () { });
+        }
+        // aplica o resultado do merge; o que foi editado aqui durante o envio continua daqui
+        var finalData = localNowHash === moduleHash(data) ? outcome.data : syncV2Merge3(data, localNow, outcome.data, {});
         var next = syncV2ReplaceModuleInState(toImageRefsSync(loadState()), name, finalData);
         firebaseIsApplyingRemote = true;
         try {
@@ -3250,8 +3333,8 @@ window.SoterUtils = window.SoterUtils || (function () {
         syncV2DispatchApplied();
         syncV2.dirty[name] = moduleHash(finalData) !== syncV2.base[name].hash;
         // "sistema" guarda só metadados (última página visitada etc.): a cópia fica salva, sem aviso
-        if (outcome.localLost && name !== SYNC_V2_FALLBACK_MODULE) {
-          showSyncNotice("Outro aparelho alterou \"" + name + "\" ao mesmo tempo. As versões foram combinadas; a sua versão anterior ficou guardada neste navegador.");
+        if (outcome.conflict && name !== SYNC_V2_FALLBACK_MODULE) {
+          showSyncNotice("Outro aparelho alterou o mesmo item de \"" + name + "\" ao mesmo tempo. Ficou a versão mais recente; a outra está guardada neste navegador.");
         }
         syncV2FetchMissingImages(uid, collectImageRefs(outcome.data));
       } else {
@@ -3283,7 +3366,11 @@ window.SoterUtils = window.SoterUtils || (function () {
       lastError: ""
     });
     return syncV2LoadLocalImages(syncV2.uid).then(function () {
-      return syncV2EnsureMigrated(syncV2.uid);
+      return syncV2EnsureMigrated(syncV2.uid).catch(function (err) {
+        // tamanho não muda tentando de novo: quem chamou decide (volta ao formato antigo)
+        if (err && (err.code === "module_too_large" || err.code === "image_too_large")) err.migrationBlocked = true;
+        throw err;
+      });
     }).then(function () {
       if (!syncV2.active || syncV2.uid !== String(uid)) return false;
       return syncV2Hydrate(syncV2.uid);
@@ -3307,6 +3394,7 @@ window.SoterUtils = window.SoterUtils || (function () {
       firebaseLastError = msg;
       updateFirebaseMeta({ enabled: true, hydrated: false, lastError: msg });
       console.error("[SoterStorage] Falha ao ativar a sincronização schema 2:", err);
+      if (err && err.migrationBlocked) throw err;
       setTimeout(function () {
         if (syncV2.active && syncV2.uid === String(uid) && !syncV2.hydrated && firebaseCurrentUser && firebaseCurrentUser.uid === uid) {
           syncV2Activate(uid).catch(function () { });
@@ -3319,17 +3407,14 @@ window.SoterUtils = window.SoterUtils || (function () {
   // formato antigo ligado, mas a conta já migrou: não grava mais no siteState
   function checkLegacyLockForCurrentUser() {
     if (!firebaseDbInstance || !firebaseCurrentUser) return Promise.resolve(false);
+    // true = a conta já usa o schema 2 (meta/sync). Enquanto a resposta não chega, o siteState
+    // fica travado; se a leitura falhar, continua travado e a promessa é rejeitada.
+    firebaseLegacyLocked = true;
     return syncV2MetaRef(firebaseCurrentUser.uid).get().then(function (snap) {
       var meta = snap.exists ? snap.data() : null;
-      firebaseLegacyLocked = !!(meta && Number(meta.schema) >= 2);
-      if (firebaseLegacyLocked) {
-        console.warn("[SoterStorage] Esta conta já usa o formato novo de sincronização (schema 2). O formato antigo (private/siteState) não será gravado neste navegador.");
-        showSyncProblem("Esta conta já usa o formato novo de sincronização. Neste navegador as alterações ficam só locais até o formato novo ser ativado.");
-      }
-      return firebaseLegacyLocked;
-    }).catch(function () {
-      firebaseLegacyLocked = false;
-      return false;
+      var migrated = !!(meta && Number(meta.schema) >= 2);
+      firebaseLegacyLocked = migrated;
+      return migrated;
     });
   }
 
@@ -7099,9 +7184,62 @@ window.SoterUtils = window.SoterUtils || (function () {
     });
   }
 
+  // Carimba updatedAt nos itens (objetos com id dentro de listas) que a página criou ou alterou sem
+  // atualizar a data: o merge entre aparelhos decide pelo item mais recente. A data segue o tipo que
+  // o item já usa (número em ms ou texto ISO). Metadados ("sistema") e o RPG, recalculados pelo
+  // próprio app, ficam de fora. Altera nextState no lugar, para a página manter a mesma data.
+  var STAMP_SKIP_KEYS = { rpg: true };
+  function stampChangedItems(previousState, nextState) {
+    var now = Date.now();
+    var prevData = previousState && previousState.data ? previousState.data : {};
+    var nextData = nextState && nextState.data ? nextState.data : {};
+    function withoutStamp(item) {
+      var copy = Object.assign({}, item);
+      delete copy.updatedAt;
+      return stableStringify(copy);
+    }
+    function walk(prevValue, nextValue) {
+      if (Array.isArray(nextValue)) {
+        if (!nextValue.length || !syncV2IsIdArray(nextValue)) return;
+        var prevById = {};
+        if (Array.isArray(prevValue)) {
+          prevValue.forEach(function (item) {
+            if (syncV2IsPlainObject(item) && item.id !== undefined && item.id !== null) prevById[String(item.id)] = item;
+          });
+        }
+        nextValue.forEach(function (item) {
+          var prev = prevById[String(item.id)];
+          if (!prev) {
+            if (item.updatedAt === undefined || item.updatedAt === null || item.updatedAt === "") item.updatedAt = now;
+            return;
+          }
+          if (item.updatedAt !== prev.updatedAt && item.updatedAt !== undefined) return;
+          if (withoutStamp(item) === withoutStamp(prev)) {
+            // página que remonta o item sem a data: mantém a que ele tinha
+            if (item.updatedAt === undefined && prev.updatedAt !== undefined) item.updatedAt = prev.updatedAt;
+            return;
+          }
+          item.updatedAt = typeof prev.updatedAt === "string" ? new Date(now).toISOString() : now;
+        });
+        return;
+      }
+      if (syncV2IsPlainObject(nextValue)) {
+        Object.keys(nextValue).forEach(function (key) {
+          walk(syncV2IsPlainObject(prevValue) ? prevValue[key] : undefined, nextValue[key]);
+        });
+      }
+    }
+    Object.keys(nextData).forEach(function (key) {
+      if (STAMP_SKIP_KEYS[key] || syncV2KeyModule(key) === SYNC_V2_FALLBACK_MODULE) return;
+      try { walk(prevData[key], nextData[key]); } catch (err) { }
+    });
+    return nextState;
+  }
+
   function exposeStorageApi(state) {
     function commit(nextState) {
       var previousState = loadState();
+      stampChangedItems(previousState, nextState);
       nextState = syncV2RebasePageSave(nextState);
       firebaseUserChangeDepth += 1;
       try {

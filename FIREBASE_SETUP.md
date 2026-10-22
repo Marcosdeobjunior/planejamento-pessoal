@@ -14,8 +14,9 @@ dados em `users/{uid}/…`.
 
 ## Estrutura no Firestore
 
-Existem dois formatos de sincronização. O **schema 1** é o atual e vem ligado por padrão. O
-**schema 2** é novo e fica desligado até ser ativado (ver abaixo).
+Existem dois formatos de sincronização. O **schema 2** (por módulos) vem ligado para todos em
+`js/firebase-config.js`. O **schema 1** (documento único) fica como formato antigo: é o backup da
+migração e o caminho de reserva quando a migração não cabe (ver abaixo).
 
 ```text
 users/{uid}/
@@ -89,30 +90,43 @@ avisa uma vez e só é tentado de novo quando o conteúdo muda; as alterações 
 
 Os testes com dois aparelhos ficam em `tests/sync/` (Firebase Emulator Suite + Playwright).
 
-## Ativar o schema 2
+## Schema 2: ligado para todos
 
-- **Num navegador só** (para testar): no console do navegador, já no site,
-  `localStorage.setItem("soter_sync_schema", "2")` e recarregue a página.
-- **Para todos**: em `js/firebase-config.js`, descomente `sync: { schema: 2 }`.
+`sync: { schema: 2 }` em `js/firebase-config.js` liga o schema 2 em todos os navegadores.
 
-No primeiro login com o schema 2 ligado, o site lê `private/siteState`, divide em módulos,
+**Migração.** No primeiro login de cada conta, o site lê `private/siteState`, divide em módulos,
 extrai as imagens, grava tudo e por fim grava `meta/sync`. O `siteState` **não é apagado nem
 alterado**: fica como backup. Se a migração falhar no meio, a próxima tentativa recomeça com
-segurança (as imagens são gravadas pelo hash e os módulos com `rev` 1).
+segurança (as imagens são gravadas pelo hash e os módulos com `rev` 1). Se não couber (uma imagem
+ou um módulo acima de 900 KB), o site avisa e continua sincronizando no formato antigo naquela
+sessão; a próxima abertura tenta de novo (depois de diminuir a imagem ou o módulo).
 
-**Atenção:** depois que `meta/sync` existe, um navegador com o schema 2 desligado não grava mais
-no `siteState`. Ele avisa que a conta já usa o formato novo e mantém as alterações só naquele
-navegador. Versões **antigas** do site (de antes desta mudança, por exemplo em cache) não sabem
-disso e ainda gravariam no `siteState`. Isso não afeta os módulos, mas deixa o backup
-diferente do estado real.
+**O formato é da conta.** Depois que `meta/sync` existe, todo navegador usa o schema 2 para essa
+conta, mesmo com a configuração desligada (a conta fica marcada em
+`soter_sync_v2_account_<uid>`). Só versões **antigas** do site (de antes desta mudança, em cache)
+ainda gravariam no `siteState`; isso não afeta os módulos, mas deixa o backup diferente.
+
+**Merge entre aparelhos.** Cada módulo é gravado numa transação que confere `rev`. Se outro
+aparelho gravou antes, o envio faz um merge de 3 vias com a base guardada no IndexedDB (store
+`base`: o conteúdo do módulo na última sincronização deste aparelho):
+
+- mudou de um lado só → vence esse lado, inclusive exclusão;
+- o mesmo item (objeto com `id`) mudou nos dois → combina campo a campo; o mesmo campo mudado
+  nos dois → vence o item com `updatedAt` mais recente, e a outra versão é guardada como cópia
+  de conflito (store `soter_conflicts`, as 50 mais recentes; `SoterStorage.listSyncConflicts()`);
+- item alterado de um lado e excluído do outro → fica (nada é perdido em silêncio).
+
+O app-shell carimba `updatedAt` nos itens que as páginas criam ou alteram sem atualizar a data
+(número em ms, ou texto ISO se o item já usava texto). Os documentos de módulo levam `updatedAt`
+do servidor (`serverTimestamp`) e `clientUpdatedAt` do aparelho.
 
 ## Voltar atrás
 
-1. Apague a chave no navegador: `localStorage.removeItem("soter_sync_schema")`, ou comente de
-   novo `sync` em `js/firebase-config.js`.
-2. Para o formato antigo voltar a gravar, apague `users/{uid}/meta/sync` no console do
-   Firestore. O site volta a usar `private/siteState`, **no estado em que estava na migração**.
-   O que foi alterado depois disso ficou só nos módulos (`modules/*`).
+1. Comente `sync` em `js/firebase-config.js`. Contas que já migraram continuam no schema 2.
+2. Para uma conta voltar ao formato antigo, apague `users/{uid}/meta/sync` no console do
+   Firestore e, em cada navegador dela, `localStorage.removeItem("soter_sync_v2_account_<uid>")`.
+   O site volta a usar `private/siteState`, **no estado em que estava na migração**. O que foi
+   alterado depois disso ficou só nos módulos (`modules/*`).
 
 ## Configuração do projeto
 
@@ -135,8 +149,8 @@ window.SOTER_FIREBASE_CONFIG = {
   appId: "1:123456789:web:abc123",
   appName: "soter-app",
   userCollection: "users",
-  auth: { enabled: true, emailPassword: true, google: false, allowGuest: false }
-  // sync: { schema: 2 }   // liga a sincronização por módulos para todos
+  auth: { enabled: true, emailPassword: true, google: false, allowGuest: false },
+  sync: { schema: 2 }      // sincronização por módulos (comente para contas novas ficarem no formato antigo)
 };
 ```
 
