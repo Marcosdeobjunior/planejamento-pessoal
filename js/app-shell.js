@@ -1067,7 +1067,10 @@ window.SoterUtils = window.SoterUtils || (function () {
       enabled: auth.enabled !== false,
       emailPassword: auth.emailPassword !== false,
       google: !!auth.google,
-      allowGuest: !!auth.allowGuest
+      allowGuest: !!auth.allowGuest,
+      // false: esconde "Registrar" e recusa criar conta pelo site. Para valer de verdade, desligue
+      // também a criação de contas no Firebase (Authentication > Configurações > Ações do usuário)
+      allowSignup: auth.allowSignup !== false
     };
   }
 
@@ -1560,7 +1563,8 @@ window.SoterUtils = window.SoterUtils || (function () {
       if (isLogin) setSignupEmailStatus('', '');
     }
     if (tabLogin) tabLogin.addEventListener('click', function () { setAuthTab('login'); });
-    if (tabSignup) tabSignup.addEventListener('click', function () { setAuthTab('signup'); });
+    if (tabSignup && !getFirebaseAuthConfig().allowSignup) tabSignup.style.display = 'none';
+    if (tabSignup) tabSignup.addEventListener('click', function () { if (getFirebaseAuthConfig().allowSignup) setAuthTab('signup'); });
     if (passwordEye) passwordEye.addEventListener('click', function () {
       toggleAuthPassword('firebase-auth-password-input', 'firebase-auth-password-eye', 'signin');
     });
@@ -3440,6 +3444,26 @@ window.SoterUtils = window.SoterUtils || (function () {
   // SDK compat servido pelo próprio site (cópia do pacote npm firebase@10.12.5), sem CDN de terceiros
   var FIREBASE_SDK_BASE = 'js/vendor/firebasejs/10.12.5/';
 
+  // App Check (opcional): só pedidos vindos do site publicado são aceitos pelo Firestore e pelo Auth,
+  // quando a verificação estiver ligada no console. Configuração em SOTER_FIREBASE_CONFIG.appCheck:
+  // { siteKey, provider: "recaptcha-enterprise" (padrão) | "recaptcha-v3", debug } (ver
+  // docs/FIREBASE_SECURITY_RULES.md). Sem siteKey, nada é carregado. Falhar aqui não impede o site
+  // de funcionar: sem o token, só a verificação (se ligada) recusa os pedidos.
+  function activateAppCheck(config) {
+    var appCheck = config && config.appCheck && typeof config.appCheck === 'object' ? config.appCheck : null;
+    if (!appCheck || !appCheck.siteKey) return Promise.resolve(false);
+    if (appCheck.debug) self.FIREBASE_APPCHECK_DEBUG_TOKEN = appCheck.debug === true ? true : String(appCheck.debug);
+    return loadScript(FIREBASE_SDK_BASE + 'firebase-app-check-compat.js').then(function () {
+      var ns = window.firebase.appCheck;
+      var Provider = appCheck.provider === 'recaptcha-v3' ? ns.ReCaptchaV3Provider : ns.ReCaptchaEnterpriseProvider;
+      firebaseAppInstance.appCheck().activate(new Provider(String(appCheck.siteKey)), true);
+      return true;
+    }).catch(function (err) {
+      console.warn('[SoterStorage] App Check n\u00e3o foi ativado:', err);
+      return false;
+    });
+  }
+
   function initFirebaseSync() {
     var config = getFirebaseRuntimeConfig();
     if (!config) return Promise.resolve(null);
@@ -3463,6 +3487,9 @@ window.SoterUtils = window.SoterUtils || (function () {
             appId: config.appId
           }, appName);
         }
+        return activateAppCheck(config);
+      })
+      .then(function () {
         firebaseDbInstance = firebaseAppInstance.firestore();
         firebaseAuthInstance = firebaseAppInstance.auth();
         // só para testes locais com o Firebase Emulator Suite (nunca configurado em produção)
@@ -7320,6 +7347,7 @@ window.SoterUtils = window.SoterUtils || (function () {
         });
       },
       registerWithEmail: function (email, password, options) {
+        if (!getFirebaseAuthConfig().allowSignup) return Promise.reject(new Error('signup_disabled'));
         return initFirebaseSync().then(function () {
           var desiredName = String(options && options.name || '').trim();
           firebasePendingSignupProfileName = desiredName;

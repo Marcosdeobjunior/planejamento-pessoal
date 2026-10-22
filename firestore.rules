@@ -26,14 +26,19 @@ service cloud.firestore {
 
     // Limites por documento (além do limite de 1 MiB que o próprio Firestore impõe):
     // - no máximo 40 campos no nível de cima;
-    // - images: o data URL em "data" com no máximo 950.000 caracteres;
-    // - modules: schema 2, "rev" inteiro e "data" como mapa;
+    // - images: o data URL em "data" com no máximo 950.000 caracteres; o documento é endereçado
+    //   pelo hash do conteúdo, então uma regravação só pode repetir o mesmo "data";
+    // - modules: schema 2, "rev" inteiro e "data" como mapa; "rev" só sobe (o site grava rev + 1
+    //   numa transação). A migração regrava rev 1 sobre rev 0 ou 1, e é a única exceção;
     // - rubrica: só "p" (página) ou "s" (configuração, no __meta), como mapa, e "em".
     function validWrite(collection) {
       let d = request.resource.data;
       return d.keys().size() <= 40
-        && (collection != 'images' || (d.data is string && d.data.size() <= 950000))
-        && (collection != 'modules' || (d.schema == 2 && d.rev is int && d.data is map))
+        && (collection != 'images' || (d.data is string && d.data.size() <= 950000
+              && (resource == null || d.data == resource.data.data)))
+        && (collection != 'modules' || (d.schema == 2 && d.rev is int && d.data is map
+              && (resource == null || d.rev > resource.data.get('rev', 0)
+                  || (d.rev == 1 && resource.data.get('rev', 0) <= 1))))
         && (collection != 'rubrica' || (d.keys().hasOnly(['p', 's', 'em'])
               && (!('p' in d) || d.p is map) && (!('s' in d) || d.s is map)));
     }

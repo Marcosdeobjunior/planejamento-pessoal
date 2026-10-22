@@ -50,11 +50,22 @@ seguidas.
 | novo | Migração que não cabe (imagem ou módulo acima de 900 KB) volta ao formato antigo na sessão, com aviso, em vez de ficar sem sincronizar. | T15 |
 | — | `sync: { schema: 2 }` ligado em `js/firebase-config.js`. | T9 (migração com imagem) |
 
-## Fase 3 — segurança e operação
+## Fase 3 — segurança e operação — ✅ feita (o código); passos do console pendentes
 
-- [9] App Check, criação de contas fechada, API key restrita, limite de imagens nas regras.
-- [17] `firebase.json` com as regras, testes das regras no emulador, regra `rev == anterior + 1`.
-- [10] [11] [12] Rubrica: reenvio ao voltar online, lote com merge, limpeza do histórico ao gravar.
+| Item | Mudança | Teste |
+|---|---|---|
+| [17] | Regras: `rev` dos módulos só sobe (recusa gravação velha fora de ordem; a migração regrava rev 1); imagem não pode trocar de conteúdo no mesmo hash. `tests/sync/rules.mjs` testa cada regra no emulador (aceita e recusada) e roda antes dos cenários no `npm test`. | 14 casos de regras |
+| [10] | Rubrica: envio que falha por rede tenta de novo com espera crescente (2 s → 60 s) e ao voltar a conexão; antes, só na próxima edição. | T17 (falhava antes) |
+| [11] | Rubrica: envio normal grava até 20 páginas por transação, com merge; o resto vai no envio seguinte. Só "enviar este aparelho" grava em lote, sobrescrevendo de propósito. | T18 (falhava antes: o lote apagava a edição do outro aparelho) |
+| [12] | Rubrica: ao gravar uma versão do histórico, apaga as com mais de 30 dias (a consulta só lê as que saem); o limite de 40 por página é conferido a cada 10 versões gravadas e ao abrir o histórico. | T16 (falhava antes) |
+| [9] | App Check opcional (`appCheck: { siteKey }` na configuração, SDK em `js/vendor`); `allowSignup: false` esconde o cadastro e o recusa no site. | T19, T20 |
+
+Não dá para limitar a **quantidade** de imagens por conta nas regras (elas não contam
+documentos); o App Check e a criação de contas fechada cobrem o abuso.
+
+**Pendente, no console** (ver `docs/FIREBASE_SECURITY_RULES.md`): publicar o `firestore.rules`,
+fechar a criação de contas, criar a chave do App Check (e aplicar depois de conferir as
+métricas) e restringir a API key.
 
 ## Fase 4 — evolução
 
