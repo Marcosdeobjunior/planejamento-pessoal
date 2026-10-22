@@ -25,8 +25,16 @@ function syncAppShellLibraryState() {
   } catch (e) {}
 }
 
+// salvamento feito pela pessoa: envia para a nuvem na hora, sem esperar o agrupamento de envios
+function syncFirebaseNow() {
+  if (window.SoterStorage && typeof window.SoterStorage.syncFirebaseNow === 'function') {
+    window.SoterStorage.syncFirebaseNow().catch(function () { });
+  }
+}
+
 function save() {
   syncAppShellLibraryState();
+  syncFirebaseNow();
 }
 
 function load() {
@@ -50,6 +58,7 @@ function load() {
 
 function saveHubState() {
   syncAppShellLibraryState();
+  syncFirebaseNow();
 }
 
 function loadHubState() {

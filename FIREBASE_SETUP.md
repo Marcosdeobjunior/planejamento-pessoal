@@ -68,6 +68,27 @@ referência de volta pelo data URL antes de entregar o estado às páginas.
   (`soter_firebase_hydrated_v1_<uid>`), o estado local dela é só o estado inicial e não sobrescreve
   a nuvem; na primeira leitura, a nuvem vence.
 
+## Como o schema 1 evita sobrescrever outro aparelho
+
+Cada envio de `private/siteState` é uma **transação**: relê o documento e combina com o que está
+neste navegador, chave a chave de `state.data`, usando como referência o hash de cada chave na
+última sincronização deste aparelho (`soter_sync_base_v1_<uid>` no localStorage):
+
+- a chave só mudou na nuvem → vale a da nuvem (inclusive exclusão);
+- só mudou aqui → vale a daqui;
+- mudou nos dois → listas com `id` são unidas por id (vence o `updatedAt` mais recente; sem data,
+  este aparelho); objetos são combinados campo a campo; o resto fica com este aparelho.
+
+A mesma combinação é feita ao abrir o site com alterações ainda não enviadas. Limitação conhecida:
+se os dois aparelhos mexerem **na mesma lista** ao mesmo tempo e um deles tiver excluído um item,
+o item excluído pode voltar (resolvido no schema 2, ver `docs/PLANO_ARMAZENAMENTO.md`).
+
+O envio espera 300 ms para agrupar salvamentos seguidos; os botões "Salvar" de Livros, Cinema e
+Mangás enviam na hora. Envio recusado de vez (documento acima de ~1 MB, regras, formato inválido)
+avisa uma vez e só é tentado de novo quando o conteúdo muda; as alterações ficam neste aparelho.
+
+Os testes com dois aparelhos ficam em `tests/sync/` (Firebase Emulator Suite + Playwright).
+
 ## Ativar o schema 2
 
 - **Num navegador só** (para testar): no console do navegador, já no site,

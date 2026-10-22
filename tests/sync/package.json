@@ -1,0 +1,13 @@
+{
+  "name": "soter-sync-tests",
+  "private": true,
+  "type": "module",
+  "description": "Testes de sincronização com dois aparelhos contra o Firebase Emulator Suite. Ver docs/PLANO_ARMAZENAMENTO.md.",
+  "scripts": {
+    "test": "firebase emulators:exec --config ../../firebase.json --only auth,firestore --project demo-soter \"node run.mjs\""
+  },
+  "devDependencies": {
+    "firebase-tools": "^13.35.1",
+    "playwright-core": "^1.64.1"
+  }
+}
