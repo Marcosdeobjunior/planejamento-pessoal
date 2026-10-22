@@ -3270,8 +3270,13 @@ window.SoterUtils = window.SoterUtils || (function () {
             console.warn('[SoterStorage] Falha ao conectar aos emuladores:', err);
           }
         }
+        // sem synchronizeTabs: no modo multiaba o Firestore guarda o estado das consultas no
+        // localStorage, que já vive cheio com o cache do app; o setItem estoura a cota e o SDK
+        // entra em "INTERNAL ASSERTION FAILED", parando de gravar na nuvem. Numa segunda aba a
+        // persistência falha (failed-precondition) e o Firestore segue só em memória.
+        removeFirestoreTabSyncKeys();
         try {
-          firebaseDbInstance.enablePersistence({ synchronizeTabs: true }).catch(function () { });
+          firebaseDbInstance.enablePersistence().catch(function () { });
         } catch (err) { }
         bindFirebaseLifecycleFlush();
         ensureFirebaseAuthListener();
@@ -3290,6 +3295,19 @@ window.SoterUtils = window.SoterUtils || (function () {
         throw err;
       });
     return firebaseReadyPromise;
+  }
+
+  // sobras do antigo modo multiaba do Firestore (firestore_targets_..., firestore_clients_...)
+  function removeFirestoreTabSyncKeys() {
+    var keys = [];
+    var i;
+    try {
+      for (i = 0; i < localStorage.length; i++) {
+        var key = String(localStorage.key(i) || "");
+        if (/^firestore_(targets|clients|mutations|online_state|sequence_number|bundle_loaded)/.test(key)) keys.push(key);
+      }
+      for (i = 0; i < keys.length; i++) localStorage.removeItem(keys[i]);
+    } catch (err) { }
   }
 
   function scheduleFirebaseRetry() {
