@@ -1383,6 +1383,10 @@ function mesclaMeta(b,l,r){
    Cada versão é um documento "~h_<página>_<data>" na mesma coleção (o "~" fica
    depois de todo id de página, então a leitura das páginas não as carrega). */
 const HIST='~h_',FIM_PAGINAS='~',MAX_VERSOES=40,INTERVALO_VERSAO=10*60*1000;
+/* versões mais velhas que isso são apagadas ao gravar uma nova (a consulta só lê as que saem);
+   o limite de MAX_VERSOES é conferido ao abrir o histórico e a cada 10 versões gravadas */
+const RETENCAO_VERSAO=30*24*60*60*1000;
+let versoesGravadas=0;
 const ultimaVersao=new Map();
 const docId=()=>window.firebase.firestore.FieldPath.documentId();
 async function guardaVersao(pid,pagina,motivo){
@@ -1391,8 +1395,15 @@ async function guardaVersao(pid,pagina,motivo){
     await f.raiz.doc(HIST+pid+'_'+Date.now()).set({p:paraNuvem(JSON.parse(JSON.stringify(pagina))),
       s:{motivo:motivo||'auto'},em:new Date().toISOString()});
     ultimaVersao.set(pid,Date.now());
+    podaHistorico(pid,++versoesGravadas%10===0).catch(e=>console.warn('[Rubrica] limpeza do histórico:',e&&e.message));
     return true;
   }catch(e){console.warn('[Rubrica] histórico:',e&&e.message);return false}
+}
+async function podaHistorico(pid,conferirLimite){
+  const f=fb();if(!f||contaMudou())return;
+  const velhas=await f.raiz.where(docId(),'>=',HIST+pid+'_').where(docId(),'<',HIST+pid+'_'+(Date.now()-RETENCAO_VERSAO)).limit(200).get();
+  if(!velhas.empty){const lote=f.db.batch();velhas.forEach(d=>lote.delete(d.ref));await lote.commit()}
+  if(conferirLimite)await listaVersoes(pid);
 }
 async function listaVersoes(pid){
   const f=fb();if(!f)return null;
@@ -1531,11 +1542,21 @@ async function nuvemCarregar(){
 }
 
 /* ---- gravação incremental ----
-   Poucas páginas: transação. Ela relê o que está na nuvem e, se outro aparelho
-   gravou a mesma página desde a última leitura, mescla antes de gravar — nada
-   do outro lado é atropelado. Muitas páginas de uma vez (migração, "enviar
-   este aparelho"): lote simples, como antes. */
-let gravando=false,pendente=false;
+   Transação de até 20 páginas por vez (o resto vai no envio seguinte). Ela relê o
+   que está na nuvem e, se outro aparelho gravou a mesma página desde a última
+   leitura, mescla antes de gravar — nada do outro lado é atropelado. Só "enviar
+   este aparelho" (forcar) grava em lote, sobrescrevendo de propósito. */
+let gravando=false,pendente=false,tentativas=0,tentaDeNovoT=null;
+/* falha de rede: tenta de novo com espera crescente e ao voltar a conexão (antes, só na próxima edição) */
+function agendaNovaTentativa(e){
+  const code=String((e&&e.code)||'');
+  if(/permission-denied|invalid-argument|failed-precondition/.test(code))return;
+  clearTimeout(tentaDeNovoT);
+  const espera=[2000,5000,15000,30000,60000][Math.min(tentativas,4)];
+  tentativas++;
+  tentaDeNovoT=setTimeout(()=>nuvemGravar(),espera);
+}
+window.addEventListener('online',()=>{tentativas=0;clearTimeout(tentaDeNovoT);nuvemGravar()});
 async function nuvemGravar(forcar){
   if(contaMudou())return;
   if(gravando){pendente=true;return}
@@ -1548,7 +1569,8 @@ async function nuvemGravar(forcar){
       const c=canon(S.pages[id]);
       if(sincronizado.get(id)===c)continue;
       if(c.length>900000){toast('a página “'+(S.pages[id].title||'sem título')+'” está perto do limite de 1 MB');continue}
-      if(mudadas.length>=(forcar?400:200)){pendente=true;break}
+      /* envio normal: até 20 páginas por transação (com merge); o resto vai no próximo envio */
+      if(mudadas.length>=(forcar?400:20)){pendente=true;break}
       mudadas.push(id);
     }
     for(const id of Array.from(sincronizado.keys())){
@@ -1562,7 +1584,7 @@ async function nuvemGravar(forcar){
     mudadas.forEach(id=>{copias[id]=JSON.parse(JSON.stringify(S.pages[id]));bases[id]=sincronizado.get(id)});
     const agora=()=>new Date().toISOString();
     let res;
-    if(forcar||mudadas.length>20){
+    if(forcar){
       const lote=f.db.batch();
       mudadas.forEach(id=>lote.set(f.raiz.doc(id),{p:paraNuvem(copias[id]),em:agora()}));
       apagar.forEach(id=>lote.delete(f.raiz.doc(id)));
@@ -1621,9 +1643,9 @@ async function nuvemGravar(forcar){
       Object.keys(metaComum(res.meta)).forEach(k=>{S[k]=res.meta[k]});
       mexidas.push(null);
     }
-    nuvemOk=true;nuvemErro=false;
+    nuvemOk=true;nuvemErro=false;tentativas=0;
     if(mexidas.length){aplicaNaTela(mexidas.filter(Boolean));salvaLocal()}
-  }catch(e){pendente=false;avisaNuvem(e)}   /* sem repetição imediata em erro: o próximo save tenta de novo */
+  }catch(e){pendente=false;avisaNuvem(e);agendaNovaTentativa(e)}
   finally{
     gravando=false;
     if(pendente){pendente=false;setTimeout(nuvemGravar,400)}

@@ -20,12 +20,13 @@ const ONLY = process.argv.slice(2);
 const SCHEMAS = process.env.SCHEMA ? [Number(process.env.SCHEMA)] : [1, 2];
 
 // configuração de emulador; schema 2 liga a sincronização por módulos (sync: { schema: 2 })
-function testConfig(schema) {
+// extra: trecho de configuração a mais (ex.: 'appCheck: {...}'), por aparelho
+function testConfig(schema, extra) {
   return `window.SOTER_FIREBASE_CONFIG = {
   apiKey: "fake-api-key", authDomain: "${PROJECT}.firebaseapp.com", projectId: "${PROJECT}",
   appId: "1:1:web:1", appName: "soter-app", userCollection: "users",
   auth: { enabled: true, emailPassword: true, google: false, allowGuest: false },
-  emulators: { firestore: "${FS_HOST}", auth: "http://${AUTH_HOST}" }${schema === 2 ? ",\n  sync: { schema: 2 }" : ""}
+  emulators: { firestore: "${FS_HOST}", auth: "http://${AUTH_HOST}" }${schema === 2 ? ",\n  sync: { schema: 2 }" : ""}${extra ? ",\n  " + extra : ""}
 };`;
 }
 
@@ -90,6 +91,16 @@ async function readDoc(docPath) {
   if (res.status === 404) return null;
   const body = await res.json();
   return fromFirestore({ mapValue: { fields: body.fields || {} } });
+}
+
+// grava direto no emulador, como administrador (só campos de texto: suficiente para os testes)
+async function writeDoc(docPath, fields) {
+  const toValue = (v) => typeof v === "object" ? { mapValue: { fields: Object.fromEntries(Object.entries(v).map(([k, x]) => [k, toValue(x)])) } } : { stringValue: String(v) };
+  const res = await fetch(`http://${FS_HOST}/v1/projects/${PROJECT}/databases/(default)/documents/${docPath}`, {
+    method: "PATCH", headers: { authorization: "Bearer owner", "content-type": "application/json" },
+    body: JSON.stringify({ fields: toValue(fields).mapValue.fields })
+  });
+  if (!res.ok) throw new Error("writeDoc falhou: " + res.status);
 }
 
 async function listDocs(collectionPath) {
@@ -160,11 +171,11 @@ let liveDevices = [];
 
 class Device {
   // schema: formato configurado neste aparelho (padrão: o da rodada atual)
-  constructor(browser, name, schema) { this.browser = browser; this.name = name; this.logs = []; this.schema = schema || currentSchema; }
+  constructor(browser, name, schema, extraConfig) { this.browser = browser; this.name = name; this.logs = []; this.schema = schema || currentSchema; this.extraConfig = extraConfig || ""; }
   async start() {
     liveDevices.push(this);
     this.context = await this.browser.newContext({ bypassCSP: true, serviceWorkers: "block" });
-    await this.context.route("**/js/firebase-config.js", (route) => route.fulfill({ contentType: "text/javascript", body: testConfig(this.schema) }));
+    await this.context.route("**/js/firebase-config.js", (route) => route.fulfill({ contentType: "text/javascript", body: testConfig(this.schema, this.extraConfig) }));
     return this;
   }
   async open(file) {
@@ -535,6 +546,116 @@ test("T15", "migração que não cabe (imagem acima de 900 KB) continua sincroni
     const toast = await B.page.evaluate(() => (document.getElementById("soter-sync-toast") || {}).textContent || "");
     if (!/formato antigo/.test(toast)) throw new Error("sem aviso da migração recusada (toast: " + JSON.stringify(toast) + ")");
   } finally { await A.close(); await B.close(); }
+}, [2]);
+
+// ---------- Rubrica (projetos.html): sincroniza página a página em users/{uid}/rubrica ----------
+async function openRubrica(device) {
+  await device.open("projetos.html");
+  await device.login();
+  await waitFor(() => evalSafe(device.page, () => !!(S && S.pages && typeof mkPage === "function")), { timeout: 15000, message: "Rubrica carregada" });
+  await sleep(1000);
+}
+
+test("T16", "Rubrica: versão do histórico com mais de 30 dias é apagada ao gravar uma nova", async ({ browser, uid }) => {
+  const A = await new Device(browser, "A").start();
+  try {
+    await openRubrica(A);
+    const pid = await evalSafe(A.page, () => { const id = mkPage("Com histórico", null, "📄"); save(); return id; });
+    await waitFor(() => readDoc(`users/${uid}/rubrica/${pid}`), { message: "página na nuvem" });
+    const old = Date.now() - 40 * 24 * 60 * 60 * 1000;
+    const recent = Date.now() - 2 * 24 * 60 * 60 * 1000;
+    await writeDoc(`users/${uid}/rubrica/~h_${pid}_${old}`, { p: { title: "velha" }, s: { motivo: "auto" }, em: "x" });
+    await writeDoc(`users/${uid}/rubrica/~h_${pid}_${recent}`, { p: { title: "recente" }, s: { motivo: "auto" }, em: "x" });
+    await evalSafe(A.page, (pid) => guardaVersao(pid, S.pages[pid], "teste"), pid);
+    await waitFor(async () => !(await readDoc(`users/${uid}/rubrica/~h_${pid}_${old}`)), { message: "versão velha apagada" });
+    if (!(await readDoc(`users/${uid}/rubrica/~h_${pid}_${recent}`))) throw new Error("a versão recente foi apagada");
+  } finally { await A.close(); }
+}, [2]);
+
+test("T17", "Rubrica: edição feita offline vai para a nuvem quando a conexão volta, sem nova edição", async ({ browser, uid }) => {
+  const A = await new Device(browser, "A").start();
+  try {
+    await openRubrica(A);
+    const pid = await evalSafe(A.page, () => { const id = mkPage("Antes", null, "📄"); save(); return id; });
+    await waitFor(async () => ((await readDoc(`users/${uid}/rubrica/${pid}`)) || {}).p?.title === "Antes", { message: "página na nuvem" });
+    await A.context.setOffline(true);
+    await evalSafe(A.page, (pid) => { S.pages[pid].title = "Editada offline"; save(); return true; }, pid);
+    // tempo para a transação desistir (sem rede, o SDK tenta algumas vezes e falha)
+    await waitFor(() => A.logs.some((l) => /\[Rubrica\] Firestore/.test(l)), { timeout: 40000, message: "envio falhar offline" });
+    await A.context.setOffline(false);
+    await A.page.evaluate(() => window.dispatchEvent(new Event("online")));
+    await waitFor(async () => ((await readDoc(`users/${uid}/rubrica/${pid}`)) || {}).p?.title === "Editada offline", { timeout: 15000, message: "edição offline na nuvem" });
+  } finally { await A.close(); }
+}, [2]);
+
+test("T18", "Rubrica: 25 páginas de uma vez chegam todas, e a edição do outro aparelho na mesma página não se perde", async ({ browser, uid }) => {
+  const A = await new Device(browser, "A").start();
+  const B = await new Device(browser, "B").start();
+  try {
+    await openRubrica(A);
+    const shared = await evalSafe(A.page, () => { const id = mkPage("Compartilhada", null, "📄"); save(); return id; });
+    await waitFor(() => readDoc(`users/${uid}/rubrica/${shared}`), { message: "página compartilhada na nuvem" });
+    await openRubrica(B);
+    await waitFor(() => evalSafe(B.page, (id) => !!S.pages[id], shared), { message: "B tem a página" });
+    // A fica offline e cria as 25 páginas; enquanto isso B muda o ícone da página compartilhada
+    await A.context.setOffline(true);
+    const ids = await evalSafe(A.page, (id) => {
+      const out = [];
+      for (let i = 0; i < 25; i++) out.push(mkPage("Lote " + i, null, "📄"));
+      S.pages[id].title = "Compartilhada (A)";
+      save();
+      return out;
+    }, shared);
+    await evalSafe(B.page, (id) => { S.pages[id].icon = "⭐"; save(); return true; }, shared);
+    await waitFor(async () => ((await readDoc(`users/${uid}/rubrica/${shared}`)) || {}).p?.icon === "⭐", { message: "ícone de B na nuvem" });
+    await sleep(1500);
+    await A.context.setOffline(false);
+    await A.page.evaluate(() => window.dispatchEvent(new Event("online")));
+    await waitFor(async () => {
+      const docs = await listDocs(`users/${uid}/rubrica`);
+      return ids.every((id) => docs.some((d) => d.id === id));
+    }, { timeout: 30000, message: "as 25 páginas na nuvem" });
+    await waitFor(async () => {
+      const p = ((await readDoc(`users/${uid}/rubrica/${shared}`)) || {}).p || {};
+      return p.title === "Compartilhada (A)" && p.icon === "⭐";
+    }, { timeout: 15000, message: "página com o título de A e o ícone de B" });
+  } finally { await A.close(); await B.close(); }
+}, [2]);
+
+test("T19", "App Check configurado: o SDK é carregado e ativado, e a sincronização continua", async ({ browser, uid }) => {
+  const A = await new Device(browser, "A", undefined, 'appCheck: { siteKey: "chave-de-teste", debug: true }').start();
+  // o serviço do App Check é do Google (não há emulador): responde como se o token de depuração
+  // fosse aceito, e conta os pedidos para provar que o SDK foi mesmo ativado
+  let exchanges = 0;
+  await A.context.route("https://content-firebaseappcheck.googleapis.com/**", (route) => {
+    exchanges += 1;
+    route.fulfill({ contentType: "application/json", body: JSON.stringify({ token: "token-de-teste", ttl: "3600s" }) });
+  });
+  try {
+    await A.open("livros.html");
+    await A.login();
+    const active = await evalSafe(A.page, () => !!(window.firebase && window.firebase.appCheck && document.querySelector('script[data-soter-src*="app-check"]')));
+    if (!active) throw new Error("App Check não foi carregado");
+    await A.editLibrary((S) => { S.livros.push({ id: 1901, titulo: "Com App Check", status: "quero", updatedAt: Date.now(), createdAt: Date.now() }); });
+    await waitFor(async () => (((await cloudState(uid)) || {}).data?.trackerLivraria || []).some((x) => x.id === 1901), { message: "livro na nuvem" });
+    const errors = A.logs.filter((l) => /^pageerror/.test(l));
+    if (errors.length) throw new Error("erros na página: " + errors.join(" | "));
+    if (!exchanges) throw new Error("nenhum pedido de token ao App Check");
+    return exchanges + " pedido(s) de token";
+  } finally { await A.close(); }
+}, [2]);
+
+test("T20", "criação de contas fechada: sem a aba Registrar e o cadastro pelo site é recusado", async ({ browser }) => {
+  const A = await new Device(browser, "A", undefined, "auth: { enabled: true, emailPassword: true, google: false, allowGuest: false, allowSignup: false }").start();
+  try {
+    await A.open("livros.html");
+    await evalSafe(A.page, () => window.SoterStorage.openAuthModal());
+    await waitFor(() => evalSafe(A.page, () => !!document.getElementById("ltab-signup")), { message: "modal aberto" });
+    const hidden = await evalSafe(A.page, () => getComputedStyle(document.getElementById("ltab-signup")).display === "none");
+    if (!hidden) throw new Error("a aba Registrar aparece");
+    const result = await evalSafe(A.page, () => window.SoterStorage.registerWithEmail("nova@soter.dev", "senha-123456", {}).then(() => "criou", (e) => e.message));
+    if (result !== "signup_disabled") throw new Error("cadastro não foi recusado: " + result);
+  } finally { await A.close(); }
 }, [2]);
 
 // ---------- execução ----------

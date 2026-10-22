@@ -2,11 +2,14 @@
   "name": "soter-sync-tests",
   "private": true,
   "type": "module",
-  "description": "Testes de sincronização com dois aparelhos contra o Firebase Emulator Suite. Ver docs/PLANO_ARMAZENAMENTO.md.",
+  "description": "Testes das regras do Firestore e de sincronização com dois aparelhos contra o Firebase Emulator Suite. Ver docs/PLANO_ARMAZENAMENTO.md.",
   "scripts": {
-    "test": "firebase emulators:exec --config ../../firebase.json --only auth,firestore --project demo-soter \"node run.mjs\""
+    "test": "firebase emulators:exec --config ../../firebase.json --only auth,firestore --project demo-soter \"node rules.mjs && node run.mjs\"",
+    "test:rules": "firebase emulators:exec --config ../../firebase.json --only firestore --project demo-soter \"node rules.mjs\""
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^3.0.4",
+    "firebase": "10.12.5",
     "firebase-tools": "^13.35.1",
     "playwright-core": "^1.64.1"
   }
