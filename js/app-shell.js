@@ -100,7 +100,12 @@ window.SoterUtils = window.SoterUtils || (function () {
   var firebaseRetryCount = 0;
   var firebaseLifecycleBound = false;
   var FIREBASE_DIRTY_STORAGE_PREFIX = "soter_sync_dirty_v1_";
-  var FIREBASE_MAX_DOC_BYTES = 900000;
+  // hash, por chave, do estado da nuvem na última sincronização deste aparelho (schema 1)
+  var FIREBASE_BASE_STORAGE_PREFIX = "soter_sync_base_v1_";
+  // limite do Firestore é 1 MiB por documento (contando nomes de campos); fica uma folga
+  var FIREBASE_MAX_DOC_BYTES = 1000000;
+  // envio recusado de vez (grande demais, regras, formato inválido): não repete até o conteúdo mudar
+  var firebaseFailedHash = "";
   var firebaseAuthInstance = null;
   var firebaseCurrentUser = null;
   var firebasePendingDeletedUid = '';
@@ -150,7 +155,7 @@ window.SoterUtils = window.SoterUtils || (function () {
   var signInInProgress = false;
   // uid cujo logout (com limpeza) foi feito em alguma aba: as outras abas não regravam a cópia local
   var LOGOUT_PURGE_STORAGE_KEY = "soter_logout_purge_uid_v1";
-  var FIREBASE_SYNC_DEBOUNCE_MS = 800;
+  var FIREBASE_SYNC_DEBOUNCE_MS = 300;
   // marca, por conta, que este navegador já leu a nuvem dela pelo menos uma vez (schema 1)
   var FIREBASE_HYDRATED_STORAGE_PREFIX = "soter_firebase_hydrated_v1_";
 
@@ -787,6 +792,104 @@ window.SoterUtils = window.SoterUtils || (function () {
     } catch (err) { }
   }
 
+  // ---------- schema 1: base da última sincronização e merge de 3 vias por chave ----------
+  // A base guarda só o hash de cada chave de state.data (e do perfil) como estava na nuvem da
+  // última vez que este aparelho leu ou gravou. Com ela, um envio sabe o que mudou aqui e o que
+  // mudou em outro aparelho, em vez de sobrescrever o documento inteiro.
+  function getSyncBaseStorageKey() {
+    var uid = firebaseCurrentUser && firebaseCurrentUser.uid ? String(firebaseCurrentUser.uid) : "";
+    return uid ? (FIREBASE_BASE_STORAGE_PREFIX + uid) : "";
+  }
+
+  function syncV1Hashes(state) {
+    var shaped = compactStateForStorage(ensureStateShape(state));
+    var data = {};
+    Object.keys(shaped.data).forEach(function (key) {
+      if (shaped.data[key] !== undefined) data[key] = moduleHash(shaped.data[key]);
+    });
+    return { profile: moduleHash(shaped.profile), data: data };
+  }
+
+  function readSyncBase() {
+    var key = getSyncBaseStorageKey();
+    var base;
+    if (!key) return null;
+    try { base = JSON.parse(localStorage.getItem(key) || "null"); } catch (err) { base = null; }
+    return base && typeof base === "object" && base.data && typeof base.data === "object" ? base : null;
+  }
+
+  function writeSyncBase(state) {
+    var key = getSyncBaseStorageKey();
+    if (!key) return;
+    try { localStorage.setItem(key, JSON.stringify(syncV1Hashes(state))); } catch (err) { }
+  }
+
+  // os dois lados mudaram: listas com id são unidas por id (vence o updatedAt mais recente; empate
+  // ou sem data, este aparelho), objetos são combinados chave a chave, o resto fica com este aparelho
+  function syncV1MergePreferLocal(localValue, remoteValue) {
+    if (remoteValue === undefined) return localValue;
+    if (localValue === undefined) return remoteValue;
+    if (Array.isArray(localValue) && Array.isArray(remoteValue) &&
+        syncV2IsIdArray(localValue) && syncV2IsIdArray(remoteValue)) {
+      var remoteById = {};
+      var seen = {};
+      remoteValue.forEach(function (item) { remoteById[String(item.id)] = item; });
+      var merged = localValue.map(function (item) {
+        var key = String(item.id);
+        seen[key] = true;
+        return remoteById[key] ? syncV2PickItem(item, remoteById[key]) : item;
+      });
+      remoteValue.forEach(function (item) {
+        if (!seen[String(item.id)]) merged.push(item);
+      });
+      return merged;
+    }
+    if (syncV2IsPlainObject(localValue) && syncV2IsPlainObject(remoteValue)) {
+      var out = {};
+      Object.keys(localValue).forEach(function (key) { out[key] = syncV1MergePreferLocal(localValue[key], remoteValue[key]); });
+      Object.keys(remoteValue).forEach(function (key) {
+        if (!Object.prototype.hasOwnProperty.call(localValue, key)) out[key] = remoteValue[key];
+      });
+      return out;
+    }
+    return localValue;
+  }
+
+  // merge de 3 vias por chave de state.data: só um lado mudou -> vence esse lado (inclusive
+  // exclusão); os dois mudaram -> syncV1MergePreferLocal. Sem base, toda diferença conta como
+  // "os dois mudaram". Metadados deste aparelho (firebaseSync, fileStorage) ficam com o local.
+  function syncV1MergeStates(base, local, remote) {
+    var l = compactStateForStorage(ensureStateShape(local));
+    var r = compactStateForStorage(ensureStateShape(remote));
+    var baseData = base && base.data ? base.data : null;
+    var out = { profile: l.profile, data: {} };
+    var conflicts = [];
+    function pick(key, lv, rv, hb) {
+      var hl = lv === undefined ? undefined : moduleHash(lv);
+      var hr = rv === undefined ? undefined : moduleHash(rv);
+      if (hl === hr) return { value: lv };
+      if (base) {
+        if (hl === hb) return { value: rv };
+        if (hr === hb) return { value: lv };
+      }
+      conflicts.push(key);
+      return { value: syncV1MergePreferLocal(lv, rv) };
+    }
+    var keys = {};
+    Object.keys(l.data).concat(Object.keys(r.data)).forEach(function (key) { keys[key] = true; });
+    Object.keys(keys).forEach(function (key) {
+      var picked;
+      if (SYNC_V2_LOCAL_ONLY_KEYS[key]) {
+        if (l.data[key] !== undefined) out.data[key] = l.data[key];
+        return;
+      }
+      picked = pick(key, l.data[key], r.data[key], baseData ? baseData[key] : undefined);
+      if (picked.value !== undefined) out.data[key] = picked.value;
+    });
+    out.profile = pick("profile", l.profile, r.profile, base ? base.profile : undefined).value || l.profile;
+    return { state: ensureStateShape(JSON.parse(JSON.stringify(out))), conflicts: conflicts };
+  }
+
   function hasUnsyncedLocalChanges() {
     if (syncV2.active) return !!(syncV2HasDirty() || syncV2.flushPromise);
     return !!(firebaseDirty || firebasePendingState || firebaseSyncInFlight || readPersistedDirty());
@@ -1020,9 +1123,13 @@ window.SoterUtils = window.SoterUtils || (function () {
   }
 
   // Avisa as páginas que os dados da nuvem foram aplicados (para recarregar e redesenhar).
+  // Livraria/Cinema/Mangás/RPG escutam "soter:storage-hydrated"; as demais, "soter:remote-state-applied".
   function dispatchRemoteStateApplied() {
     try {
       window.dispatchEvent(new CustomEvent('soter:remote-state-applied'));
+    } catch (err) { }
+    try {
+      window.dispatchEvent(new CustomEvent('soter:storage-hydrated'));
     } catch (err) { }
   }
 
@@ -1694,6 +1801,7 @@ window.SoterUtils = window.SoterUtils || (function () {
         lastRemoteAt: remote.updatedAt || '',
         lastError: ''
       });
+      writeSyncBase(remote.state);
       if (serializedIncoming === serializedLocal) return;
       firebaseIsApplyingRemote = true;
       try {
@@ -1728,22 +1836,38 @@ window.SoterUtils = window.SoterUtils || (function () {
       var hasRemote = !!(docSnap && docSnap.exists && docSnap.data() && docSnap.data().state);
       if (!hasRemote) {
         var initialState = mergeAuthProfileIntoState(loadState(), firebaseCurrentUser);
+        var initialPayload = compactStateForStorage(initialState);
         return firebaseDocRef.set({
-          state: compactStateForStorage(initialState),
+          state: initialPayload,
           updatedAt: new Date().toISOString(),
           source: location.pathname || 'site'
-        }).then(function () { setFirebaseDirty(false); return true; });
+        }).then(function () { writeSyncBase(initialPayload); setFirebaseDirty(false); return true; });
       }
+      var remoteState = ensureStateShape(docSnap.data().state);
       if ((firebaseDirty || firebasePendingState) && hasHydratedBefore(hydratingUid)) {
-        if (!firebasePendingState) firebasePendingState = compactStateForStorage(ensureStateShape(loadState()));
+        // alterações locais ainda não enviadas: combina com a nuvem por chave (o que só mudou na
+        // nuvem vem de lá; o que só mudou aqui fica) e o envio grava o resultado
+        var localNow = loadState();
+        var merged = syncV1MergeStates(readSyncBase(), localNow, remoteState).state;
+        if (stableStringify(compactStateForStorage(merged)) !== stableStringify(compactStateForStorage(localNow))) {
+          firebaseIsApplyingRemote = true;
+          try {
+            applySiteState(mergeAuthProfileIntoState(merged, firebaseCurrentUser), localNow);
+          } finally {
+            firebaseIsApplyingRemote = false;
+          }
+          dispatchRemoteStateApplied();
+        }
+        firebasePendingState = compactStateForStorage(ensureStateShape(loadState()));
         return true;
       }
       // primeira leitura neste navegador: a nuvem vence o estado inicial local
       firebasePendingState = null;
       if (firebaseDirty) setFirebaseDirty(false);
+      writeSyncBase(remoteState);
       firebaseIsApplyingRemote = true;
       try {
-        applySiteState(mergeAuthProfileIntoState(ensureStateShape(docSnap.data().state), firebaseCurrentUser), loadState());
+        applySiteState(mergeAuthProfileIntoState(remoteState, firebaseCurrentUser), loadState());
       } finally {
         firebaseIsApplyingRemote = false;
       }
@@ -1911,6 +2035,7 @@ window.SoterUtils = window.SoterUtils || (function () {
       if (!keepUnsyncedCopy) {
         keys.push(FIREBASE_DIRTY_STORAGE_PREFIX + uid);
         keys.push(FIREBASE_HYDRATED_STORAGE_PREFIX + uid);
+        keys.push(FIREBASE_BASE_STORAGE_PREFIX + uid);
         keys.push(RUBRICA_STORAGE_PREFIX + uid);
         keys.push(SYNC_V2_BASE_PREFIX + uid);
         keys.push(SYNC_V2_DIRTY_PREFIX + uid);
@@ -2115,11 +2240,8 @@ window.SoterUtils = window.SoterUtils || (function () {
   var syncV2DbPromises = {};
   var firebaseLegacyLocked = false;
 
-  // além do evento combinado, dispara "soter:storage-hydrated", que Livraria/Cinema/Mangás/RPG
-  // já escutam para reler o estado (o app-shell antigo nunca o disparava)
   function syncV2DispatchApplied() {
     dispatchRemoteStateApplied();
-    try { window.dispatchEvent(new CustomEvent("soter:storage-hydrated")); } catch (err) { }
   }
 
   function isSyncV2Enabled() {
@@ -3315,17 +3437,49 @@ window.SoterUtils = window.SoterUtils || (function () {
       if (!firebasePendingState) return null;
       if (firebaseSyncInFlight) return firebaseSyncInFlight;
       var payloadState = firebasePendingState;
-      var approxBytes = 0;
-      try { approxBytes = JSON.stringify(payloadState).length; } catch (err) { }
-      if (approxBytes > FIREBASE_MAX_DOC_BYTES) {
-        showSyncProblem('Seus dados est\u00e3o grandes demais para sincronizar (' + Math.round(approxBytes / 1024) + ' KB). Remova imagens/capas pesadas.');
+      var payloadHash = moduleHash(payloadState);
+      // j\u00e1 recusado de vez com este mesmo conte\u00fado: espera a pr\u00f3xima altera\u00e7\u00e3o
+      if (firebaseFailedHash && firebaseFailedHash === payloadHash) {
+        firebasePendingState = null;
+        return null;
       }
+      var docRef = firebaseDocRef;
+      var written = null;
       firebasePendingState = null;
-      firebaseSyncInFlight = firebaseDocRef.set({
-        state: payloadState,
-        updatedAt: new Date().toISOString(),
-        source: location.pathname || 'site'
+      // transa\u00e7\u00e3o: rel\u00ea a nuvem e combina com o que mudou em outro aparelho desde a \u00faltima
+      // sincroniza\u00e7\u00e3o deste (syncV1MergeStates), em vez de sobrescrever o documento inteiro
+      firebaseSyncInFlight = firebaseDbInstance.runTransaction(function (tx) {
+        return tx.get(docRef).then(function (snap) {
+          var remote = snap.exists && snap.data() && snap.data().state ? snap.data().state : null;
+          var finalState = remote ? compactStateForStorage(syncV1MergeStates(readSyncBase(), payloadState, remote).state) : payloadState;
+          var body = { state: finalState, updatedAt: new Date().toISOString(), source: location.pathname || 'site' };
+          var bytes = utf8ByteLength(JSON.stringify(body));
+          if (bytes > FIREBASE_MAX_DOC_BYTES) {
+            var tooBig = new Error('state_too_large');
+            tooBig.code = 'state_too_large';
+            tooBig.bytes = bytes;
+            throw tooBig;
+          }
+          tx.set(docRef, body);
+          written = finalState;
+        });
       }).then(function () {
+        firebaseFailedHash = '';
+        writeSyncBase(written);
+        // a nuvem trouxe algo de outro aparelho: aplica aqui, sem desfazer o que foi editado
+        // durante o envio (o que mudou desde payloadState continua daqui)
+        if (moduleHash(written) !== payloadHash) {
+          var localNow = loadState();
+          var next = syncV1MergeStates(syncV1Hashes(payloadState), localNow, written).state;
+          firebaseIsApplyingRemote = true;
+          try {
+            applySiteState(mergeAuthProfileIntoState(next, firebaseCurrentUser), localNow);
+          } finally {
+            firebaseIsApplyingRemote = false;
+          }
+          dispatchRemoteStateApplied();
+          if (firebasePendingState) firebasePendingState = compactStateForStorage(ensureStateShape(loadState()));
+        }
         firebaseLastSyncedAt = new Date().toISOString();
         firebaseLastError = '';
         firebaseRetryCount = 0;
@@ -3333,9 +3487,22 @@ window.SoterUtils = window.SoterUtils || (function () {
         updateFirebaseMeta({ enabled: true, hydrated: firebaseIsHydrated, lastSyncAt: firebaseLastSyncedAt, lastError: '' });
         return true;
       }).catch(function (err) {
+        var code = String((err && err.code) || '');
         firebaseLastError = String((err && err.message) || err || 'firebase_sync_failed');
-        if (!firebasePendingState) firebasePendingState = payloadState;
         updateFirebaseMeta({ enabled: true, hydrated: firebaseIsHydrated, lastError: firebaseLastError });
+        // recusas que n\u00e3o mudam tentando de novo: avisa uma vez e espera o conte\u00fado mudar
+        if (code === 'state_too_large' || code === 'invalid-argument' || code === 'permission-denied') {
+          firebaseFailedHash = payloadHash;
+          if (code === 'state_too_large') {
+            console.warn('[SoterStorage] Estado grande demais para a nuvem:', err.bytes, 'bytes');
+            showSyncProblem('Seus dados est\u00e3o grandes demais para sincronizar (' + Math.round(err.bytes / 1024) + ' KB, limite de ' + Math.round(FIREBASE_MAX_DOC_BYTES / 1024) + ' KB). As altera\u00e7\u00f5es ficam s\u00f3 neste aparelho at\u00e9 o tamanho diminuir: remova imagens/capas pesadas.');
+          } else {
+            console.error('[SoterStorage] A nuvem recusou a grava\u00e7\u00e3o:', err);
+            showSyncProblem('A nuvem recusou a grava\u00e7\u00e3o (' + code + '). As altera\u00e7\u00f5es ficam s\u00f3 neste aparelho.');
+          }
+          return false;
+        }
+        if (!firebasePendingState) firebasePendingState = payloadState;
         console.error('[SoterStorage] Falha ao sincronizar com Firebase:', err);
         if (firebaseRetryCount === 2) showSyncProblem('N\u00e3o foi poss\u00edvel salvar na nuvem. Vou tentar novamente.');
         scheduleFirebaseRetry();
