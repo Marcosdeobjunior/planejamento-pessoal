@@ -46,129 +46,120 @@
 
       <div class="hero-actions">
         <a href="rpg.html" class="btn-primary"><i class="ico ico-user" aria-hidden="true"></i> Abrir Usu&aacute;rio</a>
-        <a href="tarefas.html" class="btn-ghost">Ver Planejamento</a>
-        <a href="livros.html" class="btn-ghost">Biblioteca &rarr;</a>
+        <a href="#sonhos" class="btn-ghost">Meus Sonhos</a>
+        <a href="#evolucao" class="btn-ghost">Minha Evolu&ccedil;&atilde;o &rarr;</a>
       </div>
 
       <div class="hero-date-pill" id="homeDate"></div>
     </section>
 
     <section class="stats-bar reveal-up" aria-label="Resumo r&aacute;pido">
-      <div class="stat-item">
-        <div class="stat-num" data-stat="modules">10</div>
-        <div class="stat-label">M&oacute;dulos</div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-num" data-stat="records">0</div>
-        <div class="stat-label">Registros</div>
-      </div>
-      <div class="stat-item">
+      <a class="stat-item" href="#sonhos">
+        <div class="stat-num" id="statDreamsDone">0</div>
+        <div class="stat-label">Sonhos realizados</div>
+      </a>
+      <a class="stat-item" href="#evolucao">
+        <div class="stat-num" id="statBooksYear">0</div>
+        <div class="stat-label">Livros no ano</div>
+      </a>
+      <a class="stat-item" href="#evolucao">
+        <div class="stat-num" id="statGymMonth">0</div>
+        <div class="stat-label">Treinos no m&ecirc;s</div>
+      </a>
+      <a class="stat-item" href="#rpg">
         <div class="stat-num" id="hero-rpg-level">1</div>
         <div class="stat-label">N&iacute;vel RPG</div>
+      </a>
+    </section>
+
+    <section class="content-section section-dark reveal-up" id="sonhos">
+      <div class="section-tag">&#10022; &nbsp; Sonhos</div>
+      <h2 class="section-title">O mapa dos<br>seus sonhos</h2>
+      <p class="section-desc">O que voc&ecirc; j&aacute; conquistou, o que est&aacute; em constru&ccedil;&atilde;o e o que ainda espera o primeiro passo.</p>
+
+      <div class="dream-overview" aria-label="Resumo dos sonhos">
+        <div class="dream-overview-bar" id="dreamOverviewBar" role="img" aria-label="Sem sonhos cadastrados">
+          <span class="dob-seg dob-done" id="dobDone"></span>
+          <span class="dob-seg dob-progress" id="dobProgress"></span>
+          <span class="dob-seg dob-todo" id="dobTodo"></span>
+        </div>
+        <div class="dream-overview-legend">
+          <div class="dol-item"><span class="dol-dot dob-done"></span><span class="dol-num" id="dreamCountDone">0</span><span class="dol-lbl">Realizados</span></div>
+          <div class="dol-item"><span class="dol-dot dob-progress"></span><span class="dol-num" id="dreamCountProgress">0</span><span class="dol-lbl">Em progresso</span></div>
+          <div class="dol-item"><span class="dol-dot dob-todo"></span><span class="dol-num" id="dreamCountTodo">0</span><span class="dol-lbl">N&atilde;o come&ccedil;ados</span></div>
+        </div>
       </div>
-      <div class="stat-item">
-        <div class="stat-num" data-stat="notifications">0</div>
-        <div class="stat-label">Notifica&ccedil;&otilde;es</div>
+
+      <div class="dream-block">
+        <div class="block-head">
+          <div class="block-title">Realizados</div>
+          <a class="block-link" href="sonhos.html">Ver todos &rarr;</a>
+        </div>
+        <div class="dream-slider" id="dreamSlider" role="region" aria-roledescription="carrossel" aria-label="Sonhos realizados" tabindex="0">
+          <div class="dream-slides" id="dreamSlides"></div>
+          <button class="dream-nav dream-prev" type="button" id="dreamPrev" aria-label="Sonho anterior"><i class="ico ico-chevron-left" aria-hidden="true"></i></button>
+          <button class="dream-nav dream-next" type="button" id="dreamNext" aria-label="Pr&oacute;ximo sonho"><i class="ico ico-chevron-right" aria-hidden="true"></i></button>
+          <div class="dream-dots" id="dreamDots" role="tablist" aria-label="Escolher sonho"></div>
+        </div>
+      </div>
+
+      <div class="dream-columns">
+        <div class="dream-block">
+          <div class="block-head">
+            <div class="block-title">Em progresso</div>
+          </div>
+          <div class="dream-list" id="dreamListProgress"></div>
+        </div>
+        <div class="dream-block">
+          <div class="block-head">
+            <div class="block-title">Ainda n&atilde;o come&ccedil;ados</div>
+          </div>
+          <div class="dream-list" id="dreamListTodo"></div>
+        </div>
       </div>
     </section>
 
-    <section class="content-section section-dark reveal-up" id="constelacoes">
-      <div class="section-tag">&#10022; &nbsp; Constela&ccedil;&otilde;es</div>
-      <h2 class="section-title">As &aacute;reas centrais<br>do ecossistema</h2>
-      <p class="section-desc">Cada frente alimenta o sistema com m&eacute;tricas, progresso e contexto, formando um &uacute;nico organismo vivo.</p>
+    <section class="content-section reveal-up" id="evolucao">
+      <div class="section-tag">&#10022; &nbsp; Evolu&ccedil;&atilde;o</div>
+      <h2 class="section-title">Sua trajet&oacute;ria<br>nos &uacute;ltimos meses</h2>
+      <p class="section-desc">Finan&ccedil;as, leitura, academia e cinema medidos m&ecirc;s a m&ecirc;s, a partir do que voc&ecirc; registra em cada m&oacute;dulo.</p>
 
-      <div class="const-grid">
-        <a href="livros.html" class="const-card">
-          <div class="const-icon"><i class="ico ico-library" aria-hidden="true"></i></div>
-          <div class="const-title">Biblioteca</div>
-          <div class="const-desc">Livros, cinema e mang&aacute;s em um acervo unificado, com hist&oacute;rico e continuidade real de leitura.</div>
-          <div class="const-meta" data-stat="library-detail">0 m&iacute;dias</div>
+      <div class="evo-grid">
+        <a class="evo-card" href="financas.html" id="evoFin">
+          <div class="evo-head"><span class="evo-icon"><i class="ico ico-wallet" aria-hidden="true"></i></span><span class="evo-tag">Finan&ccedil;as</span></div>
+          <div class="evo-value" data-evo="value">&mdash;</div>
+          <div class="evo-sub" data-evo="sub">Saldo acumulado</div>
+          <div class="evo-chart" data-evo="chart"></div>
+          <div class="evo-foot" data-evo="foot"></div>
         </a>
-        <a href="sonhos.html" class="const-card">
-          <div class="const-icon"><i class="ico ico-moon" aria-hidden="true"></i></div>
-          <div class="const-title">Pessoal</div>
-          <div class="const-desc">Sonhos, viagens, wishlist e finan&ccedil;as conectam desejo, planejamento e execu&ccedil;&atilde;o em um s&oacute; fluxo.</div>
-          <div class="const-meta" data-stat="personal-detail">0 metas</div>
+        <a class="evo-card" href="livros.html" id="evoBooks">
+          <div class="evo-head"><span class="evo-icon"><i class="ico ico-library" aria-hidden="true"></i></span><span class="evo-tag">Leitura</span></div>
+          <div class="evo-value" data-evo="value">&mdash;</div>
+          <div class="evo-sub" data-evo="sub">Livros conclu&iacute;dos no ano</div>
+          <div class="evo-goal" data-evo="goal"><span></span></div>
+          <div class="evo-chart" data-evo="chart"></div>
+          <div class="evo-foot" data-evo="foot"></div>
         </a>
-        <a href="tarefas.html" class="const-card">
-          <div class="const-icon"><i class="ico ico-circle-check" aria-hidden="true"></i></div>
-          <div class="const-title">Planejamento</div>
-          <div class="const-desc">Tarefas, revis&atilde;o e treino transformam inten&ccedil;&atilde;o em rotina consistente e mensur&aacute;vel.</div>
-          <div class="const-meta" data-stat="planning-detail">0 frentes</div>
+        <a class="evo-card" href="academia.html" id="evoGym">
+          <div class="evo-head"><span class="evo-icon"><i class="ico ico-dumbbell" aria-hidden="true"></i></span><span class="evo-tag">Academia</span></div>
+          <div class="evo-value" data-evo="value">&mdash;</div>
+          <div class="evo-sub" data-evo="sub">Treinos completos neste m&ecirc;s</div>
+          <div class="evo-chart" data-evo="chart"></div>
+          <div class="evo-foot" data-evo="foot"></div>
         </a>
-        <a href="rpg.html" class="const-card">
-          <div class="const-icon"><i class="ico ico-swords" aria-hidden="true"></i></div>
-          <div class="const-title">Evolu&ccedil;&atilde;o</div>
-          <div class="const-desc">O RPG consolida esfor&ccedil;o, n&iacute;vel, atributos, conquistas e leitura do seu avan&ccedil;o real.</div>
-          <div class="const-meta">N&iacute;vel <span id="constellation-rpg-level">1</span> &middot; <span id="constellation-rpg-title">Iniciante</span></div>
+        <a class="evo-card" href="cinema.html" id="evoCinema">
+          <div class="evo-head"><span class="evo-icon"><i class="ico ico-clapperboard" aria-hidden="true"></i></span><span class="evo-tag">Cinema</span></div>
+          <div class="evo-value" data-evo="value">&mdash;</div>
+          <div class="evo-sub" data-evo="sub">T&iacute;tulos conclu&iacute;dos no ano</div>
+          <div class="evo-goal" data-evo="goal"><span></span></div>
+          <div class="evo-chart" data-evo="chart"></div>
+          <div class="evo-foot" data-evo="foot"></div>
         </a>
       </div>
+      <div class="evo-tooltip" id="evoTooltip" role="status" aria-live="polite"></div>
     </section>
 
-    <section class="content-section reveal-up" id="modulos">
-      <div class="section-tag">&#10022; &nbsp; Acesso R&aacute;pido</div>
-      <h2 class="section-title">M&oacute;dulos em destaque</h2>
-      <p class="section-desc">Entradas diretas para os principais n&uacute;cleos do sistema.</p>
-
-      <div class="mod-grid">
-        <a href="rpg.html" class="mod-card">
-          <img class="mod-thumb" src="img/conquista-evolucao.webp" loading="lazy" decoding="async" alt="Usu&aacute;rio" onerror="this.style.background='#1a1a28';this.removeAttribute('src')">
-          <div class="mod-body">
-            <div class="mod-tag">Evolu&ccedil;&atilde;o</div>
-            <div class="mod-title">Usu&aacute;rio</div>
-            <div class="mod-desc">N&iacute;vel, atributos, classe, XP, skills, achievements e estado geral do personagem.</div>
-            <div class="mod-count">N&iacute;vel <span id="featured-rpg-level">1</span> &middot; <span id="featured-rpg-title">Iniciante</span></div>
-          </div>
-        </a>
-        <a href="livros.html" class="mod-card">
-          <img class="mod-thumb" src="img/conquista-leitura.webp" loading="lazy" decoding="async" alt="Livraria" onerror="this.style.background='#1a1a28';this.removeAttribute('src')">
-          <div class="mod-body">
-            <div class="mod-tag">Biblioteca</div>
-            <div class="mod-title">Livraria</div>
-            <div class="mod-desc">Monitore leituras, p&aacute;ginas, notas e continuidade do que est&aacute; em progresso.</div>
-            <div class="mod-count"><span id="hs-livros">0</span> livros</div>
-          </div>
-        </a>
-        <a href="cinema.html" class="mod-card">
-          <img class="mod-thumb" src="img/conquista-cinema.webp" loading="lazy" decoding="async" alt="Cinema" onerror="this.style.background='#1a1a28';this.removeAttribute('src')">
-          <div class="mod-body">
-            <div class="mod-tag">Biblioteca</div>
-            <div class="mod-title">Cinema</div>
-            <div class="mod-desc">Filmes e s&eacute;ries com status, reviews e andamento em uma mesma trilha.</div>
-            <div class="mod-count"><span id="hs-filmes">0</span> t&iacute;tulos</div>
-          </div>
-        </a>
-        <a href="sonhos.html" class="mod-card">
-          <img class="mod-thumb" src="img/conquista-sonhos.webp" loading="lazy" decoding="async" alt="Sonhos" onerror="this.style.background='#1a1a28';this.removeAttribute('src')">
-          <div class="mod-body">
-            <div class="mod-tag">Pessoal</div>
-            <div class="mod-title">Sonhos</div>
-            <div class="mod-desc">Transforme desejos em metas, cronogramas e progresso concreto.</div>
-            <div class="mod-count" data-stat="dreams">0 sonhos</div>
-          </div>
-        </a>
-        <a href="viagens.html" class="mod-card">
-          <img class="mod-thumb" src="img/conquista-viagens.webp" loading="lazy" decoding="async" alt="Viagens" onerror="this.style.background='#1a1a28';this.removeAttribute('src')">
-          <div class="mod-body">
-            <div class="mod-tag">Pessoal</div>
-            <div class="mod-title">Viagens</div>
-            <div class="mod-desc">Mapeie destinos, custos, datas e rotas em um painel unificado.</div>
-            <div class="mod-count"><span id="hs-viagens">0</span> viagens</div>
-          </div>
-        </a>
-        <a href="wishlist.html" class="mod-card">
-          <img class="mod-thumb" src="img/conquista-wishlist.webp" loading="lazy" decoding="async" alt="Wishlist" onerror="this.style.background='#1a1a28';this.removeAttribute('src')">
-          <div class="mod-body">
-            <div class="mod-tag">Pessoal</div>
-            <div class="mod-title">Wishlist</div>
-            <div class="mod-desc">Priorize desejos, categorize aquisi&ccedil;&otilde;es e acompanhe conquistas reais.</div>
-            <div class="mod-count" data-stat="wishlist">0 desejos</div>
-          </div>
-        </a>
-      </div>
-    </section>
-
-    <section class="content-section section-dark reveal-up" id="ritmo">
+    <section class="content-section reveal-up" id="ritmo">
       <div class="section-tag">&#10022; &nbsp; Ritmo do Dia</div>
       <h2 class="section-title">Rotas r&aacute;pidas<br>do momento</h2>
 
@@ -195,44 +186,6 @@
           <p>Registre uma lembran&ccedil;a, foco ou inten&ccedil;&atilde;o do momento antes que passe.</p>
           <textarea class="nota-input" id="quickNote" placeholder="Escreva aqui sua nota do momento..." oninput="saveNote()"></textarea>
         </div>
-      </div>
-    </section>
-
-    <section class="content-section reveal-up" id="panorama">
-      <div class="section-tag">&#10022; &nbsp; Panorama</div>
-      <h2 class="section-title">Indicadores r&aacute;pidos</h2>
-
-      <div class="ind-grid">
-        <a class="ind-item" href="livros.html">
-          <div class="ind-icon"><i class="ico ico-library" aria-hidden="true"></i></div>
-          <div class="ind-val" id="ht-livros">0</div>
-          <div class="ind-lbl">Livros</div>
-        </a>
-        <a class="ind-item" href="cinema.html">
-          <div class="ind-icon"><i class="ico ico-clapperboard" aria-hidden="true"></i></div>
-          <div class="ind-val" id="ht-cinema">0</div>
-          <div class="ind-lbl">Filmes</div>
-        </a>
-        <a class="ind-item" href="mangas.html">
-          <div class="ind-icon"><i class="ico ico-book-open" aria-hidden="true"></i></div>
-          <div class="ind-val" id="ht-mangas">0</div>
-          <div class="ind-lbl">Mang&aacute;s</div>
-        </a>
-        <a class="ind-item" href="tarefas.html">
-          <div class="ind-icon"><i class="ico ico-circle-check" aria-hidden="true"></i></div>
-          <div class="ind-val" id="ht-tarefas">0</div>
-          <div class="ind-lbl">Tarefas</div>
-        </a>
-        <a class="ind-item" href="sonhos.html">
-          <div class="ind-icon"><i class="ico ico-moon" aria-hidden="true"></i></div>
-          <div class="ind-val" id="hs-dreams">0</div>
-          <div class="ind-lbl">Sonhos</div>
-        </a>
-        <a class="ind-item" href="wishlist.html">
-          <div class="ind-icon"><i class="ico ico-target" aria-hidden="true"></i></div>
-          <div class="ind-val" id="hs-wishlist">0</div>
-          <div class="ind-lbl">Wishlist</div>
-        </a>
       </div>
     </section>
 
@@ -294,5 +247,6 @@
   <script src="js/firebase-config.js"></script>
   <script src="js/app-shell.js"></script>
   <script src="js/index.js"></script>
+  <script src="js/index-progresso.js"></script>
 </body>
 </html>
