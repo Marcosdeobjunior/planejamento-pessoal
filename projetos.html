@@ -45,7 +45,11 @@
   --side-w:264px;
 }
 *{box-sizing:border-box}
-html{height:100%;scrollbar-width:thin;scrollbar-color:rgba(200,169,110,.18) rgba(255,255,255,.02)}
+html{height:100%;overflow:hidden;scrollbar-width:thin;scrollbar-color:rgba(200,169,110,.18) rgba(255,255,255,.02)}
+/* só a página aberta (.scroll) e, se precisar, a lateral (.side) rolam:
+   a janela em si nunca rola, nem no celular */
+html > body{height:100%;min-height:0;overflow:hidden;overscroll-behavior:none}
+body.has-bottom-nav{padding-bottom:0}
 body{
   margin:0;background:var(--bg);color:var(--text);font-family:var(--font-ui);font-size:15px;
   line-height:1.5;-webkit-font-smoothing:antialiased;
@@ -62,19 +66,32 @@ button{background:none;border:none;padding:0;cursor:pointer;color:inherit}
 :focus-visible{outline:1px solid var(--accent1);outline-offset:2px;border-radius:4px}
 [contenteditable]{outline:none}
 
-#app{position:relative;z-index:1;display:flex;height:calc(100vh - 58px);height:calc(100dvh - 58px);margin-top:58px}
+#app{position:fixed;z-index:1;top:58px;left:0;right:0;bottom:0;display:flex}
 
 /* ---------------- área de trabalho ---------------- */
-/* a janela rola apenas o suficiente para revelar o rodapé; a lateral fica
-   presa no lugar e encolhe para encostar no topo dele (ver ajustaLateral) */
+/* a lateral ocupa a altura toda do app; se a tela for baixa, ela rola sozinha */
 .side{
-  position:sticky;top:58px;align-self:flex-start;height:calc(100vh - 58px);height:calc(100dvh - 58px);
-  width:var(--side-w);flex:0 0 var(--side-w);overflow:hidden;
+  position:relative;height:100%;
+  width:var(--side-w);flex:0 0 var(--side-w);overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;
   background:rgba(19,19,28,.72);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);
   border-right:1px solid var(--border);display:flex;flex-direction:column;user-select:none;
   transition:width .2s ease,flex-basis .2s ease,opacity .15s ease,border-color .2s ease;
 }
 body.side-collapsed .side{width:0;min-width:0;flex:0 0 0;opacity:0;pointer-events:none;border-right-color:transparent}
+/* recolhida (desktop com mouse): uma faixa fina na borda esquerda abre a lateral
+   por cima da página ao passar o mouse, e ela volta a recolher ao sair */
+@media (min-width:901px) and (hover:hover){
+  body.side-collapsed .side{
+    position:absolute;top:0;bottom:0;left:0;z-index:70;height:auto;
+    width:10px;flex:none;opacity:0;pointer-events:auto;overflow:hidden;
+    transition:width .2s ease .25s,opacity .15s ease .25s,box-shadow .2s ease .25s,border-color .2s ease .25s;
+  }
+  body.side-collapsed .side > *{width:var(--side-w);flex-shrink:0}
+  body.side-collapsed .side:hover,body.side-collapsed .side:focus-within{
+    width:var(--side-w);opacity:1;overflow-y:auto;border-right-color:var(--border);
+    background:rgba(19,19,28,.94);box-shadow:0 0 50px rgba(0,0,0,.6);transition-delay:0s;
+  }
+}
 .ws{
   display:flex;align-items:center;gap:10px;width:100%;padding:12px 14px;text-align:left;
   border-bottom:1px solid var(--border);transition:background .18s;
@@ -138,7 +155,7 @@ body.side-collapsed .side{width:0;min-width:0;flex:0 0 0;opacity:0;pointer-event
 .sec button{color:var(--muted);font-size:12px;padding:2px 5px;border-radius:5px;font-family:var(--font-mono)}
 .sec button:hover{color:var(--accent1);background:rgba(200,169,110,.08)}
 
-.tree{flex:1;overflow-y:auto;padding:0 8px 20px}
+.tree{flex:1 1 auto;min-height:120px;overflow-y:auto;overscroll-behavior:contain;padding:0 8px 20px}
 .row{
   display:flex;align-items:center;gap:4px;padding:4px 8px;border-radius:8px;cursor:pointer;
   color:var(--muted);font-size:13.5px;position:relative;transition:background .16s,color .16s;
@@ -972,7 +989,7 @@ body.arrastando-algo,body.arrastando-algo *{cursor:grabbing!important;user-selec
 
 
 @media (max-width:900px){
-  .side{position:absolute;top:0;bottom:0;left:0;z-index:70;box-shadow:0 0 50px rgba(0,0,0,.6)}
+  .side{position:absolute;top:0;bottom:0;left:0;z-index:70;max-width:86vw;box-shadow:0 0 50px rgba(0,0,0,.6)}
   body:not(.show-side) .side{display:none}
   body.side-collapsed .side{width:var(--side-w);flex:0 0 var(--side-w);opacity:1;pointer-events:auto}
   #btnCollapseSide{display:none}
@@ -985,8 +1002,7 @@ body.arrastando-algo,body.arrastando-algo *{cursor:grabbing!important;user-selec
   .peek.left,.peek.right{width:100vw;border-radius:0}
   /* celular: o editor ocupa o espaço entre o cabeçalho do site e a barra inferior do app
      (--bottom-nav-h, do app-shell); a barra do editor fica sempre visível e só o conteúdo rola */
-  #app{position:fixed;top:58px;left:0;right:0;bottom:var(--bottom-nav-h,0px);height:auto;margin-top:0}
-  [data-app-footer]{display:none}
+  #app{bottom:var(--bottom-nav-h,0px)}
   .side{height:100%}
   body.show-side .main::after{content:'';position:absolute;inset:0;z-index:65;background:rgba(5,4,12,.55)}
   .top{padding:0 6px;gap:2px}
@@ -1000,7 +1016,6 @@ body.arrastando-algo,body.arrastando-algo *{cursor:grabbing!important;user-selec
   input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),select,textarea{font-size:16px}
   .overlay .spot input{font-size:21px}
 }
-[data-app-footer] .site-footer{margin-top:0}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 /* ícones de interface (Lucide): tamanho legível nos encaixes que eram glifos pequenos */
 .tw .ico{font-size:12px}
@@ -1049,8 +1064,6 @@ body.arrastando-algo,body.arrastando-algo *{cursor:grabbing!important;user-selec
     </div>
   </main>
 </div>
-
-<div data-app-footer></div>
 
 <div id="peekLayer"></div>
 <div class="toast" id="toast"></div>
@@ -5029,19 +5042,8 @@ $('#btnAllToggle').onclick=e=>{
   e.currentTarget.innerHTML=any?icn('ico-chevrons-up-down'):icn('ico-chevrons-down-up');
   e.currentTarget.title=any?'Expandir tudo':'Recolher tudo';
 };
-/* enquanto o rodapé sobe, a lateral perde a mesma altura, de modo que a
-   base dela acompanhe o topo dele em vez de passar por baixo */
-function ajustaLateral(){
-  const side=document.querySelector('.side');
-  if(!side)return;
-  if(window.innerWidth<=900){side.style.height='';return}
-  const y=Math.max(0,window.scrollY||window.pageYOffset||0);
-  side.style.height=Math.max(240,window.innerHeight-58-y)+'px';
-}
-window.addEventListener('scroll',ajustaLateral,{passive:true});
 window.addEventListener('resize',()=>{
   if(S)$('#togSide').style.display=window.innerWidth<=900?'block':'none';
-  ajustaLateral();
 });
 $('#btnSync').onclick=async e=>{
   const r=e.currentTarget.getBoundingClientRect();
@@ -5147,7 +5149,7 @@ if(window.innerWidth<=900)$('#togSide').style.display='block';
   S.peekId=null;
   garanteAreas();
   applySideCollapsed();
-  render();save();ajustaLateral();
+  render();save();
   iniciado=true;
   escutaNuvem();
   const boot=document.getElementById('boot');
