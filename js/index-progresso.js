@@ -316,7 +316,9 @@
             (sub.length ? '<div class="dream-row-sub">' + esc(sub.join("  ·  ")) + "</div>" : "") +
           "</div>" +
         "</a>";
-      }).join("") : '<div class="dream-empty">Todos os seus sonhos já saíram do papel.</div>';
+      }).join("") : '<div class="dream-empty">' + (groups.done.length || groups.progress.length
+        ? "Todos os seus sonhos já saíram do papel."
+        : 'Cadastre seus sonhos em <a href="sonhos.html">Sonhos</a> para acompanhar cada um aqui.') + "</div>";
     }
   }
 
