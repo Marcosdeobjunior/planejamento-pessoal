@@ -211,6 +211,31 @@ function snIsLate(prazo, feita) {
   if (feita || !prazo) return false;
   return snDaysDiff(prazo) < 0;
 }
+// dd/mm/aaaa — aceita 'AAAA-MM-DD' (campos de data) ou ISO completo (dataConclusao)
+function snFmtDateNum(ds) {
+  if (!ds) return null;
+  const str = String(ds);
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(str) ? new Date(str + 'T00:00:00') : new Date(str);
+  if (isNaN(d)) return null;
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+// abertura da meta: criadaEm, ou o id (gerado com Date.now() em snUid)
+function snMetaCriadaEm(m) {
+  if (m.criadaEm) return m.criadaEm;
+  const t = Number(m.id);
+  return (t > 1262304000000 && t < Date.now() + 86400000) ? new Date(t).toISOString() : '';
+}
+// ordem automática: pendentes primeiro, depois prioridade e prazo
+function snMetaAutoSort(metas) {
+  const order = {alta:0,media:1,baixa:2};
+  return [...metas].sort((a,b) => {
+    if (a.feita !== b.feita) return a.feita ? 1 : -1;
+    const po = (order[a.prioridade||'media']??1) - (order[b.prioridade||'media']??1);
+    if (po !== 0) return po;
+    if (a.prazo && b.prazo) return a.prazo < b.prazo ? -1 : 1;
+    return 0;
+  });
+}
 
 // ── Segurança / ids / imagens ─────────────────────────────────────────────
 function snEsc(v) {
@@ -834,17 +859,15 @@ function hubRenderMetaList(s) {
   const list  = document.getElementById('hub-meta-list'); if (!list) return;
   const metas = s.metas || [];
   if (!metas.length) {
+    const autoBtn = document.getElementById('hub-meta-auto-btn'); if (autoBtn) autoBtn.hidden = true;
     list.innerHTML = `<div class="hub-meta-empty"><span class="hub-meta-empty-icon"><i class="ico ico-list-checks" aria-hidden="true"></i></span>Nenhuma meta adicionada ainda.<br>Clique em <strong>+ Nova meta</strong> para começar.</div>`;
     return;
   }
-  const order = {alta:0,media:1,baixa:2};
-  const sorted = [...metas].sort((a,b) => {
-    if (a.feita !== b.feita) return a.feita ? 1 : -1;
-    const po = (order[a.prioridade||'media']||1) - (order[b.prioridade||'media']||1);
-    if (po !== 0) return po;
-    if (a.prazo && b.prazo) return a.prazo < b.prazo ? -1 : 1;
-    return 0;
-  });
+  // depois de reorganizar arrastando, a ordem do array é a ordem da lista
+  const sorted = s.metasOrdemManual ? [...metas] : snMetaAutoSort(metas);
+  const canDrag = metas.length > 1 && hubEditMetaId === null;
+  const autoBtn = document.getElementById('hub-meta-auto-btn');
+  if (autoBtn) autoBtn.hidden = !s.metasOrdemManual;
   const pColorMap = {alta:'prio-alta',media:'prio-media',baixa:'prio-baixa'};
   const pLblMap   = SN_PRIO_HTML;
   list.innerHTML = sorted.map((m, i) => {
@@ -852,14 +875,21 @@ function hubRenderMetaList(s) {
     const diff   = snDaysDiff(m.prazo);
     const checkCls = m.feita ? 'done' : isLate ? 'late' : '';
     const chips = [];
-    if (m.dataInicio) chips.push(`<span class="hub-meta-chip date"><i class="ico ico-calendar" aria-hidden="true"></i> ${snFmtDateShort(m.dataInicio)}</span>`);
+    const inicio = snFmtDateNum(m.dataInicio), aberta = inicio ? null : snFmtDateNum(snMetaCriadaEm(m));
+    if (inicio)      chips.push(`<span class="hub-meta-chip date" title="Data de início"><i class="ico ico-calendar" aria-hidden="true"></i> Início ${inicio}</span>`);
+    else if (aberta) chips.push(`<span class="hub-meta-chip date" title="Data de abertura"><i class="ico ico-calendar" aria-hidden="true"></i> Aberta ${aberta}</span>`);
     if (m.prazo) {
-      let cls = 'date', lbl = '<i class="ico ico-flag" aria-hidden="true"></i> ' + snFmtDateShort(m.prazo);
-      if      (m.feita)   { cls='ondone'; lbl='<i class="ico ico-check" aria-hidden="true"></i> '+snFmtDateShort(m.prazo); }
-      else if (isLate)    { cls='late';   lbl='<i class="ico ico-triangle-alert" aria-hidden="true"></i> '+Math.abs(diff)+'d atrasada'; }
-      else if (diff===0)  { cls='soon';   lbl='<i class="ico ico-flame" aria-hidden="true"></i> Vence hoje'; }
-      else if (diff<=3)   { cls='soon';   lbl='<i class="ico ico-alarm-clock" aria-hidden="true"></i> '+diff+'d'; }
-      chips.push(`<span class="hub-meta-chip ${cls}">${lbl}</span>`);
+      const prazo = snFmtDateNum(m.prazo);
+      let cls = 'date', lbl = '<i class="ico ico-flag" aria-hidden="true"></i> Prazo ' + prazo;
+      if      (m.feita)   { /* prazo neutro; a conclusão ganha chip próprio */ }
+      else if (isLate)    { cls='late'; lbl='<i class="ico ico-triangle-alert" aria-hidden="true"></i> Prazo '+prazo+' · '+Math.abs(diff)+'d atrasada'; }
+      else if (diff===0)  { cls='soon'; lbl='<i class="ico ico-flame" aria-hidden="true"></i> Prazo '+prazo+' · vence hoje'; }
+      else if (diff<=3)   { cls='soon'; lbl='<i class="ico ico-alarm-clock" aria-hidden="true"></i> Prazo '+prazo+' · '+diff+'d'; }
+      chips.push(`<span class="hub-meta-chip ${cls}" title="Prazo">${lbl}</span>`);
+    }
+    if (m.feita) {
+      const concl = snFmtDateNum(m.dataConclusao);
+      chips.push(`<span class="hub-meta-chip ondone" title="Data de conclusão"><i class="ico ico-check" aria-hidden="true"></i> ${concl ? 'Concluída ' + concl : 'Concluída'}</span>`);
     }
     chips.push(`<span class="hub-meta-chip ${pColorMap[m.prioridade||'media']}">${pLblMap[m.prioridade||'media']}</span>`);
     if (String(m.id) === String(hubEditMetaId)) {
@@ -880,7 +910,8 @@ function hubRenderMetaList(s) {
         </div>
       </div>`;
     }
-    return `<div class="hub-meta-item" style="animation-delay:${i*0.035}s">
+    return `<div class="hub-meta-item" data-meta-id="${snEsc(m.id)}" style="animation-delay:${i*0.035}s">
+      ${canDrag ? `<button type="button" class="hub-meta-grip" data-meta-id="${snEsc(m.id)}" title="Arraste para reorganizar (ou use ↑/↓)" aria-label="Mover meta: ${snEsc(m.texto)}. Use as setas para cima e para baixo."><i class="ico ico-grip-vertical" aria-hidden="true"></i></button>` : ''}
       <button class="hub-meta-check ${checkCls}" data-sn-act="hub-toggle-meta" data-sn-id="${snEsc(m.id)}" title="${m.feita?'Desmarcar':'Concluir'}">${m.feita?'<i class="ico ico-check" aria-hidden="true"></i>':''}</button>
       <div class="hub-meta-body">
         <div class="hub-meta-name ${m.feita?'done':''}" data-sn-act="hub-edit-meta" data-sn-id="${snEsc(m.id)}" title="Clique duas vezes para editar">${snEsc(m.texto)}</div>
@@ -964,6 +995,7 @@ function hubAddMeta() {
     prioridade: document.getElementById('hub-meta-prioridade').value,
     dataInicio: document.getElementById('hub-meta-inicio').value,
     prazo:      document.getElementById('hub-meta-prazo').value,
+    criadaEm:   new Date().toISOString(),
   });
   save();
   document.getElementById('hub-meta-form').classList.remove('open');
@@ -1018,6 +1050,138 @@ function hubDelMeta(metaId) {
   const s = snFind(hubSonhoId); if (!s) return;
   s.metas = (s.metas||[]).filter(x => String(x.id) !== String(metaId));
   save(); hubRender(s); renderSonhos();
+}
+
+// ── Reorganizar metas (arrastar) ─────────────────────────────────────────
+// Grava a ordem vinda do DOM no array e liga a ordem manual do sonho.
+function hubMetaApplyOrder(ids) {
+  const s = snFind(hubSonhoId); if (!s) return;
+  const byId = new Map((s.metas || []).map(m => [String(m.id), m]));
+  const novo = ids.map(id => byId.get(String(id))).filter(Boolean);
+  (s.metas || []).forEach(m => { if (!novo.includes(m)) novo.push(m); });
+  const mudou = !s.metasOrdemManual || novo.some((m, i) => m !== s.metas[i]);
+  if (!mudou) return;
+  s.metas = novo;
+  s.metasOrdemManual = true;
+  save(); hubRenderMetaList(s); renderSonhos();
+}
+
+function hubMetaAutoOrder() {
+  const s = snFind(hubSonhoId); if (!s) return;
+  s.metas = snMetaAutoSort(s.metas || []);
+  s.metasOrdemManual = false;
+  save(); hubRenderMetaList(s); renderSonhos();
+}
+
+// teclado: setas ↑/↓ na alça movem a meta uma posição
+function hubMetaMoveBy(metaId, delta) {
+  const list = document.getElementById('hub-meta-list'); if (!list) return;
+  const ids = [...list.querySelectorAll('.hub-meta-item[data-meta-id]')].map(el => el.dataset.metaId);
+  const i = ids.indexOf(String(metaId)), j = i + delta;
+  if (i < 0 || j < 0 || j >= ids.length) return;
+  ids.splice(j, 0, ids.splice(i, 1)[0]);
+  hubMetaApplyOrder(ids);
+  const grip = list.querySelector('.hub-meta-grip[data-meta-id="' + CSS.escape(String(metaId)) + '"]');
+  if (grip) grip.focus();
+}
+
+function hubMetaInitDrag() {
+  const list = document.getElementById('hub-meta-list'); if (!list) return;
+  let drag = null;
+
+  function scroller() { return document.getElementById('sn-hub'); }
+
+  // passa o vizinho para o outro lado do item arrastado, animando (FLIP).
+  // Move o vizinho e não o item: tirar o item do DOM soltaria o pointer capture.
+  function moveWithFlip(item, sib, ref) {
+    const sibs = [...list.querySelectorAll('.hub-meta-item')].filter(el => el !== item);
+    const before = new Map(sibs.map(el => [el, el.offsetTop]));
+    list.insertBefore(sib, ref);
+    sibs.forEach(el => {
+      const dy = before.get(el) - el.offsetTop;
+      if (!dy) return;
+      el.style.transition = 'none';
+      el.style.transform = 'translateY(' + dy + 'px)';
+      requestAnimationFrame(() => {
+        el.style.transition = 'transform .18s cubic-bezier(.22,1,.36,1)';
+        el.style.transform = '';
+      });
+    });
+  }
+
+  function update() {
+    if (!drag) return;
+    const item = drag.item;
+    // topo desejado, relativo à lista (sem sair dela)
+    const y = Math.max(0, Math.min(list.offsetHeight - item.offsetHeight,
+      drag.y - list.getBoundingClientRect().top - drag.grab));
+    let prev = item.previousElementSibling, next = item.nextElementSibling;
+    while (prev && y < prev.offsetTop + prev.offsetHeight / 2) {
+      moveWithFlip(item, prev, item.nextSibling); prev = item.previousElementSibling;
+    }
+    while (next && y + item.offsetHeight > next.offsetTop + next.offsetHeight / 2) {
+      moveWithFlip(item, next, item); next = item.nextElementSibling;
+    }
+    item.style.transform = 'translateY(' + (y - item.offsetTop) + 'px)';
+  }
+
+  // rolagem automática perto das bordas da tela
+  function autoScroll() {
+    if (!drag) return;
+    const sc = scroller(), edge = 70, h = window.innerHeight;
+    let v = 0;
+    if (drag.y < edge) v = -Math.ceil((edge - drag.y) / 5);
+    else if (drag.y > h - edge) v = Math.ceil((drag.y - (h - edge)) / 5);
+    if (v && sc) { sc.scrollTop += v; update(); }
+    drag.raf = requestAnimationFrame(autoScroll);
+  }
+
+  function end(cancel) {
+    if (!drag) return;
+    const d = drag; drag = null;
+    cancelAnimationFrame(d.raf);
+    d.item.classList.remove('dragging');
+    d.item.style.transform = '';
+    list.classList.remove('is-dragging');
+    document.body.classList.remove('sn-meta-dragging');
+    const ids = [...list.querySelectorAll('.hub-meta-item[data-meta-id]')].map(el => el.dataset.metaId);
+    if (cancel) { const s = snFind(hubSonhoId); if (s) hubRenderMetaList(s); return; }
+    hubMetaApplyOrder(ids);
+  }
+
+  list.addEventListener('pointerdown', function (e) {
+    const grip = e.target.closest('.hub-meta-grip');
+    if (!grip || drag || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    const item = grip.closest('.hub-meta-item'); if (!item) return;
+    e.preventDefault();
+    const r = item.getBoundingClientRect();
+    drag = { item, grip, id: e.pointerId, y: e.clientY, grab: e.clientY - r.top, raf: 0 };
+    try { grip.setPointerCapture(e.pointerId); } catch (_) {}
+    item.style.animation = 'none';
+    item.classList.add('dragging');
+    list.classList.add('is-dragging');
+    document.body.classList.add('sn-meta-dragging');
+    if (e.pointerType === 'touch' && navigator.vibrate) navigator.vibrate(8);
+    drag.raf = requestAnimationFrame(autoScroll);
+  });
+  list.addEventListener('pointermove', function (e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    e.preventDefault();
+    drag.y = e.clientY;
+    update();
+  });
+  list.addEventListener('pointerup',     function (e) { if (drag && e.pointerId === drag.id) end(false); });
+  list.addEventListener('pointercancel', function (e) { if (drag && e.pointerId === drag.id) end(false); });
+  list.addEventListener('lostpointercapture', function (e) { if (drag && e.pointerId === drag.id) end(false); });
+  document.addEventListener('keydown', function (e) {
+    if (drag && e.key === 'Escape') { e.stopPropagation(); end(true); return; }
+    const grip = e.target.closest && e.target.closest('.hub-meta-grip');
+    if (!grip || drag) return;
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      hubMetaMoveBy(grip.dataset.metaId, e.key === 'ArrowUp' ? -1 : 1);
+    }
+  }, true);
 }
 
 function hubToggleRealizado() {
@@ -1085,10 +1249,10 @@ function snApplyWebImg() {
 function snModalAddMeta() {
   const inp=document.getElementById('sn-m-nova-meta');
   const t=inp.value.trim(); if(!t) return;
-  snModalMetas.push({id:snUid(snModalMetas),texto:t,feita:false,prioridade:'media',dataInicio:'',prazo:''});
+  snModalMetas.push({id:snUid(snModalMetas),texto:t,feita:false,prioridade:'media',dataInicio:'',prazo:'',criadaEm:new Date().toISOString()});
   inp.value=''; snRenderModalMetas();
 }
-function snModalToggleMeta(id){const m=snModalMetas.find(x=>String(x.id)===String(id));if(m){m.feita=!m.feita;snRenderModalMetas();}}
+function snModalToggleMeta(id){const m=snModalMetas.find(x=>String(x.id)===String(id));if(m){m.feita=!m.feita;m.dataConclusao=m.feita?new Date().toISOString():'';snRenderModalMetas();}}
 function snModalDelMeta(id){snModalMetas=snModalMetas.filter(x=>String(x.id)!==String(id));if(String(snModalEditId)===String(id))snModalEditId=null;snRenderModalMetas();}
 function snModalEditMeta(id){snModalEditId=String(id);snRenderModalMetas();}
 function snModalCancelMeta(){snModalEditId=null;snRenderModalMetas();}
@@ -1850,6 +2014,7 @@ function snInitInteractions() {
   load();
   renderSonhos();
   snInitInteractions();
+  hubMetaInitDrag();
   // dados da nuvem chegaram depois da abertura: relê para não regravar a lista antiga
   window.addEventListener('soter:remote-state-applied', function () {
     load();
