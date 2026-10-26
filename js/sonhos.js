@@ -211,19 +211,13 @@ function snIsLate(prazo, feita) {
   if (feita || !prazo) return false;
   return snDaysDiff(prazo) < 0;
 }
-// dd/mm/aaaa — aceita 'AAAA-MM-DD' (campos de data) ou ISO completo (dataConclusao)
+// dd/mm/aaaa — aceita 'AAAA-MM-DD' (campos de data) ou ISO completo
 function snFmtDateNum(ds) {
   if (!ds) return null;
   const str = String(ds);
   const d = /^\d{4}-\d{2}-\d{2}$/.test(str) ? new Date(str + 'T00:00:00') : new Date(str);
   if (isNaN(d)) return null;
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-}
-// abertura da meta: criadaEm, ou o id (gerado com Date.now() em snUid)
-function snMetaCriadaEm(m) {
-  if (m.criadaEm) return m.criadaEm;
-  const t = Number(m.id);
-  return (t > 1262304000000 && t < Date.now() + 86400000) ? new Date(t).toISOString() : '';
 }
 // ordem automática: pendentes primeiro, depois prioridade e prazo
 function snMetaAutoSort(metas) {
@@ -875,21 +869,16 @@ function hubRenderMetaList(s) {
     const diff   = snDaysDiff(m.prazo);
     const checkCls = m.feita ? 'done' : isLate ? 'late' : '';
     const chips = [];
-    const inicio = snFmtDateNum(m.dataInicio), aberta = inicio ? null : snFmtDateNum(snMetaCriadaEm(m));
-    if (inicio)      chips.push(`<span class="hub-meta-chip date" title="Data de início"><i class="ico ico-calendar" aria-hidden="true"></i> Início ${inicio}</span>`);
-    else if (aberta) chips.push(`<span class="hub-meta-chip date" title="Data de abertura"><i class="ico ico-calendar" aria-hidden="true"></i> Aberta ${aberta}</span>`);
+    const inicio = snFmtDateNum(m.dataInicio);
+    if (inicio) chips.push(`<span class="hub-meta-chip date" title="Data de início"><i class="ico ico-calendar" aria-hidden="true"></i> Início ${inicio}</span>`);
     if (m.prazo) {
       const prazo = snFmtDateNum(m.prazo);
-      let cls = 'date', lbl = '<i class="ico ico-flag" aria-hidden="true"></i> Prazo ' + prazo;
-      if      (m.feita)   { /* prazo neutro; a conclusão ganha chip próprio */ }
-      else if (isLate)    { cls='late'; lbl='<i class="ico ico-triangle-alert" aria-hidden="true"></i> Prazo '+prazo+' · '+Math.abs(diff)+'d atrasada'; }
-      else if (diff===0)  { cls='soon'; lbl='<i class="ico ico-flame" aria-hidden="true"></i> Prazo '+prazo+' · vence hoje'; }
-      else if (diff<=3)   { cls='soon'; lbl='<i class="ico ico-alarm-clock" aria-hidden="true"></i> Prazo '+prazo+' · '+diff+'d'; }
-      chips.push(`<span class="hub-meta-chip ${cls}" title="Prazo">${lbl}</span>`);
-    }
-    if (m.feita) {
-      const concl = snFmtDateNum(m.dataConclusao);
-      chips.push(`<span class="hub-meta-chip ondone" title="Data de conclusão"><i class="ico ico-check" aria-hidden="true"></i> ${concl ? 'Concluída ' + concl : 'Concluída'}</span>`);
+      let cls = 'date', lbl = '<i class="ico ico-flag" aria-hidden="true"></i> Fim ' + prazo;
+      if      (m.feita)   { cls='ondone'; lbl='<i class="ico ico-check" aria-hidden="true"></i> Fim '+prazo; }
+      else if (isLate)    { cls='late'; lbl='<i class="ico ico-triangle-alert" aria-hidden="true"></i> Fim '+prazo+' · '+Math.abs(diff)+'d atrasada'; }
+      else if (diff===0)  { cls='soon'; lbl='<i class="ico ico-flame" aria-hidden="true"></i> Fim '+prazo+' · vence hoje'; }
+      else if (diff<=3)   { cls='soon'; lbl='<i class="ico ico-alarm-clock" aria-hidden="true"></i> Fim '+prazo+' · '+diff+'d'; }
+      chips.push(`<span class="hub-meta-chip ${cls}" title="Data de fim">${lbl}</span>`);
     }
     chips.push(`<span class="hub-meta-chip ${pColorMap[m.prioridade||'media']}">${pLblMap[m.prioridade||'media']}</span>`);
     if (String(m.id) === String(hubEditMetaId)) {
@@ -995,7 +984,6 @@ function hubAddMeta() {
     prioridade: document.getElementById('hub-meta-prioridade').value,
     dataInicio: document.getElementById('hub-meta-inicio').value,
     prazo:      document.getElementById('hub-meta-prazo').value,
-    criadaEm:   new Date().toISOString(),
   });
   save();
   document.getElementById('hub-meta-form').classList.remove('open');
@@ -1249,7 +1237,7 @@ function snApplyWebImg() {
 function snModalAddMeta() {
   const inp=document.getElementById('sn-m-nova-meta');
   const t=inp.value.trim(); if(!t) return;
-  snModalMetas.push({id:snUid(snModalMetas),texto:t,feita:false,prioridade:'media',dataInicio:'',prazo:'',criadaEm:new Date().toISOString()});
+  snModalMetas.push({id:snUid(snModalMetas),texto:t,feita:false,prioridade:'media',dataInicio:'',prazo:''});
   inp.value=''; snRenderModalMetas();
 }
 function snModalToggleMeta(id){const m=snModalMetas.find(x=>String(x.id)===String(id));if(m){m.feita=!m.feita;m.dataConclusao=m.feita?new Date().toISOString():'';snRenderModalMetas();}}
