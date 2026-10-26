@@ -2038,3 +2038,40 @@ body.sn-drawer-lock { overflow: hidden !important; }
   /* voltar à esquerda e as ações à direita, na mesma linha quando couber */
   .hub-nav { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
 }
+
+/* ── Metas: reorganizar arrastando ───────────────────────────────────────── */
+.hub-meta-list { position: relative; }
+.hub-section-action.ghost {
+  background: transparent; border-color: rgba(255,255,255,.1); color: var(--muted);
+  margin-right: 6px;
+}
+.hub-section-action.ghost:hover { color: var(--text); border-color: rgba(255,255,255,.25); background: rgba(255,255,255,.04); }
+.hub-section-action[hidden] { display: none; }
+
+.hub-meta-grip {
+  flex-shrink: 0; align-self: flex-start;
+  width: 22px; height: 24px; margin: 0 -8px 0 -4px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: none; border-radius: 6px;
+  color: rgba(255,255,255,.18); font-size: 14px;
+  cursor: grab; touch-action: none;
+  transition: color .15s, background .15s;
+}
+.hub-meta-item:hover .hub-meta-grip { color: rgba(255,255,255,.45); }
+.hub-meta-grip:hover { background: rgba(255,255,255,.05); }
+.hub-meta-grip:focus-visible { outline: 2px solid rgba(200,169,110,.75); outline-offset: 1px; color: var(--accent1); }
+
+.hub-meta-item.dragging {
+  z-index: 2;
+  background: rgba(20,17,38,.96);
+  box-shadow: 0 14px 34px rgba(0,0,0,.5), 0 0 0 1px rgba(200,169,110,.35);
+  transition: box-shadow .15s, background .15s;
+}
+.hub-meta-item.dragging .hub-meta-grip { color: var(--accent1); cursor: grabbing; }
+.hub-meta-list.is-dragging .hub-meta-item + .hub-meta-item { border-top-color: transparent; }
+.hub-meta-list.is-dragging .hub-meta-item:hover:not(.dragging) { background: transparent; }
+body.sn-meta-dragging, body.sn-meta-dragging * { cursor: grabbing !important; user-select: none; -webkit-user-select: none; }
+
+@media (hover: none) {
+  .hub-meta-grip { width: 30px; height: 30px; margin-top: -4px; color: rgba(255,255,255,.35); font-size: 16px; }
+}
