@@ -1320,9 +1320,15 @@
       var start = new Date(earliest + "T12:00:00");
       var y = start.getFullYear();
       var m = start.getMonth();
+      // dia a dia, como no mês exibido: aplicar o piso de zero lançamento a lançamento (na ordem
+      // da lista, não da data) fazia uma retirada "sumir" e o saldo saltar na virada do mês
       while (y < year || (y === year && m < month)) {
+        var prevDaily = {};
         expandRecurring(y, m).forEach(function (tx) {
-          running = Math.max(0, running + getSavingsDelta(tx));
+          prevDaily[tx.date] = (prevDaily[tx.date] || 0) + getSavingsDelta(tx);
+        });
+        Object.keys(prevDaily).sort().forEach(function (ds) {
+          running = Math.max(0, running + prevDaily[ds]);
         });
         m += 1;
         if (m > 11) {
