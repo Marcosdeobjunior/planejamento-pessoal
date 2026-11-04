@@ -545,8 +545,35 @@
       <div class="card"><div class="card-title">Progresso geral</div><div class="card-big-num" style="color:var(--accent2)" id="sn-stat-pct">0%</div></div>
     </div>
 
+    <!-- Abas + ordenação -->
+    <div class="sn-toolbar">
+      <div class="sn-tabs" role="tablist" aria-label="Modo de visualização">
+        <button type="button" class="sn-tab active" role="tab" id="sn-tab-cards" aria-selected="true" aria-controls="sonhos-grid" data-sn-act="view" data-sn-id="cards"><i class="ico ico-layout-grid" aria-hidden="true"></i> Cards</button>
+        <button type="button" class="sn-tab" role="tab" id="sn-tab-timeline" aria-selected="false" aria-controls="sonhos-timeline" tabindex="-1" data-sn-act="view" data-sn-id="timeline"><i class="ico ico-chart-gantt" aria-hidden="true"></i> Timeline</button>
+      </div>
+      <div class="sn-sort" id="sn-sort-wrap">
+        <label class="sn-sort-lbl" for="sn-sort"><i class="ico ico-arrow-down-wide-narrow" aria-hidden="true"></i> Ordenar</label>
+        <select class="sn-sort-sel" id="sn-sort" onchange="snSetOrdem(this.value)">
+          <option value="manual">Personalizada (arrastar)</option>
+          <option value="prazo">Prazo mais próximo</option>
+          <option value="inicio">Data de início</option>
+          <option value="progresso-desc">Maior progresso</option>
+          <option value="progresso-asc">Menor progresso</option>
+          <option value="titulo">Título (A–Z)</option>
+          <option value="categoria">Categoria</option>
+          <option value="recentes">Mais recentes</option>
+          <option value="antigos">Mais antigos</option>
+          <option value="pendentes">Pendentes primeiro</option>
+        </select>
+      </div>
+    </div>
+    <div class="sn-sort-hint" id="sn-sort-hint" hidden></div>
+
+    <!-- Timeline em cascata -->
+    <div class="sn-timeline" id="sonhos-timeline" role="tabpanel" aria-labelledby="sn-tab-timeline" hidden></div>
+
     <!-- Grid -->
-    <div class="sonhos-grid" id="sonhos-grid">
+    <div class="sonhos-grid" id="sonhos-grid" role="tabpanel" aria-labelledby="sn-tab-cards">
       <div class="empty" style="grid-column:span 3"><div class="empty-icon"><i class="ico ico-sparkles" aria-hidden="true"></i></div>Adicione seu primeiro sonho!</div>
     </div>
   </section>

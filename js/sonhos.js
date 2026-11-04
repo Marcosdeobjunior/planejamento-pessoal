@@ -2,7 +2,8 @@
 
 const DATA_KEY = "sonhosHub";
 const DREAM_OPEN_KEY = "soter_open_dream_id";
-const S = { sonhos: [] };
+const S = { sonhos: [], ordem: "manual" };
+const SN_VIEW_KEY = "soter_sonhos_view";
 
 function getAppState() {
   return window.SoterStorage && window.SoterStorage.getState
@@ -38,7 +39,8 @@ function normalizeCategory(cat) {
 function load() {
   const app = getAppState();
   const raw = app.data && app.data[DATA_KEY];
-  if (!raw || typeof raw !== "object") { S.sonhos = []; return; } // nada desta conta: começa vazio
+  if (!raw || typeof raw !== "object") { S.sonhos = []; S.ordem = "manual"; return; } // nada desta conta: começa vazio
+  S.ordem = SN_ORDENS[raw.ordenacao] ? raw.ordenacao : "manual";
 
   if (Array.isArray(raw.sonhos) && raw.sonhos.length && Array.isArray(raw.sonhos[0].metas)) {
     S.sonhos = raw.sonhos;
@@ -82,7 +84,7 @@ function load() {
 function save() {
   const app = getAppState();
   if (!app.data || typeof app.data !== "object") app.data = {};
-  app.data[DATA_KEY] = { sonhos: S.sonhos };
+  app.data[DATA_KEY] = { sonhos: S.sonhos, ordenacao: S.ordem || "manual" };
   try {
     saveAppState(app);
   } catch (err) {
@@ -1352,12 +1354,15 @@ function renderSonhos() {
   setEl('sn-stat-total',total);setEl('sn-stat-feitos',feitos);
   setEl('sn-stat-metas',doneMetas+' / '+allMetas);setEl('sn-stat-pct',pctGeral+'%');
 
+  snApplyViewUi();
+  if (snView === 'timeline') snRenderTimeline();
+
   if(!total){
     grid.innerHTML='<div class="empty" style="grid-column:span 3"><div class="empty-icon"><i class="ico ico-sparkles" aria-hidden="true"></i></div>Adicione seu primeiro sonho!</div>';
     return;
   }
 
-  grid.innerHTML=S.sonhos.map(s=>{
+  grid.innerHTML=snSortedSonhos().map(s=>{
     const id=snEsc(s.id), titulo=snEsc(s.titulo), icon=snEsc(s.icon||'🌙'), horizonte=snEsc(s.horizonte||'—');
     const img=snSafeImg(s.img);
     const metas=s.metas||[];
@@ -1392,6 +1397,7 @@ function renderSonhos() {
         '<div class="sn-top">'+
           '<div class="sn-titulo">'+titulo+'</div>'+
           '<div class="sn-actions" data-sn-act="noop">'+
+            '<button type="button" class="sn-action-btn sn-card-grip" data-sn-id="'+id+'" title="Arraste para reorganizar (ou use as setas)" aria-label="Mover sonho: '+titulo+'. Use as setas para mudar a posição."><i class="ico ico-grip-vertical" aria-hidden="true"></i></button>'+
             '<button type="button" class="sn-action-btn done-btn" data-sn-act="toggle-realizado" data-sn-id="'+id+'" title="'+(isReal?'Marcar como pendente':'Marcar como realizado')+'" aria-label="'+(isReal?'Marcar como pendente':'Marcar como realizado')+'" aria-pressed="'+(isReal?'true':'false')+'">'+(isReal?'<i class="ico ico-circle-check" aria-hidden="true"></i>':'<i class="ico ico-circle" aria-hidden="true"></i>')+'</button>'+
             '<button type="button" class="sn-action-btn more-btn" data-sn-act="card-menu" data-sn-id="'+id+'" title="Ações rápidas" aria-label="Ações rápidas" aria-haspopup="menu"><i class="ico ico-ellipsis" aria-hidden="true"></i></button>'+
           '</div>'+
@@ -1415,6 +1421,405 @@ function renderSonhos() {
 
   const analytics = document.getElementById("sn-analytics");
   if (analytics && analytics.classList.contains("open")) sanRender();
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// ABAS (Cards / Timeline) E ORDENAÇÃO DOS CARDS
+// ══════════════════════════════════════════════════════════════════════════
+
+const SN_ORDENS = {
+  manual: 'Personalizada',
+  prazo: 'Prazo mais próximo',
+  inicio: 'Data de início',
+  'progresso-desc': 'Maior progresso',
+  'progresso-asc': 'Menor progresso',
+  titulo: 'Título (A–Z)',
+  categoria: 'Categoria',
+  recentes: 'Mais recentes',
+  antigos: 'Mais antigos',
+  pendentes: 'Pendentes primeiro',
+};
+
+let snView = (function () {
+  try { return localStorage.getItem(SN_VIEW_KEY) === 'timeline' ? 'timeline' : 'cards'; } catch (_) { return 'cards'; }
+}());
+
+function snPct(s) {
+  const metas = s.metas || [];
+  return metas.length ? metas.filter(m => m.feita).length / metas.length : (s.realizado ? 1 : 0);
+}
+function snCreatedTs(s) {
+  const t = Date.parse(s.createdAt || '');
+  if (!isNaN(t)) return t;
+  const n = Number(s.id);
+  return n > 1e11 ? n : 0;                               // ids antigos são Date.now()
+}
+
+// Lista na ordem escolhida. "manual" = ordem do array (a que você arrastou).
+function snSortedSonhos() {
+  const list = S.sonhos.slice();
+  const pos = new Map(list.map((s, i) => [s, i]));
+  const tie = (a, b) => pos.get(a) - pos.get(b);
+  const date = (v) => (v ? String(v) : '9999-99-99');   // sem data vai para o fim
+  const cmp = {
+    prazo:           (a, b) => date(a.dataFim).localeCompare(date(b.dataFim)),
+    inicio:          (a, b) => date(a.dataInicio).localeCompare(date(b.dataInicio)),
+    'progresso-desc':(a, b) => snPct(b) - snPct(a),
+    'progresso-asc': (a, b) => snPct(a) - snPct(b),
+    titulo:          (a, b) => String(a.titulo || '').localeCompare(String(b.titulo || ''), 'pt-BR', { sensitivity: 'base' }),
+    categoria:       (a, b) => String(SN_CAT_LABELS[a.categoria] || a.categoria || '').localeCompare(String(SN_CAT_LABELS[b.categoria] || b.categoria || ''), 'pt-BR'),
+    recentes:        (a, b) => snCreatedTs(b) - snCreatedTs(a),
+    antigos:         (a, b) => snCreatedTs(a) - snCreatedTs(b),
+    pendentes:       (a, b) => (a.realizado ? 1 : 0) - (b.realizado ? 1 : 0),
+  }[S.ordem];
+  return cmp ? list.sort((a, b) => cmp(a, b) || tie(a, b)) : list;
+}
+
+function snSetOrdem(v) {
+  S.ordem = SN_ORDENS[v] ? v : 'manual';
+  save(); renderSonhos();
+}
+
+function snSetView(v) {
+  snView = v === 'timeline' ? 'timeline' : 'cards';
+  try { localStorage.setItem(SN_VIEW_KEY, snView); } catch (_) {}
+  snTlScrolled = false;
+  renderSonhos();
+  const tab = document.getElementById(snView === 'timeline' ? 'sn-tab-timeline' : 'sn-tab-cards');
+  if (tab && document.activeElement && document.activeElement.closest && document.activeElement.closest('.sn-tabs')) tab.focus();
+}
+
+function snApplyViewUi() {
+  const isTl = snView === 'timeline';
+  const grid = document.getElementById('sonhos-grid');
+  const tl = document.getElementById('sonhos-timeline');
+  if (grid) grid.hidden = isTl;
+  if (tl) tl.hidden = !isTl;
+  [['sn-tab-cards', !isTl], ['sn-tab-timeline', isTl]].forEach(([id, on]) => {
+    const b = document.getElementById(id); if (!b) return;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+    b.tabIndex = on ? 0 : -1;
+  });
+  const sortWrap = document.getElementById('sn-sort-wrap');
+  if (sortWrap) sortWrap.hidden = isTl;
+  const sel = document.getElementById('sn-sort');
+  if (sel && sel.value !== S.ordem) sel.value = S.ordem;
+  const hint = document.getElementById('sn-sort-hint');
+  if (hint) {
+    hint.hidden = isTl || S.sonhos.length < 2;
+    hint.innerHTML = S.ordem === 'manual'
+      ? '<i class="ico ico-grip-vertical" aria-hidden="true"></i> Arraste pela alça para colocar os cards na ordem que quiser.'
+      : '<i class="ico ico-grip-vertical" aria-hidden="true"></i> Arrastar um card salva a ordem atual como <strong>Personalizada</strong>.';
+  }
+}
+
+// ── Reorganizar cards (arrastar na grade) ────────────────────────────────
+function snCardsApplyOrder(ids) {
+  const byId = new Map(S.sonhos.map(s => [String(s.id), s]));
+  const novo = ids.map(id => byId.get(String(id))).filter(Boolean);
+  S.sonhos.forEach(s => { if (!novo.includes(s)) novo.push(s); });
+  const mudou = S.ordem !== 'manual' || novo.some((s, i) => s !== S.sonhos[i]);
+  if (!mudou) return;
+  S.sonhos = novo;
+  S.ordem = 'manual';
+  save(); renderSonhos();
+}
+
+function snCardIds() {
+  const grid = document.getElementById('sonhos-grid');
+  return grid ? [...grid.querySelectorAll('.sn-card[data-sn-id]')].map(el => el.dataset.snId) : [];
+}
+
+function snCardMoveTo(id, where) {
+  const ids = snCardIds().filter(x => x !== String(id));
+  if (where === 'inicio') ids.unshift(String(id)); else ids.push(String(id));
+  snCardsApplyOrder(ids);
+}
+
+function snCardMoveBy(id, delta) {
+  const ids = snCardIds();
+  const i = ids.indexOf(String(id)), j = i + delta;
+  if (i < 0 || j < 0 || j >= ids.length) return;
+  ids.splice(j, 0, ids.splice(i, 1)[0]);
+  snCardsApplyOrder(ids);
+  const grip = document.querySelector('#sonhos-grid .sn-card-grip[data-sn-id="' + CSS.escape(String(id)) + '"]');
+  if (grip) grip.focus();
+}
+
+function snCardsInitDrag() {
+  const grid = document.getElementById('sonhos-grid'); if (!grid) return;
+  let drag = null;
+
+  function scroller() {
+    for (let el = grid.parentElement; el && el !== document.body; el = el.parentElement) {
+      const oy = getComputedStyle(el).overflowY;
+      if ((oy === 'auto' || oy === 'scroll') && el.scrollHeight > el.clientHeight) return el;
+    }
+    return document.scrollingElement || document.documentElement;
+  }
+  function cards() { return [...grid.querySelectorAll('.sn-card[data-sn-id]')]; }
+
+  // move os vizinhos em volta do card arrastado (nunca o próprio card: tirá-lo
+  // do DOM soltaria o pointer capture), animando com FLIP.
+  function moveTo(item, target) {
+    const all = cards();
+    const i = all.indexOf(item), j = all.indexOf(target);
+    if (i < 0 || j < 0 || i === j) return;
+    const others = all.filter(el => el !== item);
+    const before = new Map(others.map(el => [el, [el.offsetLeft, el.offsetTop]]));
+    if (j > i) for (let k = i + 1; k <= j; k++) grid.insertBefore(all[k], item);
+    else for (let k = i - 1; k >= j; k--) grid.insertBefore(all[k], item.nextSibling);
+    others.forEach(el => {
+      const [x0, y0] = before.get(el);
+      const dx = x0 - el.offsetLeft, dy = y0 - el.offsetTop;
+      if (!dx && !dy) return;
+      el.style.transition = 'none';
+      el.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+      requestAnimationFrame(() => {
+        el.style.transition = 'transform .22s cubic-bezier(.22,1,.36,1)';
+        el.style.transform = '';
+      });
+    });
+  }
+
+  function update() {
+    if (!drag) return;
+    const item = drag.item, gr = grid.getBoundingClientRect();
+    const px = drag.x - gr.left, py = drag.y - gr.top;
+    const target = cards().find(el => el !== item &&
+      px >= el.offsetLeft && px <= el.offsetLeft + el.offsetWidth &&
+      py >= el.offsetTop && py <= el.offsetTop + el.offsetHeight);
+    if (target) moveTo(item, target);
+    const tx = drag.x - drag.gx - gr.left - item.offsetLeft;
+    const ty = drag.y - drag.gy - gr.top - item.offsetTop;
+    item.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(1.02)';
+  }
+
+  function autoScroll() {
+    if (!drag) return;
+    const sc = scroller(), edge = 80, h = window.innerHeight;
+    let v = 0;
+    if (drag.y < edge) v = -Math.ceil((edge - drag.y) / 5);
+    else if (drag.y > h - edge) v = Math.ceil((drag.y - (h - edge)) / 5);
+    if (v && sc) { sc.scrollTop += v; update(); }
+    drag.raf = requestAnimationFrame(autoScroll);
+  }
+
+  function end(cancel) {
+    if (!drag) return;
+    const d = drag; drag = null;
+    cancelAnimationFrame(d.raf);
+    d.item.classList.remove('dragging');
+    d.item.style.transform = '';
+    grid.classList.remove('is-dragging');
+    document.body.classList.remove('sn-meta-dragging');
+    snSuppressClickUntil = Date.now() + 350;
+    if (cancel) { renderSonhos(); return; }
+    snCardsApplyOrder(snCardIds());
+  }
+
+  grid.addEventListener('pointerdown', function (e) {
+    const grip = e.target.closest('.sn-card-grip');
+    if (!grip || drag || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    const item = grip.closest('.sn-card'); if (!item) return;
+    e.preventDefault();
+    const r = item.getBoundingClientRect();
+    drag = { item, id: e.pointerId, x: e.clientX, y: e.clientY, gx: e.clientX - r.left, gy: e.clientY - r.top, raf: 0 };
+    try { grip.setPointerCapture(e.pointerId); } catch (_) {}
+    item.classList.add('dragging');
+    grid.classList.add('is-dragging');
+    document.body.classList.add('sn-meta-dragging');
+    if (e.pointerType === 'touch' && navigator.vibrate) navigator.vibrate(8);
+    update();
+    drag.raf = requestAnimationFrame(autoScroll);
+  });
+  grid.addEventListener('pointermove', function (e) {
+    if (!drag || e.pointerId !== drag.id) return;
+    e.preventDefault();
+    drag.x = e.clientX; drag.y = e.clientY;
+    update();
+  });
+  grid.addEventListener('pointerup',     function (e) { if (drag && e.pointerId === drag.id) end(false); });
+  grid.addEventListener('pointercancel', function (e) { if (drag && e.pointerId === drag.id) end(false); });
+  grid.addEventListener('lostpointercapture', function (e) { if (drag && e.pointerId === drag.id) end(false); });
+  document.addEventListener('keydown', function (e) {
+    if (drag && e.key === 'Escape') { e.stopPropagation(); end(true); return; }
+    const grip = e.target.closest && e.target.closest('.sn-card-grip');
+    if (!grip || drag) return;
+    const delta = { ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1 }[e.key];
+    if (delta) { e.preventDefault(); snCardMoveBy(grip.dataset.snId, delta); }
+    else if (e.key === 'Home' || e.key === 'End') {
+      e.preventDefault();
+      const id = grip.dataset.snId;
+      snCardMoveTo(id, e.key === 'Home' ? 'inicio' : 'fim');
+      const g = document.querySelector('#sonhos-grid .sn-card-grip[data-sn-id="' + CSS.escape(String(id)) + '"]');
+      if (g) g.focus();
+    }
+  }, true);
+}
+
+// ── Timeline em cascata ──────────────────────────────────────────────────
+let snTlZoom = 1;
+let snTlScrolled = false;
+const SN_TL_MESES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+const SN_HORIZONTE_ANOS = { '1 ano': 1, '3 anos': 3, '5 anos': 5, '10 anos': 10, 'Longo prazo': 15 };
+
+function snTlParse(ds) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(ds || ''));
+  return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
+}
+function snTlFmt(d) { return String(d.getDate()).padStart(2, '0') + ' ' + SN_TL_MESES[d.getMonth()] + ' ' + d.getFullYear(); }
+function snTlAddYears(d, n) { const r = new Date(d); r.setFullYear(r.getFullYear() + n); return r; }
+
+function snTlZoomBy(dir) {
+  const steps = [0.5, 0.75, 1, 1.5, 2, 3];
+  const i = steps.indexOf(snTlZoom);
+  snTlZoom = steps[Math.max(0, Math.min(steps.length - 1, (i < 0 ? 2 : i) + (dir > 0 ? 1 : -1)))];
+  snTlScrolled = false;
+  snRenderTimeline();
+}
+
+function snRenderTimeline(keepScroll) {
+  const box = document.getElementById('sonhos-timeline'); if (!box) return;
+  const prevSc = box.querySelector('.sn-tl-scroll');
+  const prevLeft = prevSc ? prevSc.scrollLeft : 0;
+  if (!S.sonhos.length) {
+    box.innerHTML = '<div class="empty"><div class="empty-icon"><i class="ico ico-chart-gantt" aria-hidden="true"></i></div>Adicione um sonho com datas para vê-lo na timeline.</div>';
+    return;
+  }
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const DAY = 86400000;
+  const items = [], semData = [];
+  S.sonhos.forEach(s => {
+    let start = snTlParse(s.dataInicio), end = snTlParse(s.dataFim);
+    if (!start && !end) { semData.push(s); return; }
+    let estStart = false, estEnd = false;
+    if (!start) {
+      estStart = true;
+      const c = snCreatedTs(s);
+      start = c ? new Date(c) : new Date(today);
+      start.setHours(0, 0, 0, 0);
+      if (start >= end) start = new Date(end.getTime() - 30 * DAY);
+    }
+    if (!end) { estEnd = true; end = snTlAddYears(start, SN_HORIZONTE_ANOS[s.horizonte] || 3); }
+    if (end <= start) end = new Date(start.getTime() + DAY);
+    items.push({ s, start, end, estStart, estEnd });
+  });
+  // cascata: quem começa antes fica em cima
+  items.sort((a, b) => (a.start - b.start) || (a.end - b.end));
+
+  let html = '<div class="sn-tl-head">' +
+    '<div class="sn-tl-legend">' +
+      '<span><i class="sn-tl-key today" aria-hidden="true"></i>Hoje</span>' +
+      '<span><i class="sn-tl-key est" aria-hidden="true"></i>Data estimada pelo horizonte</span>' +
+      '<span><i class="sn-tl-key meta" aria-hidden="true"></i>Prazo de meta</span>' +
+    '</div>' +
+    (items.length ? '<div class="sn-tl-zoom" role="group" aria-label="Zoom da timeline">' +
+      '<button type="button" class="sn-tl-zoom-btn" data-sn-act="tl-zoom" data-sn-id="-1" title="Afastar" aria-label="Afastar"' + (snTlZoom <= 0.5 ? ' disabled' : '') + '><i class="ico ico-minus" aria-hidden="true"></i></button>' +
+      '<span class="sn-tl-zoom-val">' + Math.round(snTlZoom * 100) + '%</span>' +
+      '<button type="button" class="sn-tl-zoom-btn" data-sn-act="tl-zoom" data-sn-id="1" title="Aproximar" aria-label="Aproximar"' + (snTlZoom >= 3 ? ' disabled' : '') + '><i class="ico ico-plus" aria-hidden="true"></i></button>' +
+    '</div>' : '') +
+  '</div>';
+
+  if (items.length) {
+    let min = new Date(Math.min(today, ...items.map(it => it.start)));
+    let max = new Date(Math.max(today, ...items.map(it => it.end)));
+    min = new Date(min.getFullYear(), min.getMonth() - 1, 1);
+    max = new Date(max.getFullYear(), max.getMonth() + 2, 1);
+    const months = (max.getFullYear() - min.getFullYear()) * 12 + (max.getMonth() - min.getMonth());
+    const avail = Math.max(280, (box.clientWidth || 900) - 2);
+    const ppm = Math.max(14, Math.min(140, avail / months)) * snTlZoom;   // px por mês
+    const W = Math.max(avail, Math.round(months * ppm));
+    const span = max - min;
+    const X = (d) => Math.round((d - min) / span * W);
+    const ROW = 62;
+    const H = items.length * ROW + 12;
+
+    // eixo: anos em cima, meses embaixo
+    let axis = '', lines = '';
+    for (let k = 0; k <= months; k++) {
+      const d = new Date(min.getFullYear(), min.getMonth() + k, 1);
+      const x = X(d), isYear = d.getMonth() === 0;
+      lines += '<i class="sn-tl-vline' + (isYear ? ' year' : '') + '" style="left:' + x + 'px"></i>';
+      if (k < months && (ppm >= 30 || (ppm >= 16 && d.getMonth() % 3 === 0) || d.getMonth() % 6 === 0))
+        axis += '<span class="sn-tl-month" style="left:' + x + 'px;width:' + Math.round(ppm) + 'px">' + SN_TL_MESES[d.getMonth()] + '</span>';
+      if (isYear || k === 0) axis += '<span class="sn-tl-year" style="left:' + x + 'px">' + d.getFullYear() + '</span>';
+    }
+    const tx = X(today);
+
+    let rows = '', prevX = null;
+    items.forEach((it, i) => {
+      const s = it.s, x1 = X(it.start), x2 = Math.max(X(it.end), x1 + 8), w = x2 - x1;
+      const pct = Math.round(snPct(s) * 100);
+      const color = s.realizado ? '#5ec4a8' : (SN_CAT_COLORS[s.categoria] || '#7c6fcd');
+      const late = !s.realizado && pct < 100 && it.end < today && !it.estEnd;
+      const flipLbl = x1 > W - 240;
+      const markers = (s.metas || []).map(m => {
+        const d = snTlParse(m.prazo); if (!d) return '';
+        const mx = Math.max(0, Math.min(w, X(d) - x1));
+        return '<i class="sn-tl-meta' + (m.feita ? ' done' : '') + '" style="left:' + mx + 'px" title="' + snEsc(m.texto) + ' · ' + snTlFmt(d) + '"></i>';
+      }).join('');
+      const conn = prevX !== null
+        ? '<i class="sn-tl-conn" style="left:' + (prevX + 6) + 'px;width:' + Math.max(0, x1 - prevX - 6) + 'px"></i>' : '';
+      prevX = x1;
+      const label = 'Sonho: ' + s.titulo + '. ' + (it.estStart ? 'Início estimado ' : 'Início ') + snTlFmt(it.start) +
+        ', ' + (it.estEnd ? 'fim estimado ' : 'prazo ') + snTlFmt(it.end) + '. ' + pct + '% concluído' + (s.realizado ? ', realizado' : '') + (late ? ', atrasado' : '') + '.';
+      rows += '<div class="sn-tl-row" style="top:' + (i * ROW) + 'px;--d:' + (i * 0.04) + 's">' + conn +
+        '<div class="sn-tl-label' + (flipLbl ? ' flip' : '') + '" data-x1="' + x1 + '" data-x2="' + x2 + '" style="' + (flipLbl ? 'right:' + (W - x2) + 'px' : 'left:' + x1 + 'px') + '">' +
+          '<span class="sn-tl-ico">' + snEsc(s.icon || '🌙') + '</span>' +
+          '<span class="sn-tl-title">' + snEsc(s.titulo) + '</span>' +
+          '<span class="sn-tl-pct">' + (s.realizado ? '<i class="ico ico-check" aria-hidden="true"></i> realizado' : pct + '%') + (late ? ' · atrasado' : '') + '</span>' +
+        '</div>' +
+        '<button type="button" class="sn-tl-bar' + (it.estStart ? ' est-start' : '') + (it.estEnd ? ' est-end' : '') + (s.realizado ? ' done' : '') + (late ? ' late' : '') + '"' +
+          ' style="left:' + x1 + 'px;width:' + w + 'px;--c:' + color + '"' +
+          ' data-sn-act="open-card" data-sn-id="' + snEsc(s.id) + '" aria-label="' + snEsc(label) + '" title="' + snEsc(snTlFmt(it.start) + ' → ' + snTlFmt(it.end)) + '">' +
+          '<span class="sn-tl-fill" style="width:' + pct + '%"></span>' + markers +
+        '</button>' +
+      '</div>';
+    });
+
+    html += '<div class="sn-tl-scroll" tabindex="0" aria-label="Timeline dos sonhos (role para os lados)">' +
+      '<div class="sn-tl-canvas" style="width:' + W + 'px">' +
+        '<div class="sn-tl-axis">' + axis + '</div>' +
+        '<div class="sn-tl-plot" style="height:' + H + 'px">' + lines +
+          '<i class="sn-tl-today" style="left:' + tx + 'px"><span>Hoje</span></i>' +
+          rows +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  if (semData.length) {
+    html += '<div class="sn-tl-undated">' +
+      '<div class="sn-tl-undated-hd"><i class="ico ico-calendar-off" aria-hidden="true"></i> Sem datas definidas · defina início ou prazo para aparecerem na timeline</div>' +
+      '<div class="sn-tl-undated-list">' + semData.map(s =>
+        '<button type="button" class="sn-tl-chip" data-sn-act="open-card" data-sn-id="' + snEsc(s.id) + '" style="--c:' + (SN_CAT_COLORS[s.categoria] || '#7c6fcd') + '">' +
+          snEsc(s.icon || '🌙') + ' ' + snEsc(s.titulo) + '</button>').join('') +
+      '</div></div>';
+  }
+
+  box.innerHTML = html;
+  const sc = box.querySelector('.sn-tl-scroll');
+  if (!sc) return;
+  // o título acompanha a rolagem: barras que começam fora da tela continuam com nome visível
+  const labels = [...sc.querySelectorAll('.sn-tl-label:not(.flip)')];
+  const stick = () => {
+    const sl = sc.scrollLeft + 8;
+    labels.forEach(l => {
+      const x1 = +l.dataset.x1, x2 = +l.dataset.x2;
+      const dx = Math.max(0, Math.min(sl - x1, x2 - x1 - Math.min(l.offsetWidth, x2 - x1)));
+      l.style.transform = dx ? 'translateX(' + dx + 'px)' : '';
+    });
+  };
+  sc.addEventListener('scroll', stick, { passive: true });
+  if (keepScroll || snTlScrolled) sc.scrollLeft = prevLeft;
+  else {
+    const todayEl = sc.querySelector('.sn-tl-today');
+    if (todayEl) sc.scrollLeft = Math.max(0, todayEl.offsetLeft - sc.clientWidth * 0.25);
+    snTlScrolled = true;
+  }
+  stick();
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -1837,6 +2242,8 @@ function snCtxCardActions(id) {
     { label: 'Editar', action: function () { snOpenHub(s.id); hubDrawerOpen(); } },
     { label: s.realizado ? 'Marcar como pendente' : 'Marcar como realizado',
       action: function () { snToggleRealizado(s.id); } },
+    { label: 'Mover para o início', action: function () { snCardMoveTo(s.id, 'inicio'); } },
+    { label: 'Mover para o fim', action: function () { snCardMoveTo(s.id, 'fim'); } },
     { label: 'Excluir', danger: true,
       action: function () {
         if (!confirm('Excluir "' + s.titulo + '"? Esta ação não pode ser desfeita.')) return;
@@ -1897,6 +2304,8 @@ function snInitInteractions() {
       case 'hub-del-deposito':     hubDelDeposito(id); return;
       case 'modal-toggle-meta':    snModalToggleMeta(id); return;
       case 'modal-del-meta':       snModalDelMeta(id); return;
+      case 'view':                 snSetView(id); return;
+      case 'tl-zoom':              snTlZoomBy(Number(id)); return;
       case 'open-analytics-dream': snOpenHub(id); snCloseAnalytics(); return;
     }
   });
@@ -1929,7 +2338,7 @@ function snInitInteractions() {
     const t = e.target;
     if (!t || !t.closest) return;
     if (t.closest('input, textarea, select')) return;      // mantém o menu nativo nos campos
-    const card = t.closest('.sn-card[data-sn-id]');
+    const card = t.closest('.sn-card[data-sn-id], .sn-tl-bar[data-sn-id]');
     if (!card) { snCtxClose(); return; }
     e.preventDefault();
     const mouse = e.button === 2 || e.ctrlKey || e.pointerType === 'mouse';
@@ -1957,7 +2366,8 @@ function snInitInteractions() {
   document.addEventListener('pointerdown', function (e) {
     if (snCtxEl && !snCtxEl.contains(e.target)) snCtxClose();   // clique/toque fora fecha
     if (e.pointerType !== 'touch') return;
-    const card = e.target.closest && e.target.closest('.sn-card[data-sn-id]');
+    if (e.target.closest && e.target.closest('.sn-card-grip')) return;     // alça = arrastar, não menu
+    const card = e.target.closest && e.target.closest('.sn-card[data-sn-id], .sn-tl-bar[data-sn-id]');
     if (!card || snCtxIsBlocked()) return;
     lpX = e.clientX; lpY = e.clientY;
     clearTimeout(lpTimer);
@@ -2003,6 +2413,20 @@ function snInitInteractions() {
   renderSonhos();
   snInitInteractions();
   hubMetaInitDrag();
+  snCardsInitDrag();
+  // setas ←/→ alternam entre as abas
+  document.addEventListener('keydown', function (e) {
+    const tab = e.target.closest && e.target.closest('.sn-tab');
+    if (!tab || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return;
+    e.preventDefault();
+    snSetView(snView === 'cards' ? 'timeline' : 'cards');
+  });
+  let tlResizeT = 0;
+  window.addEventListener('resize', function () {
+    if (snView !== 'timeline') return;
+    clearTimeout(tlResizeT);
+    tlResizeT = setTimeout(function () { snRenderTimeline(true); }, 150);
+  });
   // dados da nuvem chegaram depois da abertura: relê para não regravar a lista antiga
   window.addEventListener('soter:remote-state-applied', function () {
     load();
@@ -2064,5 +2488,7 @@ Object.assign(globalThis, {
   hubDelDeposito: hubDelDeposito,
   hubToggleMeta: hubToggleMeta,
   hubDelMeta: hubDelMeta,
-  hubToggleRealizado: hubToggleRealizado
+  hubToggleRealizado: hubToggleRealizado,
+  snSetOrdem: snSetOrdem,
+  snSetView: snSetView
 });
